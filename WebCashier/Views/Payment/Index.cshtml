@@ -1,0 +1,165 @@
+@model WebCashier.Models.PaymentModel
+
+@{
+    ViewData["Title"] = "Top Up Your Account";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="payment-container">
+    <div class="payment-header">
+        <div class="logo-container">
+            <h2 class="logo">zenstox</h2>
+            <a href="/" class="back-link">Back to platform</a>
+        </div>
+    </div>
+
+    <div class="payment-content">
+        <h1 class="payment-title">TOP UP YOUR ACCOUNT</h1>
+        <p class="security-text">All payments are 100% secure</p>
+
+        <form asp-action="ProcessPayment" method="post" class="payment-form">
+            @Html.AntiForgeryToken()
+            
+            <div class="payment-methods">
+                <p class="method-label">Choose a payment method:</p>
+                <div class="method-options">
+                    <input type="radio" id="card" name="PaymentMethod" value="card" checked />
+                    <label for="card" class="method-option active">
+                        <div class="card-icon">💳</div>
+                    </label>
+
+                    <input type="radio" id="paypal" name="PaymentMethod" value="paypal" />
+                    <label for="paypal" class="method-option">
+                        <span class="payment-brand">PayPal</span>
+                    </label>
+
+                    <input type="radio" id="safetypay" name="PaymentMethod" value="safetypay" />
+                    <label for="safetypay" class="method-option">
+                        <span class="payment-brand">SafetyPay</span>
+                    </label>
+
+                    <input type="radio" id="skrill" name="PaymentMethod" value="skrill" />
+                    <label for="skrill" class="method-option">
+                        <span class="payment-brand">Skrill</span>
+                    </label>
+
+                    <input type="radio" id="zmg" name="PaymentMethod" value="zmg" />
+                    <label for="zmg" class="method-option">
+                        <span class="payment-brand">ZMG</span>
+                    </label>
+
+                    <input type="radio" id="gpay" name="PaymentMethod" value="gpay" />
+                    <label for="gpay" class="method-option">
+                        <span class="payment-brand">G Pay</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group amount-group">
+                    <label asp-for="Amount">Amount</label>
+                    <input asp-for="Amount" type="number" step="0.01" class="form-control" placeholder="0.00" />
+                    <span asp-validation-for="Amount" class="text-danger"></span>
+                </div>
+                <div class="form-group currency-group">
+                    <label asp-for="Currency">Currency</label>
+                    <select asp-for="Currency" class="form-control">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="card-details" class="card-details">
+                <div class="form-group">
+                    <label asp-for="NameOnCard">Name on card</label>
+                    <input asp-for="NameOnCard" class="form-control" placeholder="Tony Stoyanov" />
+                    <span asp-validation-for="NameOnCard" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="CardNumber">Card number</label>
+                    <input asp-for="CardNumber" class="form-control" placeholder="•••• •••• •••• ••••" maxlength="19" />
+                    <span asp-validation-for="CardNumber" class="text-danger"></span>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label asp-for="ExpirationDate">Expiration Date</label>
+                        <input asp-for="ExpirationDate" class="form-control" placeholder="MM/YY" maxlength="5" />
+                        <span asp-validation-for="ExpirationDate" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="CVV">CVV</label>
+                        <input asp-for="CVV" class="form-control" placeholder="123" maxlength="4" />
+                        <span asp-validation-for="CVV" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="PromotionCode">Promotion code</label>
+                    <input asp-for="PromotionCode" class="form-control" placeholder="Enter code (optional)" />
+                </div>
+            </div>
+
+            <div class="card-preview">
+                <div class="credit-card">
+                    <div class="card-dots">•••• •••• •••• ••••</div>
+                    <div class="card-name">TONY STOYANOV</div>
+                    <div class="card-expiry">MM/YY</div>
+                </div>
+                <div class="security-badges">
+                    <p>Guaranteed safe & secure checkout</p>
+                    <div class="badges">
+                        <span class="badge-item">🔒 SSL</span>
+                        <span class="badge-item">🛡️ Secure</span>
+                        <span class="badge-item">💳 VISA</span>
+                        <span class="badge-item">💳 MC</span>
+                        <span class="badge-item">💳 AMEX</span>
+                    </div>
+                </div>
+            </div>
+
+            <p class="currency-note">Please note that you might be charged in a different currency</p>
+
+            <button type="submit" class="deposit-btn">DEPOSIT</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        // Format card number input
+        document.querySelector('[name="CardNumber"]').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
+            let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+            e.target.value = formattedValue;
+        });
+
+        // Format expiration date
+        document.querySelector('[name="ExpirationDate"]').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.substring(0,2) + '/' + value.substring(2,4);
+            }
+            e.target.value = value;
+        });
+
+        // Toggle payment method details
+        document.querySelectorAll('input[name="PaymentMethod"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('.method-option').forEach(opt => opt.classList.remove('active'));
+                this.nextElementSibling.classList.add('active');
+                
+                const cardDetails = document.getElementById('card-details');
+                if (this.value === 'card') {
+                    cardDetails.style.display = 'block';
+                } else {
+                    cardDetails.style.display = 'none';
+                }
+            });
+        });
+    </script>
+}
