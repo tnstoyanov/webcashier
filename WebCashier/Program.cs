@@ -1,7 +1,22 @@
+using WebCashier.Models.Praxis;
+using WebCashier.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Configure Praxis settings
+builder.Services.Configure<PraxisConfig>(builder.Configuration.GetSection("Praxis"));
+builder.Services.AddSingleton<PraxisConfig>(provider =>
+{
+    var config = new PraxisConfig();
+    builder.Configuration.GetSection("Praxis").Bind(config);
+    return config;
+});
+
+// Register HttpClient and PraxisService
+builder.Services.AddHttpClient<IPraxisService, PraxisService>();
 
 // Configure Kestrel differently for development vs production
 if (builder.Environment.IsDevelopment())

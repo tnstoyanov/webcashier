@@ -7,16 +7,29 @@
 
 <div class="success-container">
     <div class="success-content">
-        <div class="success-icon">✓</div>
-        <h1 class="success-title">Payment Successful!</h1>
-        <p class="success-message">@Model.Message</p>
-        <div class="transaction-details">
-            <p><strong>Transaction ID:</strong> @Model.TransactionId</p>
-            <p><strong>Status:</strong> Completed</p>
-            <p><strong>Date:</strong> @DateTime.Now.ToString("MM/dd/yyyy HH:mm")</p>
-        </div>
+        @if (Model.Success)
+        {
+            <div class="success-icon">✓</div>
+            <h1 class="success-title">Payment Successful!</h1>
+            <p class="success-message">@Model.Message</p>
+            <div class="transaction-details">
+                <p><strong>Transaction ID:</strong> @Model.TransactionId</p>
+                <p><strong>Status:</strong> Completed</p>
+                <p><strong>Date:</strong> @DateTime.Now.ToString("MM/dd/yyyy HH:mm")</p>
+            </div>
+        }
+        else
+        {
+            <div class="error-icon">✗</div>
+            <h1 class="error-title">Payment Failed</h1>
+            <p class="error-message">@Model.Message</p>
+            <div class="transaction-details">
+                <p><strong>Status:</strong> Failed</p>
+                <p><strong>Date:</strong> @DateTime.Now.ToString("MM/dd/yyyy HH:mm")</p>
+            </div>
+        }
         <div class="success-actions">
-            <a href="/Payment" class="btn btn-primary">Make Another Payment</a>
+            <a href="/Payment" class="btn btn-primary">@(Model.Success ? "Make Another Payment" : "Try Again")</a>
             <a href="/" class="btn btn-secondary">Back to Home</a>
         </div>
     </div>
@@ -54,14 +67,39 @@
         margin: 0 auto 1.5rem;
     }
 
+    .error-icon {
+        width: 80px;
+        height: 80px;
+        background: #ef4444;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        margin: 0 auto 1.5rem;
+    }
+
     .success-title {
         color: #1f2937;
         margin-bottom: 1rem;
         font-size: 2rem;
     }
 
+    .error-title {
+        color: #ef4444;
+        margin-bottom: 1rem;
+        font-size: 2rem;
+    }
+
     .success-message {
         color: #6b7280;
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+    }
+
+    .error-message {
+        color: #ef4444;
         margin-bottom: 2rem;
         font-size: 1.1rem;
     }
