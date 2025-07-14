@@ -21,14 +21,10 @@ builder.Services.AddHttpClient<IPraxisService, PraxisService>();
 // Configure Kestrel differently for development vs production
 if (builder.Environment.IsDevelopment())
 {
-    // Development configuration with custom certificate
+    // Development configuration - HTTP only for simplicity
     builder.WebHost.ConfigureKestrel(serverOptions =>
     {
-        serverOptions.ListenLocalhost(5182); // HTTP
-        serverOptions.ListenLocalhost(7068, listenOptions =>
-        {
-            listenOptions.UseHttps("localhost.pfx", "testpassword"); // HTTPS with custom cert
-        });
+        serverOptions.ListenLocalhost(5182); // HTTP only
     });
 }
 else
