@@ -37,9 +37,12 @@ namespace WebCashier.Services
                 var secretKey = PadLeft(_config.MerchantSecret, 32, '0');
                 var requestTimestamp = PadLeft(timestamp.ToString(), 16, '0');
 
+                // Format expiration date correctly (MM/YYYY instead of MM/YY)
+                var formattedExpDate = FormatExpirationDate(payment.ExpirationDate);
+
                 // Encrypt card data
                 var encryptedCardNumber = AesEncrypt(payment.CardNumber, secretKey, requestTimestamp);
-                var encryptedCardExp = AesEncrypt(payment.ExpirationDate, secretKey, requestTimestamp);
+                var encryptedCardExp = AesEncrypt(formattedExpDate, secretKey, requestTimestamp);
                 var encryptedCvv = AesEncrypt(payment.CVV, secretKey, requestTimestamp);
 
                 // Convert amount to cents
@@ -119,18 +122,35 @@ namespace WebCashier.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var praxisResponse = JsonSerializer.Deserialize<PraxisResponse>(responseContent, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-                    return praxisResponse ?? new PraxisResponse { status = false, message = "Invalid response from payment gateway" };
+                    
+                    if (praxisResponse != null)
+                    {
+                        _logger.LogInformation("Praxis API Response - Status: {Status}, Description: {Description}, Transaction Status: {TransactionStatus}", 
+                            praxisResponse.status, praxisResponse.description, praxisResponse.transaction?.transaction_status);
+                        
+                        if (!string.IsNullOrEmpty(praxisResponse.redirect_url))
+                        {
+                            _logger.LogInformation("Redirect URL provided: {RedirectUrl}", praxisResponse.redirect_url);
+                        }
+                        
+                        return praxisResponse;
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to deserialize Praxis response");
+                        return new PraxisResponse { status = 1, description = "Invalid response from payment gateway" };
+                    }
                 }
                 else
                 {
                     _logger.LogError("Praxis API error: {StatusCode} - {Response}", response.StatusCode, responseContent);
-                    return new PraxisResponse { status = false, message = "Payment gateway error" };
+                    return new PraxisResponse { status = 1, description = "Payment gateway error" };
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing payment with Praxis");
-                return new PraxisResponse { status = false, message = "Payment processing failed" };
+                return new PraxisResponse { status = 1, description = "Payment processing failed" };
             }
         }
 
@@ -172,6 +192,44 @@ namespace WebCashier.Services
         {
             var parts = nameOnCard.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             return parts.Length > 1 ? string.Join(" ", parts.Skip(1)) : "Customer";
+        }
+
+        private string FormatExpirationDate(string expDate)
+        {
+            // Input format: MM/YY (e.g., "12/29")
+            // Output format: MM/YYYY (e.g., "12/2029")
+            
+            if (string.IsNullOrEmpty(expDate) || !expDate.Contains('/'))
+                return expDate;
+
+            var parts = expDate.Split('/');
+            if (parts.Length != 2)
+                return expDate;
+
+            var month = parts[0].PadLeft(2, '0');
+            var year = parts[1];
+
+            // Convert YY to YYYY
+            if (year.Length == 2)
+            {
+                var currentYear = DateTime.Now.Year;
+                var currentCentury = currentYear / 100 * 100;
+                var twoDigitYear = int.Parse(year);
+                
+                // If the year is less than current year's last two digits + 10, assume it's in the current century
+                // Otherwise, assume it's in the next century
+                var currentTwoDigit = currentYear % 100;
+                if (twoDigitYear < currentTwoDigit + 10)
+                {
+                    year = (currentCentury + twoDigitYear).ToString();
+                }
+                else
+                {
+                    year = (currentCentury - 100 + twoDigitYear).ToString();
+                }
+            }
+
+            return $"{month}/{year}";
         }
     }
 }

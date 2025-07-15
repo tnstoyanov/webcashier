@@ -40,13 +40,21 @@ namespace WebCashier.Controllers
                 // Call Praxis API
                 var praxisResponse = await _praxisService.ProcessPaymentAsync(model, clientIp);
 
-                if (praxisResponse.status)
+                // Check if Praxis returned a redirect URL (for 3DS authentication)
+                if (!string.IsNullOrEmpty(praxisResponse.redirect_url))
+                {
+                    _logger.LogInformation("Redirecting to 3DS authentication: {RedirectUrl}", praxisResponse.redirect_url);
+                    return Redirect(praxisResponse.redirect_url);
+                }
+
+                // Handle direct response (no 3DS required)
+                if (praxisResponse.IsSuccess && praxisResponse.transaction?.transaction_status == "approved")
                 {
                     var result = new PaymentResult
                     {
                         Success = true,
                         Message = "Payment processed successfully!",
-                        TransactionId = praxisResponse.transaction_id ?? praxisResponse.order_id
+                        TransactionId = praxisResponse.transaction_id
                     };
 
                     _logger.LogInformation("Payment processed successfully: TransactionId={TransactionId}", result.TransactionId);
@@ -57,11 +65,12 @@ namespace WebCashier.Controllers
                     var result = new PaymentResult
                     {
                         Success = false,
-                        Message = praxisResponse.message ?? "Payment processing failed",
-                        TransactionId = ""
+                        Message = praxisResponse.description ?? "Payment processing failed",
+                        TransactionId = praxisResponse.transaction_id
                     };
 
-                    _logger.LogWarning("Payment failed: {Message}", result.Message);
+                    _logger.LogWarning("Payment failed: {Message}, Transaction Status: {TransactionStatus}", 
+                        result.Message, praxisResponse.transaction?.transaction_status);
                     return View("Success", result);
                 }
             }
@@ -78,6 +87,22 @@ namespace WebCashier.Controllers
 
                 return View("Success", result);
             }
+        }
+
+        [HttpGet]
+        public IActionResult Return(string? status, string? transaction_id, string? order_id, string? message)
+        {
+            _logger.LogInformation("Payment return - Status: {Status}, TransactionId: {TransactionId}, OrderId: {OrderId}, Message: {Message}", 
+                status, transaction_id, order_id, message);
+
+            var result = new PaymentResult
+            {
+                Success = status == "approved",
+                Message = status == "approved" ? "Payment completed successfully!" : (message ?? "Payment was not completed"),
+                TransactionId = transaction_id ?? order_id ?? ""
+            };
+
+            return View("Success", result);
         }
 
         public IActionResult Success()
