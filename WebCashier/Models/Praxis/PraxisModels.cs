@@ -74,13 +74,89 @@ namespace WebCashier.Models.Praxis
 
     public class PraxisResponse
     {
-        public bool status { get; set; }
-        public string message { get; set; } = string.Empty;
-        public string transaction_id { get; set; } = string.Empty;
+        public int status { get; set; }
+        public string description { get; set; } = string.Empty;
+        public string redirect_url { get; set; } = string.Empty;
+        public PraxisCustomer customer { get; set; } = new();
+        public PraxisSession session { get; set; } = new();
+        public PraxisTransaction transaction { get; set; } = new();
+        public long timestamp { get; set; }
+        public string version { get; set; } = string.Empty;
+        
+        // Legacy properties for backward compatibility
+        public bool IsSuccess => status == 0;
+        public string message => description;
+        public string transaction_id => transaction?.transaction_id ?? string.Empty;
+        public string order_id => session?.order_id ?? string.Empty;
+    }
+
+    public class PraxisCustomer
+    {
+        public string customer_token { get; set; } = string.Empty;
+        public string country { get; set; } = string.Empty;
+        public string first_name { get; set; } = string.Empty;
+        public string last_name { get; set; } = string.Empty;
+        public int avs_alert { get; set; }
+        public int verification_alert { get; set; }
+    }
+
+    public class PraxisSession
+    {
+        public string auth_token { get; set; } = string.Empty;
+        public string intent { get; set; } = string.Empty;
+        public string session_status { get; set; } = string.Empty;
         public string order_id { get; set; } = string.Empty;
-        public string reference_id { get; set; } = string.Empty;
-        public decimal amount { get; set; }
         public string currency { get; set; } = string.Empty;
-        public string gateway_response { get; set; } = string.Empty;
+        public int amount { get; set; }
+        public string conversion_rate { get; set; } = string.Empty;
+        public string processed_currency { get; set; } = string.Empty;
+        public int processed_amount { get; set; }
+        public string payment_method { get; set; } = string.Empty;
+        public string gateway { get; set; } = string.Empty;
+        public string cid { get; set; } = string.Empty;
+        public string? variable1 { get; set; }
+        public string? variable2 { get; set; }
+        public string? variable3 { get; set; }
+    }
+
+    public class PraxisTransaction
+    {
+        public string transaction_type { get; set; } = string.Empty;
+        public string transaction_status { get; set; } = string.Empty;
+        public int tid { get; set; }
+        public string transaction_id { get; set; } = string.Empty;
+        public string currency { get; set; } = string.Empty;
+        public int amount { get; set; }
+        public string conversion_rate { get; set; } = string.Empty;
+        public string? processed_currency { get; set; }
+        public int? processed_amount { get; set; }
+        public int fee { get; set; }
+        public int fee_included { get; set; }
+        public string fee_type { get; set; } = string.Empty;
+        public string payment_method { get; set; } = string.Empty;
+        public string payment_processor { get; set; } = string.Empty;
+        public string gateway { get; set; } = string.Empty;
+        public PraxisCard card { get; set; } = new();
+        public object? wallet { get; set; }
+        public int is_async { get; set; }
+        public int is_cascade { get; set; }
+        public string? cascade_level { get; set; }
+        public string? reference_id { get; set; }
+        public string? withdrawal_request_id { get; set; }
+        public string created_by { get; set; } = string.Empty;
+        public string? edited_by { get; set; }
+        public string status_code { get; set; } = string.Empty;
+        public string status_details { get; set; } = string.Empty;
+        public string redirect_url { get; set; } = string.Empty;
+    }
+
+    public class PraxisCard
+    {
+        public string? card_token { get; set; }
+        public string card_type { get; set; } = string.Empty;
+        public string card_number { get; set; } = string.Empty;
+        public string card_exp { get; set; } = string.Empty;
+        public string card_issuer_name { get; set; } = string.Empty;
+        public string card_issuer_country { get; set; } = string.Empty;
     }
 }

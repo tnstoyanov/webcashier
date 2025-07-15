@@ -15,8 +15,10 @@ builder.Services.AddSingleton<PraxisConfig>(provider =>
     return config;
 });
 
-// Register HttpClient and PraxisService
-builder.Services.AddHttpClient<IPraxisService, PraxisService>();
+// Register HttpClient and PraxisService with logging
+builder.Services.AddTransient<LoggingHandler>();
+builder.Services.AddHttpClient<IPraxisService, PraxisService>()
+    .AddHttpMessageHandler<LoggingHandler>();
 
 // Configure Kestrel differently for development vs production
 if (builder.Environment.IsDevelopment())
@@ -41,9 +43,8 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
-
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
