@@ -26,30 +26,84 @@
                 <span class="detail-label">Transaction ID:</span>
                 <span class="detail-value">@Model.TransactionId</span>
             </div>
+            @if (!string.IsNullOrEmpty(Model.OrderId))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Order ID:</span>
+                    <span class="detail-value">@Model.OrderId</span>
+                </div>
+            }
             <div class="detail-row">
                 <span class="detail-label">Payment Method:</span>
                 <span class="detail-value">@Model.PaymentMethod</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Payment Processor:</span>
-                <span class="detail-value">@Model.PaymentProcessor</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Currency:</span>
-                <span class="detail-value">@Model.Currency</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Card Type:</span>
-                <span class="detail-value">@Model.CardType</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Card Number:</span>
-                <span class="detail-value">@Model.CardNumber</span>
-            </div>
+            @if (!string.IsNullOrEmpty(Model.PaymentProcessor))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Payment Processor:</span>
+                    <span class="detail-value">@Model.PaymentProcessor</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Currency))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Currency:</span>
+                    <span class="detail-value">@Model.Currency</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Amount))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Amount:</span>
+                    <span class="detail-value">@Model.Amount @Model.Currency</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.CardType))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Card Type:</span>
+                    <span class="detail-value">@Model.CardType</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.CardNumber))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Card Number:</span>
+                    <span class="detail-value">@Model.CardNumber</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.AuthorizationCode))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Authorization Code:</span>
+                    <span class="detail-value">@Model.AuthorizationCode</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Reference))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Reference:</span>
+                    <span class="detail-value">@Model.Reference</span>
+                </div>
+            }
             <div class="detail-row">
                 <span class="detail-label">Status:</span>
                 <span class="detail-value status-approved">@Model.TransactionStatus</span>
             </div>
+            @if (!string.IsNullOrEmpty(Model.StatusCode))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Status Code:</span>
+                    <span class="detail-value">@Model.StatusCode</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.StatusDetails))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Status Details:</span>
+                    <span class="detail-value">@Model.StatusDetails</span>
+                </div>
+            }
         </div>
 
         <div class="action-buttons">

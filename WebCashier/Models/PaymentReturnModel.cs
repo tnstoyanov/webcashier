@@ -12,5 +12,11 @@ namespace WebCashier.Models
         public string StatusCode { get; set; } = string.Empty;
         public string StatusDetails { get; set; } = string.Empty;
         public string TransactionStatus { get; set; } = string.Empty;
+        public string OrderId { get; set; } = string.Empty;
+        public string Amount { get; set; } = string.Empty;
+        public string ErrorCode { get; set; } = string.Empty;
+        public string ErrorMessage { get; set; } = string.Empty;
+        public string AuthorizationCode { get; set; } = string.Empty;
+        public string Reference { get; set; } = string.Empty;
     }
 }
