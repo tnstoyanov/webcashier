@@ -1,0 +1,190 @@
+@model WebCashier.Models.PaymentReturnModel
+
+@{
+    ViewData["Title"] = "Payment Failed";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="payment-result-container">
+    <div class="payment-result-header">
+        <div class="logo-container">
+            <h2 class="logo">zenstox</h2>
+        </div>
+    </div>
+
+    <div class="payment-result-content">
+        <div class="failure-icon">
+            <i class="fas fa-times-circle"></i>
+        </div>
+        
+        <h1 class="result-title failure">Payment Failed</h1>
+        <p class="result-message">Unfortunately, your payment could not be processed.</p>
+
+        <div class="transaction-details">
+            <h3>Transaction Details</h3>
+            <div class="detail-row">
+                <span class="detail-label">Transaction ID:</span>
+                <span class="detail-value">@Model.TransactionId</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Payment Method:</span>
+                <span class="detail-value">@Model.PaymentMethod</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Payment Processor:</span>
+                <span class="detail-value">@Model.PaymentProcessor</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Currency:</span>
+                <span class="detail-value">@Model.Currency</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Card Type:</span>
+                <span class="detail-value">@Model.CardType</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Card Number:</span>
+                <span class="detail-value">@Model.CardNumber</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value status-rejected">@Model.TransactionStatus</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status Code:</span>
+                <span class="detail-value">@Model.StatusCode</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status Details:</span>
+                <span class="detail-value">@Model.StatusDetails</span>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <a href="/Payment" class="btn btn-primary">Try Again</a>
+            <a href="/" class="btn btn-secondary">Return to Platform</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .payment-result-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+    }
+
+    .payment-result-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .logo {
+        color: #2c3e50;
+        font-size: 24px;
+        font-weight: bold;
+        margin: 0;
+    }
+
+    .payment-result-content {
+        text-align: center;
+    }
+
+    .failure-icon {
+        font-size: 64px;
+        color: #e74c3c;
+        margin-bottom: 20px;
+    }
+
+    .result-title {
+        font-size: 32px;
+        margin: 20px 0;
+        font-weight: bold;
+    }
+
+    .result-title.failure {
+        color: #e74c3c;
+    }
+
+    .result-message {
+        font-size: 18px;
+        color: #666;
+        margin-bottom: 30px;
+    }
+
+    .transaction-details {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        text-align: left;
+    }
+
+    .transaction-details h3 {
+        margin-top: 0;
+        color: #2c3e50;
+        border-bottom: 2px solid #e74c3c;
+        padding-bottom: 10px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-weight: bold;
+        color: #555;
+    }
+
+    .detail-value {
+        color: #333;
+    }
+
+    .status-rejected {
+        color: #e74c3c;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .action-buttons {
+        margin-top: 30px;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        margin: 0 10px;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .btn-primary {
+        background-color: #3498db;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #2980b9;
+    }
+
+    .btn-secondary {
+        background-color: #95a5a6;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #7f8c8d;
+    }
+</style>

@@ -90,19 +90,65 @@ namespace WebCashier.Controllers
         }
 
         [HttpGet]
-        public IActionResult Return(string? status, string? transaction_id, string? order_id, string? message)
+        public IActionResult Return()
         {
-            _logger.LogInformation("Payment return - Status: {Status}, TransactionId: {TransactionId}, OrderId: {OrderId}, Message: {Message}", 
-                status, transaction_id, order_id, message);
-
-            var result = new PaymentResult
+            try
             {
-                Success = status == "approved",
-                Message = status == "approved" ? "Payment completed successfully!" : (message ?? "Payment was not completed"),
-                TransactionId = transaction_id ?? order_id ?? ""
-            };
+                // Read the query parameters from the return URL
+                var queryParams = Request.Query;
+                
+                _logger.LogInformation("Payment return received with query parameters: {QueryParams}", 
+                    string.Join(", ", queryParams.Select(kv => $"{kv.Key}={kv.Value}")));
 
-            return View("Success", result);
+                // Parse the parameters that Praxis sends back
+                var transactionStatus = queryParams["transaction_status"].ToString();
+                var tid = queryParams["tid"].ToString();
+                var paymentMethod = queryParams["payment_method"].ToString();
+                var paymentProcessor = queryParams["payment_processor"].ToString();
+                var currency = queryParams["currency"].ToString();
+                var cardType = queryParams["card_type"].ToString();
+                var cardNumber = queryParams["card_number"].ToString();
+                var statusCode = queryParams["status_code"].ToString();
+                var statusDetails = queryParams["status_details"].ToString();
+
+                var model = new PaymentReturnModel
+                {
+                    IsSuccess = transactionStatus == "approved" || transactionStatus == "success" || transactionStatus == "completed",
+                    TransactionId = tid,
+                    PaymentMethod = paymentMethod,
+                    PaymentProcessor = paymentProcessor,
+                    Currency = currency,
+                    CardType = cardType,
+                    CardNumber = cardNumber,
+                    StatusCode = statusCode,
+                    StatusDetails = statusDetails,
+                    TransactionStatus = transactionStatus
+                };
+
+                _logger.LogInformation("Payment return processed - Status: {Status}, TID: {TID}, Method: {Method}", 
+                    transactionStatus, tid, paymentMethod);
+
+                if (model.IsSuccess)
+                {
+                    return View("PaymentSuccess", model);
+                }
+                else
+                {
+                    return View("PaymentFailure", model);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing payment return");
+                
+                var errorModel = new PaymentReturnModel
+                {
+                    IsSuccess = false,
+                    StatusDetails = "An error occurred while processing the payment return"
+                };
+                
+                return View("PaymentFailure", errorModel);
+            }
         }
 
         public IActionResult Success()

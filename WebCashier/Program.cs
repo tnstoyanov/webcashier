@@ -1,5 +1,9 @@
 using WebCashier.Models.Praxis;
 using WebCashier.Services;
+using System.Net;
+using System.Security.Authentication;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,8 +21,31 @@ builder.Services.AddSingleton<PraxisConfig>(provider =>
 
 // Register HttpClient and PraxisService with logging
 builder.Services.AddTransient<LoggingHandler>();
-builder.Services.AddHttpClient<IPraxisService, PraxisService>()
-    .AddHttpMessageHandler<LoggingHandler>();
+builder.Services.AddHttpClient<IPraxisService, PraxisService>(client =>
+{
+    // Configure HttpClient for HTTPS requests
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "WebCashier/1.0");
+})
+.AddHttpMessageHandler<LoggingHandler>()
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    var handler = new HttpClientHandler();
+    
+    // Force TLS 1.2 only for maximum compatibility
+    handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+    handler.CheckCertificateRevocationList = false;
+    handler.UseCookies = false;
+    
+    // In development, bypass SSL validation
+    if (builder.Environment.IsDevelopment())
+    {
+        Console.WriteLine("Development mode: bypassing SSL certificate validation");
+        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+    }
+    
+    return handler;
+});
 
 // Configure Kestrel differently for development vs production
 if (builder.Environment.IsDevelopment())
@@ -36,6 +63,10 @@ else
 }
 
 var app = builder.Build();
+
+// Test SSL connectivity on startup
+Console.WriteLine("Testing SSL connection to Praxis API...");
+await WebCashier.SSLTest.TestSSLConnection();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
