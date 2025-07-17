@@ -160,10 +160,7 @@ namespace WebCashier.Controllers
                     
                     try
                     {
-                        var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody, new JsonSerializerOptions 
-                        { 
-                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
-                        });
+                        var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody);
                         
                         if (callbackData?.transaction != null)
                         {
@@ -280,10 +277,7 @@ namespace WebCashier.Controllers
 
                 try
                 {
-                    var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody, new JsonSerializerOptions 
-                    { 
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
-                    });
+                    var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody);
                     
                     if (callbackData?.transaction != null)
                     {
