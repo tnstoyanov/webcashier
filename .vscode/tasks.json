@@ -6,9 +6,7 @@
 			"type": "shell",
 			"command": "dotnet",
 			"args": [
-				"run",
-				"--launch-profile",
-				"https"
+				"run"
 			],
 			"group": "build",
 			"isBackground": true,
