@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using WebCashier.Models;
 using WebCashier.Services;
+using WebCashier.Models.Praxis;
+using System.Text.Json;
 
 namespace WebCashier.Controllers
 {
@@ -90,11 +92,63 @@ namespace WebCashier.Controllers
         }
 
         [HttpGet]
-        public IActionResult Return()
+        [HttpPost]
+        public async Task<IActionResult> Return()
         {
             try
             {
-                // Read the query parameters from the return URL
+                // First, try to handle JSON callback from Praxis
+                if (Request.Method == "POST" && Request.ContentType?.Contains("application/json") == true)
+                {
+                    Request.EnableBuffering();
+                    using var reader = new StreamReader(Request.Body);
+                    var jsonBody = await reader.ReadToEndAsync();
+                    
+                    _logger.LogInformation("Praxis JSON callback received: {JsonBody}", jsonBody);
+                    
+                    try
+                    {
+                        var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody, new JsonSerializerOptions 
+                        { 
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+                        });
+                        
+                        if (callbackData?.transaction != null)
+                        {
+                            var model = new PaymentReturnModel
+                            {
+                                IsSuccess = callbackData.transaction.transaction_status == "approved",
+                                TransactionId = callbackData.transaction.tid.ToString(),
+                                PaymentMethod = callbackData.transaction.payment_method ?? "",
+                                PaymentProcessor = callbackData.transaction.payment_processor ?? "",
+                                Currency = callbackData.transaction.currency ?? "",
+                                CardType = callbackData.transaction.card?.card_type ?? "",
+                                CardNumber = callbackData.transaction.card?.card_number ?? "",
+                                StatusCode = callbackData.transaction.status_code ?? "",
+                                StatusDetails = callbackData.transaction.status_details ?? "",
+                                TransactionStatus = callbackData.transaction.transaction_status ?? ""
+                            };
+
+                            _logger.LogInformation("Praxis callback processed - Status: {Status}, TID: {TID}", 
+                                callbackData.transaction.transaction_status, callbackData.transaction.tid);
+
+                            if (model.IsSuccess)
+                            {
+                                return View("PaymentSuccess", model);
+                            }
+                            else
+                            {
+                                return View("PaymentFailure", model);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to parse Praxis callback JSON");
+                    }
+                }
+
+                // Fall back to query parameter handling
                 var queryParams = Request.Query;
                 
                 _logger.LogInformation("Payment return received with query parameters: {QueryParams}", 
@@ -111,7 +165,7 @@ namespace WebCashier.Controllers
                 var statusCode = queryParams["status_code"].ToString();
                 var statusDetails = queryParams["status_details"].ToString();
 
-                var model = new PaymentReturnModel
+                var fallbackModel = new PaymentReturnModel
                 {
                     IsSuccess = transactionStatus == "approved" || transactionStatus == "success" || transactionStatus == "completed",
                     TransactionId = tid,
@@ -128,13 +182,13 @@ namespace WebCashier.Controllers
                 _logger.LogInformation("Payment return processed - Status: {Status}, TID: {TID}, Method: {Method}", 
                     transactionStatus, tid, paymentMethod);
 
-                if (model.IsSuccess)
+                if (fallbackModel.IsSuccess)
                 {
-                    return View("PaymentSuccess", model);
+                    return View("PaymentSuccess", fallbackModel);
                 }
                 else
                 {
-                    return View("PaymentFailure", model);
+                    return View("PaymentFailure", fallbackModel);
                 }
             }
             catch (Exception ex)
