@@ -178,6 +178,103 @@ namespace WebCashier.Controllers
         }
 
         [HttpGet]
+        [HttpPost]
+        [Route("Payment/Return")]
+        public async Task<IActionResult> Return()
+        {
+            try
+            {
+                _logger.LogInformation("Payment Return endpoint called via {Method}", Request.Method);
+                _logger.LogInformation("Return URL query parameters: {QueryParams}", 
+                    string.Join(", ", Request.Query.Select(kv => $"{kv.Key}={kv.Value}")));
+
+                // If this is a POST request with JSON (callback), handle it as a callback
+                if (Request.Method == "POST" && Request.ContentType?.Contains("application/json") == true)
+                {
+                    Request.EnableBuffering();
+                    using var reader = new StreamReader(Request.Body);
+                    var jsonBody = await reader.ReadToEndAsync();
+                    
+                    _logger.LogInformation("Praxis callback received at Return endpoint: {JsonBody}", jsonBody);
+                    
+                    if (!string.IsNullOrEmpty(jsonBody))
+                    {
+                        try
+                        {
+                            var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody);
+                            
+                            if (callbackData?.session?.order_id != null)
+                            {
+                                var callbackOrderId = callbackData.session.order_id;
+                                
+                                _logger.LogInformation("Processing callback for OrderId: {OrderId}", callbackOrderId);
+                                
+                                // Update payment state
+                                _paymentStateService.SetPaymentCompleted(callbackOrderId, callbackData);
+                                
+                                // Create result model
+                                var transaction = callbackData.transaction;
+                                var model = new PaymentReturnModel
+                                {
+                                    IsSuccess = transaction.transaction_status == "approved",
+                                    TransactionId = transaction.transaction_id,
+                                    PaymentMethod = transaction.payment_method,
+                                    PaymentProcessor = transaction.payment_processor,
+                                    Currency = transaction.currency,
+                                    Amount = (transaction.amount / 100.0m).ToString("F2"),
+                                    CardType = transaction.card?.card_type,
+                                    CardNumber = transaction.card?.card_number,
+                                    StatusCode = transaction.status_code,
+                                    StatusDetails = transaction.status_details,
+                                    TransactionStatus = transaction.transaction_status,
+                                    OrderId = callbackOrderId
+                                };
+
+                                if (model.IsSuccess)
+                                {
+                                    return View("PaymentSuccess", model);
+                                }
+                                else
+                                {
+                                    return View("PaymentFailure", model);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to parse callback JSON at Return endpoint");
+                        }
+                    }
+                }
+
+                // Handle GET request with query parameters or fallback
+                var queryParams = Request.Query;
+                var orderId = queryParams["order_id"].ToString();
+                
+                if (!string.IsNullOrEmpty(orderId))
+                {
+                    return RedirectToAction("Result", new { orderId });
+                }
+
+                // Fallback - show error
+                return View("PaymentFailure", new PaymentReturnModel
+                {
+                    IsSuccess = false,
+                    StatusDetails = "No callback received from Praxis!"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing payment return");
+                return View("PaymentFailure", new PaymentReturnModel
+                {
+                    IsSuccess = false,
+                    StatusDetails = "An error occurred while processing the payment return"
+                });
+            }
+        }
+
+        [HttpGet]
         public IActionResult Timeout(string orderId)
         {
             _logger.LogWarning("Payment timeout for OrderId {OrderId}", orderId);
