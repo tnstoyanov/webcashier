@@ -1,0 +1,81 @@
+@model WebCashier.Models.PaymentModel
+
+@{
+    ViewData["Title"] = "Processing Payment";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="processing-container">
+    <div class="processing-content">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h2 class="mt-4">Processing Your Payment</h2>
+        <p class="text-muted">Please wait while we process your payment of $@Model.Amount.ToString("F2")...</p>
+        <p class="text-muted">Do not refresh or close this page.</p>
+        
+        <!-- Check for callback every 2 seconds -->
+        <script>
+            let orderIdFromForm = '@ViewBag.OrderId';
+            let pollCount = 0;
+            let maxPolls = 60; // 2 minutes max
+            
+            function checkPaymentStatus() {
+                pollCount++;
+                
+                if (pollCount > maxPolls) {
+                    // Timeout - redirect to error page
+                    window.location.href = '/Payment/Timeout?orderId=' + orderIdFromForm;
+                    return;
+                }
+                
+                fetch('/Payment/CheckStatus?orderId=' + orderIdFromForm)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'completed') {
+                            // Payment completed - redirect to result page
+                            window.location.href = '/Payment/Result?orderId=' + orderIdFromForm;
+                        } else if (data.status === 'pending') {
+                            // Still processing - check again in 2 seconds
+                            setTimeout(checkPaymentStatus, 2000);
+                        } else {
+                            // Error or unknown status
+                            window.location.href = '/Payment/Error?orderId=' + orderIdFromForm;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking payment status:', error);
+                        setTimeout(checkPaymentStatus, 2000);
+                    });
+            }
+            
+            // Start polling after 3 seconds
+            setTimeout(checkPaymentStatus, 3000);
+        </script>
+    </div>
+</div>
+
+<style>
+    .processing-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 2rem;
+    }
+
+    .processing-content {
+        text-align: center;
+        background: white;
+        padding: 3rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        width: 100%;
+    }
+
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>
