@@ -47,6 +47,9 @@ builder.Services.AddHttpClient<IPraxisService, PraxisService>(client =>
     return handler;
 });
 
+// Register PaymentStateService as singleton to maintain state across requests
+builder.Services.AddSingleton<IPaymentStateService, PaymentStateService>();
+
 // Configure Kestrel differently for development vs production
 if (builder.Environment.IsDevelopment())
 {

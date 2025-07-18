@@ -10,11 +10,13 @@ namespace WebCashier.Controllers
     {
         private readonly ILogger<PaymentController> _logger;
         private readonly IPraxisService _praxisService;
+        private readonly IPaymentStateService _paymentStateService;
 
-        public PaymentController(ILogger<PaymentController> logger, IPraxisService praxisService)
+        public PaymentController(ILogger<PaymentController> logger, IPraxisService praxisService, IPaymentStateService paymentStateService)
         {
             _logger = logger;
             _praxisService = praxisService;
+            _paymentStateService = paymentStateService;
         }
 
         public IActionResult Index()
@@ -34,13 +36,22 @@ namespace WebCashier.Controllers
 
             try
             {
+                // Generate a unique order ID
+                var orderId = Guid.NewGuid().ToString("N")[..16];
+                
                 // Get client IP address
                 var clientIp = GetClientIpAddress();
                 
-                _logger.LogInformation("Processing payment for amount {Amount} using Praxis API", model.Amount);
+                _logger.LogInformation("Processing payment for amount {Amount} with OrderId {OrderId}", model.Amount, orderId);
+
+                // Set payment as pending
+                _paymentStateService.SetPaymentPending(orderId, "");
 
                 // Call Praxis API
-                var praxisResponse = await _praxisService.ProcessPaymentAsync(model, clientIp);
+                var praxisResponse = await _praxisService.ProcessPaymentAsync(model, clientIp, orderId);
+
+                // Update with transaction ID from Praxis response
+                _paymentStateService.SetPaymentPending(orderId, praxisResponse.transaction_id ?? "");
 
                 // Check if Praxis returned a redirect URL (for 3DS authentication)
                 if (!string.IsNullOrEmpty(praxisResponse.redirect_url))
@@ -49,32 +60,9 @@ namespace WebCashier.Controllers
                     return Redirect(praxisResponse.redirect_url);
                 }
 
-                // Handle direct response (no 3DS required)
-                if (praxisResponse.IsSuccess && praxisResponse.transaction?.transaction_status == "approved")
-                {
-                    var result = new PaymentResult
-                    {
-                        Success = true,
-                        Message = "Payment processed successfully!",
-                        TransactionId = praxisResponse.transaction_id
-                    };
-
-                    _logger.LogInformation("Payment processed successfully: TransactionId={TransactionId}", result.TransactionId);
-                    return View("Success", result);
-                }
-                else
-                {
-                    var result = new PaymentResult
-                    {
-                        Success = false,
-                        Message = praxisResponse.description ?? "Payment processing failed",
-                        TransactionId = praxisResponse.transaction_id
-                    };
-
-                    _logger.LogWarning("Payment failed: {Message}, Transaction Status: {TransactionStatus}", 
-                        result.Message, praxisResponse.transaction?.transaction_status);
-                    return View("Success", result);
-                }
+                // Always redirect to processing page to wait for callback
+                ViewBag.OrderId = orderId;
+                return View("Processing", model);
             }
             catch (Exception ex)
             {
@@ -87,228 +75,130 @@ namespace WebCashier.Controllers
                     TransactionId = ""
                 };
 
-                return View("Success", result);
+                return View("PaymentFailure", result);
             }
         }
 
         [HttpGet]
-        [HttpPost]
-        public async Task<IActionResult> Return()
+        public IActionResult CheckStatus(string orderId)
         {
             try
             {
-                _logger.LogInformation("Payment return endpoint called via {Method}", Request.Method);
+                var state = _paymentStateService.GetPaymentState(orderId);
                 
-                // Check if we have transaction data from the callback
-                var tid = Request.Query["tid"].ToString();
-                if (!string.IsNullOrEmpty(tid))
+                if (state == null)
                 {
-                    var transactionDataJson = TempData[$"transaction_{tid}"]?.ToString();
-                    if (!string.IsNullOrEmpty(transactionDataJson))
-                    {
-                        _logger.LogInformation("Found transaction data from callback for TID: {TID}", tid);
-                        
-                        try
-                        {
-                            var transactionData = JsonSerializer.Deserialize<PraxisTransaction>(transactionDataJson);
-                            
-                            if (transactionData != null)
-                            {
-                                var model = new PaymentReturnModel
-                                {
-                                    IsSuccess = transactionData.transaction_status == "approved",
-                                    TransactionId = transactionData.tid.ToString(),
-                                    PaymentMethod = transactionData.payment_method ?? "",
-                                    PaymentProcessor = transactionData.payment_processor ?? "",
-                                    Currency = transactionData.currency ?? "",
-                                    CardType = transactionData.card?.card_type ?? "",
-                                    CardNumber = transactionData.card?.card_number ?? "",
-                                    StatusCode = transactionData.status_code ?? "",
-                                    StatusDetails = transactionData.status_details ?? "",
-                                    TransactionStatus = transactionData.transaction_status ?? "",
-                                    Amount = transactionData.amount.ToString()
-                                };
-
-                                _logger.LogInformation("Using callback data - Status: {Status}, TID: {TID}", 
-                                    transactionData.transaction_status, transactionData.tid);
-
-                                if (model.IsSuccess)
-                                {
-                                    return View("PaymentSuccess", model);
-                                }
-                                else
-                                {
-                                    return View("PaymentFailure", model);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to deserialize transaction data from callback");
-                        }
-                    }
+                    return Json(new { status = "not_found" });
                 }
 
-                // First, try to handle JSON callback from Praxis (fallback)
-                if (Request.Method == "POST" && Request.ContentType?.Contains("application/json") == true)
+                switch (state.Status)
                 {
-                    Request.EnableBuffering();
-                    using var reader = new StreamReader(Request.Body);
-                    var jsonBody = await reader.ReadToEndAsync();
-                    
-                    _logger.LogInformation("Praxis JSON callback received at Return endpoint: {JsonBody}", jsonBody);
-                    
-                    try
-                    {
-                        var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody);
-                        
-                        if (callbackData?.transaction != null)
-                        {
-                            var model = new PaymentReturnModel
-                            {
-                                IsSuccess = callbackData.transaction.transaction_status == "approved",
-                                TransactionId = callbackData.transaction.tid.ToString(),
-                                PaymentMethod = callbackData.transaction.payment_method ?? "",
-                                PaymentProcessor = callbackData.transaction.payment_processor ?? "",
-                                Currency = callbackData.transaction.currency ?? "",
-                                CardType = callbackData.transaction.card?.card_type ?? "",
-                                CardNumber = callbackData.transaction.card?.card_number ?? "",
-                                StatusCode = callbackData.transaction.status_code ?? "",
-                                StatusDetails = callbackData.transaction.status_details ?? "",
-                                TransactionStatus = callbackData.transaction.transaction_status ?? "",
-                                Amount = callbackData.transaction.amount.ToString()
-                            };
-
-                            _logger.LogInformation("Praxis callback processed - Status: {Status}, TID: {TID}", 
-                                callbackData.transaction.transaction_status, callbackData.transaction.tid);
-
-                            if (model.IsSuccess)
-                            {
-                                return View("PaymentSuccess", model);
-                            }
-                            else
-                            {
-                                return View("PaymentFailure", model);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to parse Praxis callback JSON");
-                    }
-                }
-
-                // Fall back to query parameter handling
-                var queryParams = Request.Query;
-                
-                _logger.LogInformation("Payment return received with query parameters: {QueryParams}", 
-                    string.Join(", ", queryParams.Select(kv => $"{kv.Key}={kv.Value}")));
-
-                // Parse the parameters that Praxis sends back
-                var transactionStatus = queryParams["transaction_status"].ToString();
-                var queryTid = queryParams["tid"].ToString();
-                var paymentMethod = queryParams["payment_method"].ToString();
-                var paymentProcessor = queryParams["payment_processor"].ToString();
-                var currency = queryParams["currency"].ToString();
-                var cardType = queryParams["card_type"].ToString();
-                var cardNumber = queryParams["card_number"].ToString();
-                var statusCode = queryParams["status_code"].ToString();
-                var statusDetails = queryParams["status_details"].ToString();
-
-                var fallbackModel = new PaymentReturnModel
-                {
-                    IsSuccess = transactionStatus == "approved" || transactionStatus == "success" || transactionStatus == "completed",
-                    TransactionId = queryTid,
-                    PaymentMethod = paymentMethod,
-                    PaymentProcessor = paymentProcessor,
-                    Currency = currency,
-                    CardType = cardType,
-                    CardNumber = cardNumber,
-                    StatusCode = statusCode,
-                    StatusDetails = statusDetails,
-                    TransactionStatus = transactionStatus
-                };
-
-                _logger.LogInformation("Payment return processed - Status: {Status}, TID: {TID}, Method: {Method}", 
-                    transactionStatus, queryTid, paymentMethod);
-
-                if (fallbackModel.IsSuccess)
-                {
-                    return View("PaymentSuccess", fallbackModel);
-                }
-                else
-                {
-                    return View("PaymentFailure", fallbackModel);
+                    case PaymentStatus.Pending:
+                        return Json(new { status = "pending" });
+                    case PaymentStatus.Completed:
+                    case PaymentStatus.Failed:
+                        return Json(new { status = "completed" });
+                    case PaymentStatus.Timeout:
+                        return Json(new { status = "timeout" });
+                    default:
+                        return Json(new { status = "unknown" });
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing payment return");
-                
-                var errorModel = new PaymentReturnModel
-                {
-                    IsSuccess = false,
-                    StatusDetails = "An error occurred while processing the payment return"
-                };
-                
-                return View("PaymentFailure", errorModel);
+                _logger.LogError(ex, "Error checking payment status for OrderId {OrderId}", orderId);
+                return Json(new { status = "error" });
             }
         }
 
-        [HttpPost]
-        [Route("Payment/Callback")]
-        public async Task<IActionResult> Callback()
+        [HttpGet]
+        public IActionResult Result(string orderId)
         {
             try
             {
-                _logger.LogInformation("Praxis notification callback received");
+                var state = _paymentStateService.GetPaymentState(orderId);
                 
-                Request.EnableBuffering();
-                using var reader = new StreamReader(Request.Body);
-                var jsonBody = await reader.ReadToEndAsync();
-                
-                _logger.LogInformation("Praxis callback payload: {JsonBody}", jsonBody);
-                
-                if (string.IsNullOrEmpty(jsonBody))
+                if (state == null)
                 {
-                    _logger.LogWarning("Empty callback payload received");
-                    return Ok("Empty payload");
+                    return View("PaymentFailure", new PaymentReturnModel
+                    {
+                        IsSuccess = false,
+                        StatusDetails = "No callback received from Praxis!"
+                    });
                 }
 
-                try
+                if (state.Status == PaymentStatus.Completed && state.CallbackData != null)
                 {
-                    var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody);
+                    var transaction = state.CallbackData.transaction;
+                    var session = state.CallbackData.session;
                     
-                    if (callbackData?.transaction != null)
+                    var model = new PaymentReturnModel
                     {
-                        _logger.LogInformation("Praxis callback processed - Status: {Status}, TID: {TID}, Amount: {Amount}", 
-                            callbackData.transaction.transaction_status, 
-                            callbackData.transaction.tid,
-                            callbackData.transaction.amount);
+                        IsSuccess = transaction.transaction_status == "approved",
+                        TransactionId = transaction.transaction_id,
+                        PaymentMethod = transaction.payment_method,
+                        PaymentProcessor = transaction.payment_processor,
+                        Currency = transaction.currency,
+                        Amount = (transaction.amount / 100.0m).ToString("F2"),
+                        CardType = transaction.card?.card_type,
+                        CardNumber = transaction.card?.card_number,
+                        StatusCode = transaction.status_code,
+                        StatusDetails = transaction.status_details,
+                        TransactionStatus = transaction.transaction_status,
+                        OrderId = session.order_id
+                    };
 
-                        // Store transaction details for later retrieval
-                        // In a real application, you would save this to a database
-                        TempData[$"transaction_{callbackData.transaction.tid}"] = JsonSerializer.Serialize(callbackData.transaction);
-                        
-                        return Ok("Callback processed successfully");
+                    if (model.IsSuccess)
+                    {
+                        return View("PaymentSuccess", model);
                     }
                     else
                     {
-                        _logger.LogWarning("Invalid callback data structure");
-                        return Ok("Invalid callback data");
+                        return View("PaymentFailure", model);
                     }
                 }
-                catch (JsonException ex)
+                else
                 {
-                    _logger.LogError(ex, "Failed to parse Praxis callback JSON");
-                    return Ok("JSON parsing failed");
+                    return View("PaymentFailure", new PaymentReturnModel
+                    {
+                        IsSuccess = false,
+                        StatusDetails = state.ErrorMessage ?? "No callback received from Praxis!"
+                    });
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing Praxis callback");
-                return Ok("Error processing callback");
+                _logger.LogError(ex, "Error processing payment result for OrderId {OrderId}", orderId);
+                return View("PaymentFailure", new PaymentReturnModel
+                {
+                    IsSuccess = false,
+                    StatusDetails = "An error occurred while processing the payment result"
+                });
             }
+        }
+
+        [HttpGet]
+        public IActionResult Timeout(string orderId)
+        {
+            _logger.LogWarning("Payment timeout for OrderId {OrderId}", orderId);
+            
+            return View("PaymentFailure", new PaymentReturnModel
+            {
+                IsSuccess = false,
+                StatusDetails = "Payment processing timed out. No callback received from Praxis!"
+            });
+        }
+
+        [HttpGet]
+        public IActionResult Error(string orderId)
+        {
+            _logger.LogError("Payment error for OrderId {OrderId}", orderId);
+            
+            return View("PaymentFailure", new PaymentReturnModel
+            {
+                IsSuccess = false,
+                StatusDetails = "An error occurred during payment processing"
+            });
         }
 
         public IActionResult Success()

@@ -8,7 +8,7 @@ namespace WebCashier.Services
 {
     public interface IPraxisService
     {
-        Task<PraxisResponse> ProcessPaymentAsync(PaymentModel payment, string clientIp);
+        Task<PraxisResponse> ProcessPaymentAsync(PaymentModel payment, string clientIp, string orderId);
     }
 
     public class PraxisService : IPraxisService
@@ -24,14 +24,14 @@ namespace WebCashier.Services
             _logger = logger;
         }
 
-        public async Task<PraxisResponse> ProcessPaymentAsync(PaymentModel payment, string clientIp)
+        public async Task<PraxisResponse> ProcessPaymentAsync(PaymentModel payment, string clientIp, string orderId)
         {
             try
             {
                 // Generate dynamic values
                 var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 var cid = new Random().Next(1, int.MaxValue).ToString();
-                var orderId = new Random().Next(1, int.MaxValue).ToString();
+                // Use the provided orderId instead of generating a new one
 
                 // Prepare secret key and IV
                 var secretKey = PadLeft(_config.MerchantSecret, 32, '0');
