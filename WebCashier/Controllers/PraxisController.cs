@@ -23,14 +23,20 @@ namespace WebCashier.Controllers
         {
             try
             {
+                _logger.LogInformation("=== PRAXIS NOTIFICATION RECEIVED ===");
+                _logger.LogInformation("Request Method: {Method}", Request.Method);
+                _logger.LogInformation("Request Content-Type: {ContentType}", Request.ContentType);
+                _logger.LogInformation("Request Headers: {Headers}", 
+                    string.Join(", ", Request.Headers.Select(h => $"{h.Key}: {h.Value}")));
+
                 var requestBody = await new StreamReader(Request.Body).ReadToEndAsync();
                 
-                _logger.LogInformation("Received Praxis notification: {RequestBody}", requestBody);
+                _logger.LogInformation("Praxis notification payload: {RequestBody}", requestBody);
 
                 if (string.IsNullOrEmpty(requestBody))
                 {
                     _logger.LogWarning("Empty notification payload received");
-                    return Ok("Empty payload");
+                    return Ok("Empty payload received");
                 }
 
                 try
@@ -41,31 +47,41 @@ namespace WebCashier.Controllers
                     {
                         var orderId = callbackData.session.order_id;
                         
-                        _logger.LogInformation("Processing Praxis callback for OrderId: {OrderId}, Status: {Status}", 
-                            orderId, callbackData.transaction?.transaction_status);
+                        _logger.LogInformation("Processing Praxis callback for OrderId: {OrderId}, Status: {Status}, TID: {TID}", 
+                            orderId, callbackData.transaction?.transaction_status, callbackData.transaction?.tid);
 
                         // Update payment state with callback data
                         _paymentStateService.SetPaymentCompleted(orderId, callbackData);
+                        
+                        _logger.LogInformation("Payment state updated successfully for OrderId: {OrderId}", orderId);
                         
                         return Ok(new { status = "processed", order_id = orderId });
                     }
                     else
                     {
                         _logger.LogWarning("Invalid callback data structure - missing order_id");
-                        return Ok("Invalid callback data");
+                        _logger.LogWarning("Callback data: {CallbackData}", requestBody);
+                        return Ok("Invalid callback data - missing order_id");
                     }
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogError(ex, "Failed to parse Praxis callback JSON");
+                    _logger.LogError(ex, "Failed to parse Praxis callback JSON: {JsonBody}", requestBody);
                     return Ok("JSON parsing failed");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing Praxis notification");
-                return StatusCode(500, new { error = "Internal server error" });
+                return Ok("Error processing notification");
             }
+        }
+
+        [HttpGet("test")]
+        public IActionResult Test()
+        {
+            _logger.LogInformation("Praxis API test endpoint called");
+            return Ok(new { status = "Praxis API is working", timestamp = DateTime.UtcNow });
         }
     }
 }
