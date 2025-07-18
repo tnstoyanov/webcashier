@@ -9,6 +9,7 @@ namespace WebCashier.Services
         void SetPaymentCompleted(string orderId, PraxisCallbackModel callbackData);
         PaymentState? GetPaymentState(string orderId);
         void SetPaymentFailed(string orderId, string reason);
+        PaymentState? GetMostRecentCompletedPayment();
     }
 
     public class PaymentStateService : IPaymentStateService
@@ -82,6 +83,16 @@ namespace WebCashier.Services
         {
             _paymentStates.TryGetValue(orderId, out var state);
             return state;
+        }
+
+        public PaymentState? GetMostRecentCompletedPayment()
+        {
+            var completedPayments = _paymentStates.Values
+                .Where(p => p.Status == PaymentStatus.Completed && p.CompletedAt.HasValue)
+                .OrderByDescending(p => p.CompletedAt.Value)
+                .FirstOrDefault();
+
+            return completedPayments;
         }
     }
 

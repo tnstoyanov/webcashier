@@ -256,6 +256,15 @@ namespace WebCashier.Controllers
                     return RedirectToAction("Result", new { orderId });
                 }
 
+                // Check for most recent completed payment (within last 5 minutes)
+                var recentPayment = _paymentStateService.GetMostRecentCompletedPayment();
+                if (recentPayment != null && recentPayment.CompletedAt.HasValue && 
+                    DateTime.UtcNow - recentPayment.CompletedAt.Value < TimeSpan.FromMinutes(5))
+                {
+                    _logger.LogInformation("Found recent completed payment for OrderId {OrderId}, redirecting to result", recentPayment.OrderId);
+                    return RedirectToAction("Result", new { orderId = recentPayment.OrderId });
+                }
+
                 // Fallback - show error
                 return View("PaymentFailure", new PaymentReturnModel
                 {
