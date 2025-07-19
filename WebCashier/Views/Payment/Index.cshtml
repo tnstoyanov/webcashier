@@ -198,6 +198,9 @@
             
             // Detect card brand and update styling
             updateCardBrand(value);
+            
+            // Validate card number
+            validateCardNumber();
         });
 
         // Format expiration date and update widget
@@ -214,6 +217,9 @@
             } else {
                 expiryDisplay.textContent = 'MM/YY';
             }
+            
+            // Validate expiration date
+            validateExpirationDate();
         });
 
         // Update name on card - only show user input
@@ -224,6 +230,9 @@
             } else {
                 nameDisplay.textContent = 'YOUR NAME HERE';
             }
+            
+            // Validate name on card
+            validateNameOnCard();
         });
 
         // Update CVC - only show user input
@@ -234,6 +243,9 @@
             } else {
                 cvcDisplay.textContent = '•••';
             }
+            
+            // Validate CVV
+            validateCVV();
         });
 
         // Card brand detection and styling
@@ -304,7 +316,7 @@
         // Validation functions
         function validateAmount() {
             const amountInput = document.querySelector('[name="Amount"]');
-            const amountError = amountInput.nextElementSibling;
+            const amountError = amountInput.parentElement.querySelector('.text-danger');
             const value = parseFloat(amountInput.value);
             
             if (!amountInput.value || value <= 0) {
@@ -316,7 +328,7 @@
 
         function validateNameOnCard() {
             const nameInput = document.querySelector('[name="NameOnCard"]');
-            const nameError = nameInput.nextElementSibling;
+            const nameError = nameInput.parentElement.querySelector('.text-danger');
             
             if (!nameInput.value.trim()) {
                 nameError.style.display = 'block';
@@ -327,7 +339,7 @@
 
         function validateCardNumber() {
             const cardInput = document.querySelector('[name="CardNumber"]');
-            const cardError = cardInput.nextElementSibling;
+            const cardError = cardInput.parentElement.querySelector('.text-danger');
             const value = cardInput.value.replace(/\s/g, '');
             
             if (!value || value.length < 13) {
@@ -339,7 +351,7 @@
 
         function validateExpirationDate() {
             const expiryInput = document.querySelector('[name="ExpirationDate"]');
-            const expiryError = expiryInput.nextElementSibling;
+            const expiryError = expiryInput.parentElement.querySelector('.text-danger');
             const value = expiryInput.value;
             
             if (!value || value.length < 5) {
@@ -351,7 +363,7 @@
 
         function validateCVV() {
             const cvvInput = document.querySelector('[name="CVV"]');
-            const cvvError = cvvInput.nextElementSibling;
+            const cvvError = cvvInput.parentElement.querySelector('.text-danger');
             const value = cvvInput.value;
             
             if (!value || value.length < 3) {
@@ -361,18 +373,39 @@
             }
         }
 
-        // Add event listeners for real-time validation
-        document.querySelector('[name="Amount"]').addEventListener('input', validateAmount);
-        document.querySelector('[name="NameOnCard"]').addEventListener('input', validateNameOnCard);
-        document.querySelector('[name="CardNumber"]').addEventListener('input', validateCardNumber);
-        document.querySelector('[name="ExpirationDate"]').addEventListener('input', validateExpirationDate);
-        document.querySelector('[name="CVV"]').addEventListener('input', validateCVV);
-
-        // Hide all validation messages on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        // Initialize validation on page load
+        function initializeValidation() {
+            // Hide all validation messages initially
             document.querySelectorAll('.text-danger').forEach(error => {
                 error.style.display = 'none';
             });
-        });
+
+            // Add event listeners for real-time validation
+            const amountInput = document.querySelector('[name="Amount"]');
+            const nameInput = document.querySelector('[name="NameOnCard"]');
+            const cardInput = document.querySelector('[name="CardNumber"]');
+            const expiryInput = document.querySelector('[name="ExpirationDate"]');
+            const cvvInput = document.querySelector('[name="CVV"]');
+
+            if (amountInput) amountInput.addEventListener('input', validateAmount);
+            if (nameInput) nameInput.addEventListener('input', validateNameOnCard);
+            if (cardInput) cardInput.addEventListener('input', validateCardNumber);
+            if (expiryInput) expiryInput.addEventListener('input', validateExpirationDate);
+            if (cvvInput) cvvInput.addEventListener('input', validateCVV);
+
+            // Also validate on blur (when user leaves the field)
+            if (amountInput) amountInput.addEventListener('blur', validateAmount);
+            if (nameInput) nameInput.addEventListener('blur', validateNameOnCard);
+            if (cardInput) cardInput.addEventListener('blur', validateCardNumber);
+            if (expiryInput) expiryInput.addEventListener('blur', validateExpirationDate);
+            if (cvvInput) cvvInput.addEventListener('blur', validateCVV);
+        }
+
+        // Wait for DOM to be fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeValidation);
+        } else {
+            initializeValidation();
+        }
     </script>
 }
