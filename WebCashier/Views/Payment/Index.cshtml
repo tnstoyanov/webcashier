@@ -159,6 +159,17 @@
     </div>
 </div>
 
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay" style="display: none;">
+    <div class="loading-content">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+        </div>
+        <h3 class="loading-title">Transaction in progress</h3>
+        <p class="loading-message">Please wait while we process your payment...</p>
+    </div>
+</div>
+
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
@@ -448,5 +459,27 @@
         } else {
             initializeValidation();
         }
+
+        // Form submission handler for loading overlay
+        document.querySelector('.payment-form').addEventListener('submit', function(e) {
+            // Check if form is valid before showing loading overlay
+            const form = e.target;
+            const isValid = form.checkValidity();
+            
+            if (isValid) {
+                // Show loading overlay
+                const loadingOverlay = document.getElementById('loading-overlay');
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'flex';
+                }
+                
+                // Disable submit button to prevent double submission
+                const submitBtn = form.querySelector('.deposit-btn');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'PROCESSING...';
+                }
+            }
+        });
     </script>
 }
