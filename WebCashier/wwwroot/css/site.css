@@ -83,24 +83,46 @@ body {
   margin-bottom: 2rem;
 }
 
-/* Main payment layout - form on left, widget on right */
+/* Main payment layout - single column with carousel */
 .payment-layout {
+  display: block;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.payment-form {
+  width: 100%;
+}
+
+/* Payment method carousel */
+.method-carousel {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  justify-content: center;
+}
+
+/* Payment forms section */
+.payment-forms {
+  margin-bottom: 2rem;
+}
+
+/* Card form layout - form left, widget right */
+.card-form-layout {
   display: grid;
   grid-template-columns: 1fr 400px;
   gap: 3rem;
   align-items: start;
 }
 
-.payment-form {
-  min-width: 0; /* Prevent grid overflow */
+.form-left {
+  min-width: 0;
 }
 
-.widget-container {
+.form-right {
   position: sticky;
   top: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
 }
 
 .payment-methods {
@@ -111,16 +133,18 @@ body {
   color: #374151;
   margin-bottom: 1rem;
   font-weight: 500;
+  text-align: center;
 }
 
-.method-options {
+.method-carousel {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 2rem;
+  justify-content: center;
 }
 
-.method-options input[type="radio"] {
+.method-carousel input[type="radio"] {
   display: none;
 }
 
@@ -256,23 +280,34 @@ body {
     font-size: 2rem;
   }
   
+  /* Stack carousel items and form elements vertically on mobile */
+  .method-carousel {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .method-option {
+    width: 100%;
+    max-width: 280px;
+    min-height: 60px;
+    flex-direction: row;
+    gap: 1rem;
+  }
+  
   /* Stack form and widget vertically on mobile */
-  .payment-layout {
+  .card-form-layout {
     grid-template-columns: 1fr;
     gap: 2rem;
   }
   
-  .widget-container {
+  .form-right {
     position: static;
     order: -1; /* Show widget first on mobile */
   }
   
   .form-row {
     flex-direction: column;
-  }
-  
-  .method-options {
-    justify-content: center;
   }
   
   .card-background {
@@ -285,8 +320,7 @@ body {
   
   .card-number {
     font-size: 16px;
-    letter-spacing: 1px;
-    word-spacing: 4px;
+    letter-spacing: 0.5px;
   }
   
   .card-name, .card-expiry, .card-cvc {
@@ -304,7 +338,7 @@ body {
 
 /* Larger screens - ensure proper spacing */
 @media (min-width: 1200px) {
-  .payment-layout {
+  .card-form-layout {
     grid-template-columns: 2fr 420px;
     gap: 4rem;
   }
@@ -383,11 +417,11 @@ body {
 .card-number {
   font-size: 20px;
   font-weight: 600;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   margin: 20px 0;
-  word-spacing: 8px;
   line-height: 1.2;
+  font-family: 'Courier New', monospace;
 }
 
 .card-details {

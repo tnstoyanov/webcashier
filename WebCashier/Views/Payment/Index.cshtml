@@ -23,7 +23,7 @@
                 
                 <div class="payment-methods">
                     <p class="method-label">Choose a payment method:</p>
-                    <div class="method-options">
+                    <div class="method-carousel">
                         <input type="radio" id="card" name="PaymentMethod" value="card" checked />
                         <label for="card" class="method-option active">
                             <div class="card-icon">
@@ -66,51 +66,91 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group amount-group">
-                        <label asp-for="Amount">Amount</label>
-                        <input asp-for="Amount" type="number" step="0.01" class="form-control" placeholder="0" />
-                        <span asp-validation-for="Amount" class="text-danger"></span>
-                    </div>
-                    <div class="form-group currency-group">
-                        <label asp-for="Currency">Currency</label>
-                        <select asp-for="Currency" class="form-control">
-                            <option value="USD">USD</option>
-                            <option value="EUR">EUR</option>
-                            <option value="GBP">GBP</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="card-details" class="card-details">
-                    <div class="form-group">
-                        <label asp-for="NameOnCard">Name on card</label>
-                        <input asp-for="NameOnCard" class="form-control" placeholder="Enter your name" />
-                        <span asp-validation-for="NameOnCard" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-group">
-                        <label asp-for="CardNumber">Card number</label>
-                        <input asp-for="CardNumber" class="form-control" placeholder="•••• •••• •••• ••••" maxlength="19" />
-                        <span asp-validation-for="CardNumber" class="text-danger"></span>
-                    </div>
-
+                <div class="payment-forms">
                     <div class="form-row">
-                        <div class="form-group">
-                            <label asp-for="ExpirationDate">Expiration Date</label>
-                            <input asp-for="ExpirationDate" class="form-control" placeholder="MM/YY" maxlength="5" />
-                            <span asp-validation-for="ExpirationDate" class="text-danger"></span>
+                        <div class="form-group amount-group">
+                            <label asp-for="Amount">Amount</label>
+                            <input asp-for="Amount" type="number" step="0.01" class="form-control" placeholder="0" />
+                            <span asp-validation-for="Amount" class="text-danger"></span>
                         </div>
-                        <div class="form-group">
-                            <label asp-for="CVV">CVV</label>
-                            <input asp-for="CVV" class="form-control" placeholder="123" maxlength="4" />
-                            <span asp-validation-for="CVV" class="text-danger"></span>
+                        <div class="form-group currency-group">
+                            <label asp-for="Currency">Currency</label>
+                            <select asp-for="Currency" class="form-control">
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label asp-for="PromotionCode">Promotion code</label>
-                        <input asp-for="PromotionCode" class="form-control" placeholder="Enter code (optional)" />
+                    <div id="card-details" class="card-details">
+                        <div class="card-form-layout">
+                            <div class="form-left">
+                                <div class="form-group">
+                                    <label asp-for="NameOnCard">Name on card</label>
+                                    <input asp-for="NameOnCard" class="form-control" placeholder="Enter your name" />
+                                    <span asp-validation-for="NameOnCard" class="text-danger"></span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label asp-for="CardNumber">Card number</label>
+                                    <input asp-for="CardNumber" class="form-control" placeholder="•••• •••• •••• ••••" maxlength="19" />
+                                    <span asp-validation-for="CardNumber" class="text-danger"></span>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label asp-for="ExpirationDate">Expiration Date</label>
+                                        <input asp-for="ExpirationDate" class="form-control" placeholder="MM/YY" maxlength="5" />
+                                        <span asp-validation-for="ExpirationDate" class="text-danger"></span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label asp-for="CVV">CVV</label>
+                                        <input asp-for="CVV" class="form-control" placeholder="123" maxlength="4" />
+                                        <span asp-validation-for="CVV" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label asp-for="PromotionCode">Promotion code</label>
+                                    <input asp-for="PromotionCode" class="form-control" placeholder="Enter code (optional)" />
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="interactive-credit-card">
+                                    <div class="card-background">
+                                        <div class="card-chip"></div>
+                                        <div class="card-number" id="card-display">•••• •••• •••• ••••</div>
+                                        <div class="card-details">
+                                            <div class="card-holder">
+                                                <div class="card-label">CARDHOLDER NAME</div>
+                                                <div class="card-name" id="name-display">YOUR NAME HERE</div>
+                                            </div>
+                                            <div class="card-expiry-section">
+                                                <div class="card-label">EXPIRES</div>
+                                                <div class="card-expiry" id="expiry-display">MM/YY</div>
+                                            </div>
+                                            <div class="card-cvc-section">
+                                                <div class="card-label">CVC</div>
+                                                <div class="card-cvc" id="cvc-display">•••</div>
+                                            </div>
+                                        </div>
+                                        <div class="card-brand" id="card-brand"></div>
+                                    </div>
+                                </div>
+                                <div class="security-badges">
+                                    <p>Guaranteed safe & secure checkout</p>
+                                    <div class="badges">
+                                        <span class="badge-item">🔒 SSL</span>
+                                        <span class="badge-item">🛡️ Secure</span>
+                                        <span class="badge-item">💳 VISA</span>
+                                        <span class="badge-item">💳 MC</span>
+                                        <span class="badge-item">💳 AMEX</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -118,40 +158,6 @@
 
                 <button type="submit" class="deposit-btn">DEPOSIT</button>
             </form>
-
-            <div class="widget-container">
-                <div class="interactive-credit-card">
-                    <div class="card-background">
-                        <div class="card-chip"></div>
-                        <div class="card-number" id="card-display">•••• •••• •••• ••••</div>
-                        <div class="card-details">
-                            <div class="card-holder">
-                                <div class="card-label">CARDHOLDER NAME</div>
-                                <div class="card-name" id="name-display">YOUR NAME HERE</div>
-                            </div>
-                            <div class="card-expiry-section">
-                                <div class="card-label">EXPIRES</div>
-                                <div class="card-expiry" id="expiry-display">MM/YY</div>
-                            </div>
-                            <div class="card-cvc-section">
-                                <div class="card-label">CVC</div>
-                                <div class="card-cvc" id="cvc-display">•••</div>
-                            </div>
-                        </div>
-                        <div class="card-brand" id="card-brand"></div>
-                    </div>
-                </div>
-                <div class="security-badges">
-                    <p>Guaranteed safe & secure checkout</p>
-                    <div class="badges">
-                        <span class="badge-item">🔒 SSL</span>
-                        <span class="badge-item">🛡️ Secure</span>
-                        <span class="badge-item">💳 VISA</span>
-                        <span class="badge-item">💳 MC</span>
-                        <span class="badge-item">💳 AMEX</span>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -175,13 +181,19 @@
             
             // Update card display - only show user input
             if (value.length > 0) {
-                let displayValue = formattedValue;
-                // Pad with dots to show card format
-                while (displayValue.replace(/\s/g, '').length < 16) {
-                    displayValue += '•';
+                // Create display value with proper spacing
+                let displayValue = '';
+                for (let i = 0; i < 16; i++) {
+                    if (i < value.length) {
+                        displayValue += value[i];
+                    } else {
+                        displayValue += '•';
+                    }
+                    // Add space after every 4 digits except the last group
+                    if ((i + 1) % 4 === 0 && i < 15) {
+                        displayValue += ' ';
+                    }
                 }
-                // Format with spaces
-                displayValue = displayValue.match(/.{1,4}/g)?.join(' ') || displayValue;
                 cardDisplay.textContent = displayValue;
             } else {
                 cardDisplay.textContent = '•••• •••• •••• ••••';
@@ -267,13 +279,10 @@
                 this.nextElementSibling.classList.add('active');
                 
                 const cardDetails = document.getElementById('card-details');
-                const widgetContainer = document.querySelector('.widget-container');
                 if (this.value === 'card') {
                     cardDetails.style.display = 'block';
-                    widgetContainer.style.display = 'block';
                 } else {
                     cardDetails.style.display = 'none';
-                    widgetContainer.style.display = 'none';
                 }
             });
         });
