@@ -199,8 +199,8 @@
             // Detect card brand and update styling
             updateCardBrand(value);
             
-            // Validate card number
-            validateCardNumber();
+            // Validate card number with delay to avoid jQuery validation conflicts
+            setTimeout(() => validateCardNumber(), 150);
         });
 
         // Format expiration date and update widget
@@ -218,8 +218,8 @@
                 expiryDisplay.textContent = 'MM/YY';
             }
             
-            // Validate expiration date
-            validateExpirationDate();
+            // Validate expiration date with delay
+            setTimeout(() => validateExpirationDate(), 150);
         });
 
         // Update name on card - only show user input
@@ -231,8 +231,8 @@
                 nameDisplay.textContent = 'YOUR NAME HERE';
             }
             
-            // Validate name on card
-            validateNameOnCard();
+            // Validate name on card with delay
+            setTimeout(() => validateNameOnCard(), 150);
         });
 
         // Update CVC - only show user input
@@ -244,8 +244,8 @@
                 cvcDisplay.textContent = '•••';
             }
             
-            // Validate CVV
-            validateCVV();
+            // Validate CVV with delay
+            setTimeout(() => validateCVV(), 150);
         });
 
         // Card brand detection and styling
@@ -320,9 +320,9 @@
             const value = parseFloat(amountInput.value);
             
             if (!amountInput.value || value <= 0) {
-                amountError.style.display = 'block';
+                if (amountError) amountError.style.display = 'block';
             } else {
-                amountError.style.display = 'none';
+                if (amountError) amountError.style.display = 'none';
             }
         }
 
@@ -331,9 +331,9 @@
             const nameError = nameInput.parentElement.querySelector('.text-danger');
             
             if (!nameInput.value.trim()) {
-                nameError.style.display = 'block';
+                if (nameError) nameError.style.display = 'block';
             } else {
-                nameError.style.display = 'none';
+                if (nameError) nameError.style.display = 'none';
             }
         }
 
@@ -343,9 +343,9 @@
             const value = cardInput.value.replace(/\s/g, '');
             
             if (!value || value.length < 13) {
-                cardError.style.display = 'block';
+                if (cardError) cardError.style.display = 'block';
             } else {
-                cardError.style.display = 'none';
+                if (cardError) cardError.style.display = 'none';
             }
         }
 
@@ -355,9 +355,9 @@
             const value = expiryInput.value;
             
             if (!value || value.length < 5) {
-                expiryError.style.display = 'block';
+                if (expiryError) expiryError.style.display = 'block';
             } else {
-                expiryError.style.display = 'none';
+                if (expiryError) expiryError.style.display = 'none';
             }
         }
 
@@ -367,9 +367,9 @@
             const value = cvvInput.value;
             
             if (!value || value.length < 3) {
-                cvvError.style.display = 'block';
+                if (cvvError) cvvError.style.display = 'block';
             } else {
-                cvvError.style.display = 'none';
+                if (cvvError) cvvError.style.display = 'none';
             }
         }
 
@@ -377,28 +377,37 @@
         function initializeValidation() {
             // Hide all validation messages initially
             document.querySelectorAll('.text-danger').forEach(error => {
-                error.style.display = 'none';
+                if (error) error.style.display = 'none';
             });
 
-            // Add event listeners for real-time validation
+            // Add event listeners for real-time validation with debouncing
             const amountInput = document.querySelector('[name="Amount"]');
             const nameInput = document.querySelector('[name="NameOnCard"]');
             const cardInput = document.querySelector('[name="CardNumber"]');
             const expiryInput = document.querySelector('[name="ExpirationDate"]');
             const cvvInput = document.querySelector('[name="CVV"]');
 
-            if (amountInput) amountInput.addEventListener('input', validateAmount);
-            if (nameInput) nameInput.addEventListener('input', validateNameOnCard);
-            if (cardInput) cardInput.addEventListener('input', validateCardNumber);
-            if (expiryInput) expiryInput.addEventListener('input', validateExpirationDate);
-            if (cvvInput) cvvInput.addEventListener('input', validateCVV);
-
-            // Also validate on blur (when user leaves the field)
-            if (amountInput) amountInput.addEventListener('blur', validateAmount);
-            if (nameInput) nameInput.addEventListener('blur', validateNameOnCard);
-            if (cardInput) cardInput.addEventListener('blur', validateCardNumber);
-            if (expiryInput) expiryInput.addEventListener('blur', validateExpirationDate);
-            if (cvvInput) cvvInput.addEventListener('blur', validateCVV);
+            // Use setTimeout to prevent conflicts with jQuery validation
+            if (amountInput) {
+                amountInput.addEventListener('input', () => setTimeout(validateAmount, 100));
+                amountInput.addEventListener('blur', () => setTimeout(validateAmount, 100));
+            }
+            if (nameInput) {
+                nameInput.addEventListener('input', () => setTimeout(validateNameOnCard, 100));
+                nameInput.addEventListener('blur', () => setTimeout(validateNameOnCard, 100));
+            }
+            if (cardInput) {
+                cardInput.addEventListener('input', () => setTimeout(validateCardNumber, 100));
+                cardInput.addEventListener('blur', () => setTimeout(validateCardNumber, 100));
+            }
+            if (expiryInput) {
+                expiryInput.addEventListener('input', () => setTimeout(validateExpirationDate, 100));
+                expiryInput.addEventListener('blur', () => setTimeout(validateExpirationDate, 100));
+            }
+            if (cvvInput) {
+                cvvInput.addEventListener('input', () => setTimeout(validateCVV, 100));
+                cvvInput.addEventListener('blur', () => setTimeout(validateCVV, 100));
+            }
         }
 
         // Wait for DOM to be fully loaded
