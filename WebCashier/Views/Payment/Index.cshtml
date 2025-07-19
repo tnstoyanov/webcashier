@@ -295,6 +295,83 @@
                 document.querySelectorAll('.amount-btn').forEach(btn => btn.classList.remove('active'));
                 // Add active class to clicked button
                 this.classList.add('active');
+                
+                // Validate amount field after setting value
+                validateAmount();
+            });
+        });
+
+        // Validation functions
+        function validateAmount() {
+            const amountInput = document.querySelector('[name="Amount"]');
+            const amountError = amountInput.nextElementSibling;
+            const value = parseFloat(amountInput.value);
+            
+            if (!amountInput.value || value <= 0) {
+                amountError.style.display = 'block';
+            } else {
+                amountError.style.display = 'none';
+            }
+        }
+
+        function validateNameOnCard() {
+            const nameInput = document.querySelector('[name="NameOnCard"]');
+            const nameError = nameInput.nextElementSibling;
+            
+            if (!nameInput.value.trim()) {
+                nameError.style.display = 'block';
+            } else {
+                nameError.style.display = 'none';
+            }
+        }
+
+        function validateCardNumber() {
+            const cardInput = document.querySelector('[name="CardNumber"]');
+            const cardError = cardInput.nextElementSibling;
+            const value = cardInput.value.replace(/\s/g, '');
+            
+            if (!value || value.length < 13) {
+                cardError.style.display = 'block';
+            } else {
+                cardError.style.display = 'none';
+            }
+        }
+
+        function validateExpirationDate() {
+            const expiryInput = document.querySelector('[name="ExpirationDate"]');
+            const expiryError = expiryInput.nextElementSibling;
+            const value = expiryInput.value;
+            
+            if (!value || value.length < 5) {
+                expiryError.style.display = 'block';
+            } else {
+                expiryError.style.display = 'none';
+            }
+        }
+
+        function validateCVV() {
+            const cvvInput = document.querySelector('[name="CVV"]');
+            const cvvError = cvvInput.nextElementSibling;
+            const value = cvvInput.value;
+            
+            if (!value || value.length < 3) {
+                cvvError.style.display = 'block';
+            } else {
+                cvvError.style.display = 'none';
+            }
+        }
+
+        // Add event listeners for real-time validation
+        document.querySelector('[name="Amount"]').addEventListener('input', validateAmount);
+        document.querySelector('[name="NameOnCard"]').addEventListener('input', validateNameOnCard);
+        document.querySelector('[name="CardNumber"]').addEventListener('input', validateCardNumber);
+        document.querySelector('[name="ExpirationDate"]').addEventListener('input', validateExpirationDate);
+        document.querySelector('[name="CVV"]').addEventListener('input', validateCVV);
+
+        // Hide all validation messages on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.text-danger').forEach(error => {
+                error.style.display = 'none';
             });
         });
     </script>

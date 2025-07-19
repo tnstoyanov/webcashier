@@ -199,21 +199,21 @@ body {
 }
 
 .amount-btn {
-  background: #f8f9fa;
-  border: 2px solid #e5e7eb;
+  background: #60a5fa;
+  border: 2px solid #60a5fa;
   border-radius: 8px;
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   font-weight: 500;
-  color: #374151;
+  color: white;
   cursor: pointer;
   transition: all 0.2s;
   min-width: 80px;
 }
 
 .amount-btn:hover {
-  border-color: #22c55e;
-  background: #f0fdf4;
+  background: #3b82f6;
+  border-color: #3b82f6;
 }
 
 .amount-btn.active {
