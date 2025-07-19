@@ -79,4 +79,12 @@ namespace WebCashier.Models.Praxis
         public string card_issuer_name { get; set; }
         public string card_issuer_country { get; set; }
     }
+
+    public class PraxisCallbackResponse
+    {
+        public int status { get; set; }
+        public string description { get; set; }
+        public string version { get; set; }
+        public long timestamp { get; set; }
+    }
 }
