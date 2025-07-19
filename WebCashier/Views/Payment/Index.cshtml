@@ -309,7 +309,7 @@
             if (cardNumber.startsWith('4')) {
                 cardBrand.textContent = 'VISA';
                 cardBackground.classList.add('visa-card');
-            } else if (firstTwoDigits >= '51' && firstTwoDigits <= '55') {
+            } else if (isMastercard(cardNumber)) {
                 cardBrand.textContent = 'MASTERCARD';
                 cardBackground.classList.add('mastercard-card');
             } else if (cardNumber.startsWith('34') || cardNumber.startsWith('37')) {
@@ -322,6 +322,24 @@
                 cardBrand.textContent = '';
                 cardBackground.classList.add('default-card');
             }
+        }
+
+        // Enhanced Mastercard detection function
+        function isMastercard(cardNumber) {
+            const firstTwoDigits = parseInt(cardNumber.substring(0, 2));
+            const firstFourDigits = parseInt(cardNumber.substring(0, 4));
+            
+            // Original Mastercard range: 51-55
+            if (firstTwoDigits >= 51 && firstTwoDigits <= 55) {
+                return true;
+            }
+            
+            // New Mastercard 2-series range: 2221-2720
+            if (firstFourDigits >= 2221 && firstFourDigits <= 2720) {
+                return true;
+            }
+            
+            return false;
         }
 
         // Toggle payment method details
