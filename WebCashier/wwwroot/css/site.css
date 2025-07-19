@@ -23,7 +23,7 @@ body {
 
 /* Payment Form Styles */
 .payment-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
   background: #f8f9fa;
@@ -66,7 +66,6 @@ body {
   padding: 3rem;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-width: 800px;
   margin: 0 auto;
 }
 
@@ -82,6 +81,26 @@ body {
   color: #6b7280;
   text-align: center;
   margin-bottom: 2rem;
+}
+
+/* Main payment layout - form on left, widget on right */
+.payment-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 3rem;
+  align-items: start;
+}
+
+.payment-form {
+  min-width: 0; /* Prevent grid overflow */
+}
+
+.widget-container {
+  position: sticky;
+  top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .payment-methods {
@@ -192,75 +211,6 @@ body {
   margin-bottom: 2rem;
 }
 
-.card-preview {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 2rem;
-}
-
-.credit-card {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  color: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  min-width: 280px;
-  position: relative;
-}
-
-.card-dots {
-  font-size: 1.2rem;
-  letter-spacing: 2px;
-  margin-bottom: 1rem;
-}
-
-.card-name {
-  font-weight: bold;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
-}
-
-.card-expiry {
-  font-size: 0.8rem;
-  position: absolute;
-  bottom: 1.5rem;
-  right: 1.5rem;
-}
-
-.security-badges {
-  text-align: center;
-}
-
-.security-badges p {
-  color: #6b7280;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
-}
-
-.badges {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.badges img {
-  height: 30px;
-  width: auto;
-}
-
-.badge-item {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  background: #f3f4f6;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  color: #374151;
-  margin: 0 0.25rem;
-}
-
 .currency-note {
   color: #9ca3af;
   font-size: 0.9rem;
@@ -306,6 +256,17 @@ body {
     font-size: 2rem;
   }
   
+  /* Stack form and widget vertically on mobile */
+  .payment-layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .widget-container {
+    position: static;
+    order: -1; /* Show widget first on mobile */
+  }
+  
   .form-row {
     flex-direction: column;
   }
@@ -314,28 +275,51 @@ body {
     justify-content: center;
   }
   
-  .card-preview {
-    flex-direction: column;
-    text-align: center;
+  .card-background {
+    width: 100%;
+    max-width: 320px;
+    height: 200px;
+    padding: 20px;
+    margin: 0 auto;
   }
   
-  .credit-card {
-    min-width: auto;
-    width: 100%;
-    max-width: 300px;
-    margin: 0 auto;
+  .card-number {
+    font-size: 16px;
+    letter-spacing: 1px;
+    word-spacing: 4px;
+  }
+  
+  .card-name, .card-expiry, .card-cvc {
+    font-size: 12px;
+  }
+  
+  .card-brand {
+    font-size: 14px;
+  }
+  
+  .interactive-credit-card {
+    max-width: 100%;
+  }
+}
+
+/* Larger screens - ensure proper spacing */
+@media (min-width: 1200px) {
+  .payment-layout {
+    grid-template-columns: 2fr 420px;
+    gap: 4rem;
   }
 }
 
 /* Interactive Credit Card Widget */
 .interactive-credit-card {
-  margin-right: 2rem;
+  width: 100%;
+  max-width: 380px;
 }
 
 .card-background {
-  width: 350px;
-  height: 220px;
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  width: 100%;
+  height: 240px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   border-radius: 16px;
   padding: 24px;
   color: white;
@@ -343,6 +327,10 @@ body {
   position: relative;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
 }
 
 .card-background:hover {
@@ -376,8 +364,8 @@ body {
   height: 35px;
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
   border-radius: 6px;
-  margin-bottom: 20px;
   position: relative;
+  margin-bottom: 10px;
 }
 
 .card-chip::before {
@@ -393,75 +381,104 @@ body {
 }
 
 .card-number {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
   letter-spacing: 2px;
-  margin-bottom: 20px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin: 20px 0;
+  word-spacing: 8px;
+  line-height: 1.2;
 }
 
 .card-details {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  margin-top: auto;
+  gap: 10px;
 }
 
-.card-holder, .card-expiry-section, .card-cvc-section {
+.card-holder {
+  flex: 2;
+  min-width: 0;
+}
+
+.card-expiry-section, .card-cvc-section {
   flex: 1;
+  min-width: 0;
+  text-align: center;
 }
 
 .card-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   opacity: 0.8;
   margin-bottom: 4px;
   letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
 .card-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
+  line-height: 1.2;
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
 }
 
 .card-expiry, .card-cvc {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 1px;
+  line-height: 1.2;
 }
 
 .card-brand {
   position: absolute;
   top: 24px;
   right: 24px;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 2px;
   opacity: 0.9;
+  text-align: right;
 }
 
-@media (max-width: 768px) {
-  .card-background {
-    width: 300px;
-    height: 190px;
-    padding: 20px;
-  }
-  
-  .card-number {
-    font-size: 18px;
-  }
-  
-  .card-name, .card-expiry, .card-cvc {
-    font-size: 14px;
-  }
-  
-  .card-brand {
-    font-size: 16px;
-  }
-  
-  .interactive-credit-card {
-    margin-right: 0;
-    margin-bottom: 1rem;
-  }
+.security-badges {
+  text-align: center;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.security-badges p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.badge-item {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #374151;
+  margin: 0 0.25rem;
+  border: 1px solid #e5e7eb;
+  font-weight: 500;
 }
