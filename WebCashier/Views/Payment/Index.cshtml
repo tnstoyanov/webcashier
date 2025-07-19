@@ -114,10 +114,26 @@
             </div>
 
             <div class="card-preview">
-                <div class="credit-card">
-                    <div class="card-dots">•••• •••• •••• ••••</div>
-                    <div class="card-name">TONY STOYANOV</div>
-                    <div class="card-expiry">MM/YY</div>
+                <div class="interactive-credit-card">
+                    <div class="card-background">
+                        <div class="card-chip"></div>
+                        <div class="card-number" id="card-display">4256 7890 5678 4532</div>
+                        <div class="card-details">
+                            <div class="card-holder">
+                                <div class="card-label">CARDHOLDER NAME</div>
+                                <div class="card-name" id="name-display">John Smith</div>
+                            </div>
+                            <div class="card-expiry-section">
+                                <div class="card-label">EXPIRES</div>
+                                <div class="card-expiry" id="expiry-display">09/20</div>
+                            </div>
+                            <div class="card-cvc-section">
+                                <div class="card-label">CVC</div>
+                                <div class="card-cvc" id="cvc-display">345</div>
+                            </div>
+                        </div>
+                        <div class="card-brand" id="card-brand">VISA</div>
+                    </div>
                 </div>
                 <div class="security-badges">
                     <p>Guaranteed safe & secure checkout</p>
@@ -141,21 +157,93 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
-        // Format card number input
+        // Card widget elements
+        const cardDisplay = document.getElementById('card-display');
+        const nameDisplay = document.getElementById('name-display');
+        const expiryDisplay = document.getElementById('expiry-display');
+        const cvcDisplay = document.getElementById('cvc-display');
+        const cardBrand = document.getElementById('card-brand');
+        const cardBackground = document.querySelector('.card-background');
+
+        // Format card number input and update widget
         document.querySelector('[name="CardNumber"]').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
             let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
             e.target.value = formattedValue;
+            
+            // Update card display
+            if (value.length > 0) {
+                cardDisplay.textContent = formattedValue.padEnd(19, '•').replace(/(.{4})/g, '$1 ').trim();
+            } else {
+                cardDisplay.textContent = '4256 7890 5678 4532';
+            }
+            
+            // Detect card brand and update styling
+            updateCardBrand(value);
         });
 
-        // Format expiration date
+        // Format expiration date and update widget
         document.querySelector('[name="ExpirationDate"]').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
             if (value.length >= 2) {
                 value = value.substring(0,2) + '/' + value.substring(2,4);
             }
             e.target.value = value;
+            
+            // Update expiry display
+            if (value.length > 0) {
+                expiryDisplay.textContent = value;
+            } else {
+                expiryDisplay.textContent = '09/20';
+            }
         });
+
+        // Update name on card
+        document.querySelector('[name="NameOnCard"]').addEventListener('input', function(e) {
+            const name = e.target.value.trim().toUpperCase();
+            if (name.length > 0) {
+                nameDisplay.textContent = name;
+            } else {
+                nameDisplay.textContent = 'John Smith';
+            }
+        });
+
+        // Update CVC
+        document.querySelector('[name="CVV"]').addEventListener('input', function(e) {
+            const cvc = e.target.value.trim();
+            if (cvc.length > 0) {
+                cvcDisplay.textContent = cvc;
+            } else {
+                cvcDisplay.textContent = '345';
+            }
+        });
+
+        // Card brand detection and styling
+        function updateCardBrand(cardNumber) {
+            const firstDigit = cardNumber.charAt(0);
+            const firstTwoDigits = cardNumber.substring(0, 2);
+            const firstFourDigits = cardNumber.substring(0, 4);
+
+            // Reset classes
+            cardBackground.className = 'card-background';
+
+            if (cardNumber.startsWith('4')) {
+                cardBrand.textContent = 'VISA';
+                cardBackground.classList.add('visa-card');
+            } else if (firstTwoDigits >= '51' && firstTwoDigits <= '55') {
+                cardBrand.textContent = 'MASTERCARD';
+                cardBackground.classList.add('mastercard-card');
+            } else if (cardNumber.startsWith('34') || cardNumber.startsWith('37')) {
+                cardBrand.textContent = 'AMEX';
+                cardBackground.classList.add('amex-card');
+            } else if (cardNumber.startsWith('6011') || firstTwoDigits === '65') {
+                cardBrand.textContent = 'DISCOVER';
+                cardBackground.classList.add('discover-card');
+            } else {
+                cardBrand.textContent = 'VISA';
+                cardBackground.classList.add('default-card');
+            }
+        }
 
         // Toggle payment method details
         document.querySelectorAll('input[name="PaymentMethod"]').forEach(radio => {
