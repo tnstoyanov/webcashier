@@ -45,10 +45,10 @@ body {
 }
 
 .logo {
-  color: #22c55e;
-  font-weight: bold;
-  font-size: 1.8rem;
+  height: 2rem;
+  width: auto;
   margin: 0;
+  display: block;
 }
 
 .back-link {
