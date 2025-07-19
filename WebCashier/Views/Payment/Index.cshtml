@@ -17,122 +17,128 @@
         <h1 class="payment-title">TOP UP YOUR ACCOUNT</h1>
         <p class="security-text">All payments are 100% secure</p>
 
-        <form asp-action="ProcessPayment" method="post" class="payment-form">
-            @Html.AntiForgeryToken()
-            
-            <div class="payment-methods">
-                <p class="method-label">Choose a payment method:</p>
-                <div class="method-options">
-                    <input type="radio" id="card" name="PaymentMethod" value="card" checked />
-                    <label for="card" class="method-option active">
-                        <div class="card-icon">
-                            <svg width="48" height="32" viewBox="0 0 48 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="48" height="32" rx="4" fill="#4F46E5"/>
-                                <rect x="4" y="6" width="40" height="4" fill="#E5E7EB"/>
-                                <rect x="4" y="14" width="12" height="2" fill="#D1D5DB"/>
-                                <rect x="4" y="18" width="8" height="2" fill="#D1D5DB"/>
-                                <circle cx="38" cy="22" r="4" fill="#10B981"/>
-                                <circle cx="34" cy="22" r="4" fill="#F59E0B"/>
-                            </svg>
-                        </div>
-                        <span class="payment-brand">Praxis CC 1.3</span>
-                    </label>
+        <div class="payment-layout">
+            <form asp-action="ProcessPayment" method="post" class="payment-form">
+                @Html.AntiForgeryToken()
+                
+                <div class="payment-methods">
+                    <p class="method-label">Choose a payment method:</p>
+                    <div class="method-options">
+                        <input type="radio" id="card" name="PaymentMethod" value="card" checked />
+                        <label for="card" class="method-option active">
+                            <div class="card-icon">
+                                <svg width="48" height="32" viewBox="0 0 48 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect width="48" height="32" rx="4" fill="#4F46E5"/>
+                                    <rect x="4" y="6" width="40" height="4" fill="#E5E7EB"/>
+                                    <rect x="4" y="14" width="12" height="2" fill="#D1D5DB"/>
+                                    <rect x="4" y="18" width="8" height="2" fill="#D1D5DB"/>
+                                    <circle cx="38" cy="22" r="4" fill="#10B981"/>
+                                    <circle cx="34" cy="22" r="4" fill="#F59E0B"/>
+                                </svg>
+                            </div>
+                            <span class="payment-brand">Praxis CC 1.3</span>
+                        </label>
 
-                    <input type="radio" id="paypal" name="PaymentMethod" value="paypal" />
-                    <label for="paypal" class="method-option">
-                        <span class="payment-brand">PayPal</span>
-                    </label>
+                        <input type="radio" id="paypal" name="PaymentMethod" value="paypal" />
+                        <label for="paypal" class="method-option">
+                            <span class="payment-brand">PayPal</span>
+                        </label>
 
-                    <input type="radio" id="safetypay" name="PaymentMethod" value="safetypay" />
-                    <label for="safetypay" class="method-option">
-                        <span class="payment-brand">SafetyPay</span>
-                    </label>
+                        <input type="radio" id="safetypay" name="PaymentMethod" value="safetypay" />
+                        <label for="safetypay" class="method-option">
+                            <span class="payment-brand">SafetyPay</span>
+                        </label>
 
-                    <input type="radio" id="skrill" name="PaymentMethod" value="skrill" />
-                    <label for="skrill" class="method-option">
-                        <span class="payment-brand">Skrill</span>
-                    </label>
+                        <input type="radio" id="skrill" name="PaymentMethod" value="skrill" />
+                        <label for="skrill" class="method-option">
+                            <span class="payment-brand">Skrill</span>
+                        </label>
 
-                    <input type="radio" id="zmg" name="PaymentMethod" value="zmg" />
-                    <label for="zmg" class="method-option">
-                        <span class="payment-brand">ZMG</span>
-                    </label>
+                        <input type="radio" id="zmg" name="PaymentMethod" value="zmg" />
+                        <label for="zmg" class="method-option">
+                            <span class="payment-brand">ZMG</span>
+                        </label>
 
-                    <input type="radio" id="gpay" name="PaymentMethod" value="gpay" />
-                    <label for="gpay" class="method-option">
-                        <span class="payment-brand">G Pay</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group amount-group">
-                    <label asp-for="Amount">Amount</label>
-                    <input asp-for="Amount" type="number" step="0.01" class="form-control" placeholder="0.00" />
-                    <span asp-validation-for="Amount" class="text-danger"></span>
-                </div>
-                <div class="form-group currency-group">
-                    <label asp-for="Currency">Currency</label>
-                    <select asp-for="Currency" class="form-control">
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="card-details" class="card-details">
-                <div class="form-group">
-                    <label asp-for="NameOnCard">Name on card</label>
-                    <input asp-for="NameOnCard" class="form-control" placeholder="Tony Stoyanov" />
-                    <span asp-validation-for="NameOnCard" class="text-danger"></span>
-                </div>
-
-                <div class="form-group">
-                    <label asp-for="CardNumber">Card number</label>
-                    <input asp-for="CardNumber" class="form-control" placeholder="•••• •••• •••• ••••" maxlength="19" />
-                    <span asp-validation-for="CardNumber" class="text-danger"></span>
+                        <input type="radio" id="gpay" name="PaymentMethod" value="gpay" />
+                        <label for="gpay" class="method-option">
+                            <span class="payment-brand">G Pay</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="form-row">
-                    <div class="form-group">
-                        <label asp-for="ExpirationDate">Expiration Date</label>
-                        <input asp-for="ExpirationDate" class="form-control" placeholder="MM/YY" maxlength="5" />
-                        <span asp-validation-for="ExpirationDate" class="text-danger"></span>
+                    <div class="form-group amount-group">
+                        <label asp-for="Amount">Amount</label>
+                        <input asp-for="Amount" type="number" step="0.01" class="form-control" placeholder="0" />
+                        <span asp-validation-for="Amount" class="text-danger"></span>
                     </div>
-                    <div class="form-group">
-                        <label asp-for="CVV">CVV</label>
-                        <input asp-for="CVV" class="form-control" placeholder="123" maxlength="4" />
-                        <span asp-validation-for="CVV" class="text-danger"></span>
+                    <div class="form-group currency-group">
+                        <label asp-for="Currency">Currency</label>
+                        <select asp-for="Currency" class="form-control">
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label asp-for="PromotionCode">Promotion code</label>
-                    <input asp-for="PromotionCode" class="form-control" placeholder="Enter code (optional)" />
-                </div>
-            </div>
+                <div id="card-details" class="card-details">
+                    <div class="form-group">
+                        <label asp-for="NameOnCard">Name on card</label>
+                        <input asp-for="NameOnCard" class="form-control" placeholder="Enter your name" />
+                        <span asp-validation-for="NameOnCard" class="text-danger"></span>
+                    </div>
 
-            <div class="card-preview">
+                    <div class="form-group">
+                        <label asp-for="CardNumber">Card number</label>
+                        <input asp-for="CardNumber" class="form-control" placeholder="•••• •••• •••• ••••" maxlength="19" />
+                        <span asp-validation-for="CardNumber" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label asp-for="ExpirationDate">Expiration Date</label>
+                            <input asp-for="ExpirationDate" class="form-control" placeholder="MM/YY" maxlength="5" />
+                            <span asp-validation-for="ExpirationDate" class="text-danger"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="CVV">CVV</label>
+                            <input asp-for="CVV" class="form-control" placeholder="123" maxlength="4" />
+                            <span asp-validation-for="CVV" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="PromotionCode">Promotion code</label>
+                        <input asp-for="PromotionCode" class="form-control" placeholder="Enter code (optional)" />
+                    </div>
+                </div>
+
+                <p class="currency-note">Please note that you might be charged in a different currency</p>
+
+                <button type="submit" class="deposit-btn">DEPOSIT</button>
+            </form>
+
+            <div class="widget-container">
                 <div class="interactive-credit-card">
                     <div class="card-background">
                         <div class="card-chip"></div>
-                        <div class="card-number" id="card-display">4256 7890 5678 4532</div>
+                        <div class="card-number" id="card-display">•••• •••• •••• ••••</div>
                         <div class="card-details">
                             <div class="card-holder">
                                 <div class="card-label">CARDHOLDER NAME</div>
-                                <div class="card-name" id="name-display">John Smith</div>
+                                <div class="card-name" id="name-display">YOUR NAME HERE</div>
                             </div>
                             <div class="card-expiry-section">
                                 <div class="card-label">EXPIRES</div>
-                                <div class="card-expiry" id="expiry-display">09/20</div>
+                                <div class="card-expiry" id="expiry-display">MM/YY</div>
                             </div>
                             <div class="card-cvc-section">
                                 <div class="card-label">CVC</div>
-                                <div class="card-cvc" id="cvc-display">345</div>
+                                <div class="card-cvc" id="cvc-display">•••</div>
                             </div>
                         </div>
-                        <div class="card-brand" id="card-brand">VISA</div>
+                        <div class="card-brand" id="card-brand"></div>
                     </div>
                 </div>
                 <div class="security-badges">
@@ -146,11 +152,7 @@
                     </div>
                 </div>
             </div>
-
-            <p class="currency-note">Please note that you might be charged in a different currency</p>
-
-            <button type="submit" class="deposit-btn">DEPOSIT</button>
-        </form>
+        </div>
     </div>
 </div>
 
@@ -171,11 +173,18 @@
             let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
             e.target.value = formattedValue;
             
-            // Update card display
+            // Update card display - only show user input
             if (value.length > 0) {
-                cardDisplay.textContent = formattedValue.padEnd(19, '•').replace(/(.{4})/g, '$1 ').trim();
+                let displayValue = formattedValue;
+                // Pad with dots to show card format
+                while (displayValue.replace(/\s/g, '').length < 16) {
+                    displayValue += '•';
+                }
+                // Format with spaces
+                displayValue = displayValue.match(/.{1,4}/g)?.join(' ') || displayValue;
+                cardDisplay.textContent = displayValue;
             } else {
-                cardDisplay.textContent = '4256 7890 5678 4532';
+                cardDisplay.textContent = '•••• •••• •••• ••••';
             }
             
             // Detect card brand and update styling
@@ -190,31 +199,31 @@
             }
             e.target.value = value;
             
-            // Update expiry display
+            // Update expiry display - only show user input
             if (value.length > 0) {
                 expiryDisplay.textContent = value;
             } else {
-                expiryDisplay.textContent = '09/20';
+                expiryDisplay.textContent = 'MM/YY';
             }
         });
 
-        // Update name on card
+        // Update name on card - only show user input
         document.querySelector('[name="NameOnCard"]').addEventListener('input', function(e) {
             const name = e.target.value.trim().toUpperCase();
             if (name.length > 0) {
                 nameDisplay.textContent = name;
             } else {
-                nameDisplay.textContent = 'John Smith';
+                nameDisplay.textContent = 'YOUR NAME HERE';
             }
         });
 
-        // Update CVC
+        // Update CVC - only show user input
         document.querySelector('[name="CVV"]').addEventListener('input', function(e) {
             const cvc = e.target.value.trim();
             if (cvc.length > 0) {
                 cvcDisplay.textContent = cvc;
             } else {
-                cvcDisplay.textContent = '345';
+                cvcDisplay.textContent = '•••';
             }
         });
 
@@ -226,6 +235,12 @@
 
             // Reset classes
             cardBackground.className = 'card-background';
+
+            if (cardNumber.length === 0) {
+                cardBrand.textContent = '';
+                cardBackground.classList.add('default-card');
+                return;
+            }
 
             if (cardNumber.startsWith('4')) {
                 cardBrand.textContent = 'VISA';
@@ -240,7 +255,7 @@
                 cardBrand.textContent = 'DISCOVER';
                 cardBackground.classList.add('discover-card');
             } else {
-                cardBrand.textContent = 'VISA';
+                cardBrand.textContent = '';
                 cardBackground.classList.add('default-card');
             }
         }
@@ -252,10 +267,13 @@
                 this.nextElementSibling.classList.add('active');
                 
                 const cardDetails = document.getElementById('card-details');
+                const widgetContainer = document.querySelector('.widget-container');
                 if (this.value === 'card') {
                     cardDetails.style.display = 'block';
+                    widgetContainer.style.display = 'block';
                 } else {
                     cardDetails.style.display = 'none';
+                    widgetContainer.style.display = 'none';
                 }
             });
         });
