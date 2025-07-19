@@ -55,7 +55,21 @@ namespace WebCashier.Controllers
                         
                         _logger.LogInformation("Payment state updated successfully for OrderId: {OrderId}", orderId);
                         
-                        return Ok(new { status = "processed", order_id = orderId });
+                        // Create proper Praxis callback response
+                        var response = new PraxisCallbackResponse
+                        {
+                            status = callbackData.transaction?.transaction_status == "approved" ? 0 : 1,
+                            description = callbackData.transaction?.transaction_status == "approved" 
+                                ? "Ok" 
+                                : "Transaction already updated manually at the website to final status",
+                            version = "1.3",
+                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                        };
+
+                        _logger.LogInformation("Returning Praxis callback response: Status={Status}, Description={Description}", 
+                            response.status, response.description);
+                        
+                        return Ok(response);
                     }
                     else
                     {
