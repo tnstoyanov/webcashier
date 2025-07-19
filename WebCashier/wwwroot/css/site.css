@@ -190,6 +190,38 @@ body {
   font-size: 0.9rem;
 }
 
+/* Amount suggestion buttons */
+.amount-suggestions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  justify-content: flex-start;
+}
+
+.amount-btn {
+  background: #f8f9fa;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 80px;
+}
+
+.amount-btn:hover {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+
+.amount-btn.active {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: white;
+}
+
 .form-row {
   display: flex;
   gap: 1rem;
@@ -202,7 +234,7 @@ body {
 }
 
 .amount-group {
-  flex: 2.5;
+  flex: 2;
 }
 
 .currency-group {
