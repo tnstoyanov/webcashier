@@ -126,24 +126,35 @@
 
                             <div class="form-right">
                                 <div class="interactive-credit-card">
-                                    <div class="card-background">
-                                        <div class="card-chip"></div>
-                                        <div class="card-number" id="card-display">•••• •••• •••• ••••</div>
-                                        <div class="card-details">
-                                            <div class="card-holder">
-                                                <div class="card-label">CARDHOLDER NAME</div>
-                                                <div class="card-name" id="name-display">YOUR NAME HERE</div>
+                                    <div class="card-container">
+                                        <!-- Front of the card -->
+                                        <div class="card-background card-front">
+                                            <div class="card-chip"></div>
+                                            <div class="card-number" id="card-display">•••• •••• •••• ••••</div>
+                                            <div class="card-details">
+                                                <div class="card-holder">
+                                                    <div class="card-label">CARDHOLDER NAME</div>
+                                                    <div class="card-name" id="name-display">YOUR NAME HERE</div>
+                                                </div>
+                                                <div class="card-expiry-section">
+                                                    <div class="card-label">EXPIRES</div>
+                                                    <div class="card-expiry" id="expiry-display">MM/YY</div>
+                                                </div>
                                             </div>
-                                            <div class="card-expiry-section">
-                                                <div class="card-label">EXPIRES</div>
-                                                <div class="card-expiry" id="expiry-display">MM/YY</div>
-                                            </div>
-                                            <div class="card-cvc-section">
-                                                <div class="card-label">CVC</div>
-                                                <div class="card-cvc" id="cvc-display">•••</div>
-                                            </div>
+                                            <div class="card-brand" id="card-brand"></div>
                                         </div>
-                                        <div class="card-brand" id="card-brand"></div>
+                                        
+                                        <!-- Back of the card -->
+                                        <div class="card-background card-back">
+                                            <div class="magnetic-stripe"></div>
+                                            <div class="signature-panel">
+                                                <div class="cvv-section">
+                                                    <div class="card-label">CVV</div>
+                                                    <div class="card-cvv" id="cvv-display-back">•••</div>
+                                                </div>
+                                            </div>
+                                            <div class="card-brand-back" id="card-brand-back"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -209,8 +220,10 @@
         const cardDisplay = document.getElementById('card-display');
         const nameDisplay = document.getElementById('name-display');
         const expiryDisplay = document.getElementById('expiry-display');
-        const cvcDisplay = document.getElementById('cvc-display');
+        const cvvDisplayBack = document.getElementById('cvv-display-back');
         const cardBrand = document.getElementById('card-brand');
+        const cardBrandBack = document.getElementById('card-brand-back');
+        const cardContainer = document.querySelector('.card-container');
         const cardBackground = document.querySelector('.card-background');
 
         // Format card number input and update widget
@@ -278,13 +291,29 @@
             setTimeout(() => validateNameOnCard(), 150);
         });
 
-        // Update CVC - only show user input
+        // Update CVV - only show user input and handle card flipping
+        document.querySelector('[name="CVV"]').addEventListener('focus', function(e) {
+            // Flip card to back side
+            if (cardContainer) {
+                cardContainer.classList.add('flipped');
+            }
+        });
+
+        document.querySelector('[name="CVV"]').addEventListener('blur', function(e) {
+            // Flip card back to front side after a short delay
+            setTimeout(() => {
+                if (cardContainer) {
+                    cardContainer.classList.remove('flipped');
+                }
+            }, 1000);
+        });
+
         document.querySelector('[name="CVV"]').addEventListener('input', function(e) {
-            const cvc = e.target.value.trim();
-            if (cvc.length > 0) {
-                cvcDisplay.textContent = cvc;
+            const cvv = e.target.value.trim();
+            if (cvv.length > 0) {
+                cvvDisplayBack.textContent = cvv;
             } else {
-                cvcDisplay.textContent = '•••';
+                cvvDisplayBack.textContent = '•••';
             }
             
             // Validate CVV with delay
@@ -297,31 +326,37 @@
             const firstTwoDigits = cardNumber.substring(0, 2);
             const firstFourDigits = cardNumber.substring(0, 4);
 
-            // Reset classes
-            cardBackground.className = 'card-background';
+            // Reset classes on front side
+            cardFront.className = 'card-front';
 
             if (cardNumber.length === 0) {
-                cardBrand.textContent = '';
-                cardBackground.classList.add('default-card');
+                cardBrandDisplay.textContent = '';
+                cardBrandBack.textContent = '';
+                cardFront.classList.add('default-card');
                 return;
             }
 
+            let brandName = '';
             if (cardNumber.startsWith('4')) {
-                cardBrand.textContent = 'VISA';
-                cardBackground.classList.add('visa-card');
+                brandName = 'VISA';
+                cardFront.classList.add('visa-card');
             } else if (isMastercard(cardNumber)) {
-                cardBrand.textContent = 'MASTERCARD';
-                cardBackground.classList.add('mastercard-card');
+                brandName = 'MASTERCARD';
+                cardFront.classList.add('mastercard-card');
             } else if (cardNumber.startsWith('34') || cardNumber.startsWith('37')) {
-                cardBrand.textContent = 'AMEX';
-                cardBackground.classList.add('amex-card');
+                brandName = 'AMEX';
+                cardFront.classList.add('amex-card');
             } else if (cardNumber.startsWith('6011') || firstTwoDigits === '65') {
-                cardBrand.textContent = 'DISCOVER';
-                cardBackground.classList.add('discover-card');
+                brandName = 'DISCOVER';
+                cardFront.classList.add('discover-card');
             } else {
-                cardBrand.textContent = '';
-                cardBackground.classList.add('default-card');
+                brandName = '';
+                cardFront.classList.add('default-card');
             }
+            
+            // Update both front and back brand displays
+            cardBrandDisplay.textContent = brandName;
+            cardBrandBack.textContent = brandName;
         }
 
         // Enhanced Mastercard detection function
