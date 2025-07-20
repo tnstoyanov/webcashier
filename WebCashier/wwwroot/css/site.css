@@ -95,11 +95,53 @@ body {
 }
 
 /* Payment method carousel */
-.method-carousel {
+.carousel-container {
   display: flex;
+  align-items: center;
   gap: 1rem;
-  flex-wrap: wrap;
   margin-bottom: 2rem;
+  justify-content: center;
+}
+
+.carousel-arrow {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+.carousel-arrow:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.carousel-arrow:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.method-carousel {
+  overflow: hidden;
+  width: 400px;
+  position: relative;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.3s ease;
+  gap: 1rem;
+}
+
+.carousel-item {
+  flex: 0 0 120px;
+  display: flex;
   justify-content: center;
 }
 
@@ -111,8 +153,8 @@ body {
 /* Card form layout - form left, widget right */
 .card-form-layout {
   display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 3rem;
+  grid-template-columns: 1fr 280px;
+  gap: 2rem;
   align-items: start;
 }
 
@@ -136,15 +178,7 @@ body {
   text-align: center;
 }
 
-.method-carousel {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 2rem;
-  justify-content: center;
-}
-
-.method-carousel input[type="radio"] {
+.carousel-item input[type="radio"] {
   display: none;
 }
 
@@ -153,14 +187,15 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  min-width: 120px;
-  min-height: 80px;
+  width: 100px;
+  height: 70px;
   background: white;
+  font-size: 0.875rem;
 }
 
 .method-option:hover {
@@ -176,7 +211,12 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.card-icon svg {
+  width: 32px;
+  height: 20px;
 }
 
 .card-icon svg {
@@ -392,13 +432,13 @@ body {
 
 .card-background {
   width: 100%;
-  height: 240px;
+  height: 180px;
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  border-radius: 16px;
+  border-radius: 12px;
   color: white;
   font-family: 'Courier New', monospace;
   position: relative;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   transition: transform 0.8s ease-in-out;
   overflow: hidden;
   transform-style: preserve-3d;
@@ -413,7 +453,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  padding: 24px;
+  padding: 16px;
   box-sizing: border-box;
 }
 
@@ -542,11 +582,11 @@ body {
 }
 
 .card-number {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: 1px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  margin: 20px 0;
+  margin: 12px 0;
   line-height: 1.2;
   font-family: 'Courier New', monospace;
 }
@@ -571,16 +611,16 @@ body {
 }
 
 .card-label {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   opacity: 0.8;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
 .card-name {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -589,11 +629,11 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 160px;
+  max-width: 140px;
 }
 
 .card-expiry, .card-cvc {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 1px;
   line-height: 1.2;
@@ -601,9 +641,9 @@ body {
 
 .card-brand {
   position: absolute;
-  top: 24px;
-  right: 24px;
-  font-size: 16px;
+  top: 16px;
+  right: 16px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 2px;
   opacity: 0.9;
