@@ -426,7 +426,7 @@ body {
 .card-back-content {
   /* Back side - initially hidden, rotated to back */
   transform: rotateY(-180deg);
-  backface-visibility: hidden;
+  backface-visibility: visible;
   padding: 0;
 }
 
