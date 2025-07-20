@@ -20,8 +20,8 @@ function moveCarousel(direction) {
         currentSlide = 0;
     }
     
-    // Move the track (100px per item)
-    const translateX = currentSlide * -100;
+    // Move the track (90px per item + 8px gap = 98px total)
+    const translateX = currentSlide * -98;
     track.style.transform = `translateX(${translateX}px)`;
 }
 
