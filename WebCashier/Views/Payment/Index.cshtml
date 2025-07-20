@@ -127,33 +127,35 @@
                             <div class="form-right">
                                 <div class="interactive-credit-card">
                                     <div class="card-container">
-                                        <!-- Front of the card -->
-                                        <div class="card-background card-front">
-                                            <div class="card-chip"></div>
-                                            <div class="card-number" id="card-display">•••• •••• •••• ••••</div>
-                                            <div class="card-details">
-                                                <div class="card-holder">
-                                                    <div class="card-label">CARDHOLDER NAME</div>
-                                                    <div class="card-name" id="name-display">YOUR NAME HERE</div>
+                                        <div class="card-background">
+                                            <!-- Front content -->
+                                            <div class="card-content card-front-content">
+                                                <div class="card-chip"></div>
+                                                <div class="card-number" id="card-display">•••• •••• •••• ••••</div>
+                                                <div class="card-details">
+                                                    <div class="card-holder">
+                                                        <div class="card-label">CARDHOLDER NAME</div>
+                                                        <div class="card-name" id="name-display">YOUR NAME HERE</div>
+                                                    </div>
+                                                    <div class="card-expiry-section">
+                                                        <div class="card-label">EXPIRES</div>
+                                                        <div class="card-expiry" id="expiry-display">MM/YY</div>
+                                                    </div>
                                                 </div>
-                                                <div class="card-expiry-section">
-                                                    <div class="card-label">EXPIRES</div>
-                                                    <div class="card-expiry" id="expiry-display">MM/YY</div>
-                                                </div>
+                                                <div class="card-brand" id="card-brand"></div>
                                             </div>
-                                            <div class="card-brand" id="card-brand"></div>
-                                        </div>
-                                        
-                                        <!-- Back of the card -->
-                                        <div class="card-background card-back">
-                                            <div class="magnetic-stripe"></div>
-                                            <div class="signature-panel">
-                                                <div class="cvv-section">
-                                                    <div class="card-label">CVV</div>
-                                                    <div class="card-cvv" id="cvv-display-back">•••</div>
+                                            
+                                            <!-- Back content -->
+                                            <div class="card-content card-back-content" style="display: none;">
+                                                <div class="magnetic-stripe"></div>
+                                                <div class="signature-panel">
+                                                    <div class="cvv-section">
+                                                        <div class="card-label">CVV</div>
+                                                        <div class="card-cvv" id="cvv-display-back">•••</div>
+                                                    </div>
                                                 </div>
+                                                <div class="card-brand-back" id="card-brand-back"></div>
                                             </div>
-                                            <div class="card-brand-back" id="card-brand-back"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -224,8 +226,9 @@
         const cardBrandDisplay = document.getElementById('card-brand');
         const cardBrandBack = document.getElementById('card-brand-back');
         const cardContainer = document.querySelector('.card-container');
-        const cardFront = document.querySelector('.card-front');
-        const cardBack = document.querySelector('.card-back');
+        const cardBackground = document.querySelector('.card-background');
+        const cardFrontContent = document.querySelector('.card-front-content');
+        const cardBackContent = document.querySelector('.card-back-content');
 
         // Format card number input and update widget
         document.querySelector('[name="CardNumber"]').addEventListener('input', function(e) {
@@ -294,17 +297,25 @@
 
         // Update CVV - only show user input and handle card flipping
         document.querySelector('[name="CVV"]').addEventListener('focus', function(e) {
-            // Flip card to back side
-            if (cardContainer) {
-                cardContainer.classList.add('flipped');
+            // Flip card to back side - hide front content, show back content
+            if (cardFrontContent && cardBackContent) {
+                cardFrontContent.style.display = 'none';
+                cardBackContent.style.display = 'flex';
+                if (cardContainer) {
+                    cardContainer.classList.add('flipped');
+                }
             }
         });
 
         document.querySelector('[name="CVV"]').addEventListener('blur', function(e) {
             // Flip card back to front side after a short delay
             setTimeout(() => {
-                if (cardContainer) {
-                    cardContainer.classList.remove('flipped');
+                if (cardFrontContent && cardBackContent) {
+                    cardFrontContent.style.display = 'flex';
+                    cardBackContent.style.display = 'none';
+                    if (cardContainer) {
+                        cardContainer.classList.remove('flipped');
+                    }
                 }
             }, 1000);
         });
@@ -327,34 +338,34 @@
             const firstTwoDigits = cardNumber.substring(0, 2);
             const firstFourDigits = cardNumber.substring(0, 4);
 
-            // Reset classes on front side
-            if (cardFront) {
-                cardFront.className = 'card-background card-front';
+            // Reset classes on card background
+            if (cardBackground) {
+                cardBackground.className = 'card-background';
             }
 
             if (cardNumber.length === 0) {
                 if (cardBrandDisplay) cardBrandDisplay.textContent = '';
                 if (cardBrandBack) cardBrandBack.textContent = '';
-                if (cardFront) cardFront.classList.add('default-card');
+                if (cardBackground) cardBackground.classList.add('default-card');
                 return;
             }
 
             let brandName = '';
             if (cardNumber.startsWith('4')) {
                 brandName = 'VISA';
-                if (cardFront) cardFront.classList.add('visa-card');
+                if (cardBackground) cardBackground.classList.add('visa-card');
             } else if (isMastercard(cardNumber)) {
                 brandName = 'MASTERCARD';
-                if (cardFront) cardFront.classList.add('mastercard-card');
+                if (cardBackground) cardBackground.classList.add('mastercard-card');
             } else if (cardNumber.startsWith('34') || cardNumber.startsWith('37')) {
                 brandName = 'AMEX';
-                if (cardFront) cardFront.classList.add('amex-card');
+                if (cardBackground) cardBackground.classList.add('amex-card');
             } else if (cardNumber.startsWith('6011') || firstTwoDigits === '65') {
                 brandName = 'DISCOVER';
-                if (cardFront) cardFront.classList.add('discover-card');
+                if (cardBackground) cardBackground.classList.add('discover-card');
             } else {
                 brandName = '';
-                if (cardFront) cardFront.classList.add('default-card');
+                if (cardBackground) cardBackground.classList.add('default-card');
             }
             
             // Update both front and back brand displays
