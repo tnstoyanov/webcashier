@@ -265,8 +265,10 @@
 
         // Flip back to front when focusing on card number
         document.querySelector('[name="CardNumber"]').addEventListener('focus', function(e) {
+            console.log('Card number focused - flipping to front');
             if (cardContainer) {
                 cardContainer.classList.remove('flipped');
+                console.log('Removed flipped class');
             }
         });
 
@@ -319,13 +321,18 @@
         // Update CVV - only show user input and handle card flipping
         document.querySelector('[name="CVV"]').addEventListener('focus', function(e) {
             // Flip card to back side with 3D animation
+            console.log('CVV focused - flipping to back');
             if (cardContainer) {
                 cardContainer.classList.add('flipped');
+                console.log('Added flipped class');
+            } else {
+                console.log('cardContainer not found');
             }
         });
 
         document.querySelector('[name="CVV"]').addEventListener('blur', function(e) {
             // Don't auto-flip back on blur - let user decide by clicking other inputs
+            console.log('CVV blurred');
         });
 
         document.querySelector('[name="CVV"]').addEventListener('input', function(e) {
