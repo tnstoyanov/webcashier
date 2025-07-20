@@ -437,6 +437,7 @@ body {
 
 .card-container.flipped .card-back-content {
   display: flex;
+  transform: rotateY(180deg);
 }
 
 /* When card is NOT flipped, show front content and hide back */
