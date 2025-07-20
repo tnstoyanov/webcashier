@@ -5,11 +5,12 @@
 
 // Carousel functionality
 let currentSlide = 0;
-const totalSlides = document.querySelectorAll('.carousel-item').length;
 
 function moveCarousel(direction) {
     const track = document.querySelector('.carousel-track');
     if (!track) return;
+    
+    const totalSlides = document.querySelectorAll('.carousel-item').length;
     
     currentSlide += direction;
     
@@ -27,6 +28,12 @@ function moveCarousel(direction) {
 
 // Initialize carousel when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    // Reset carousel to show first item properly
+    const track = document.querySelector('.carousel-track');
+    if (track) {
+        track.style.transform = 'translateX(0px)';
+    }
+    
     const prevButton = document.querySelector('.carousel-arrow.prev');
     const nextButton = document.querySelector('.carousel-arrow.next');
     

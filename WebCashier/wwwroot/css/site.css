@@ -23,7 +23,7 @@ body {
 
 /* Payment Form Styles */
 .payment-container {
-  max-width: 690px;
+  max-width: 910px;
   margin: 0 auto;
   padding: 2rem;
   background: #f8f9fa;
@@ -129,7 +129,7 @@ body {
 
 .method-carousel {
   overflow: hidden;
-  width: 500px;
+  width: 600px;
   position: relative;
 }
 
@@ -137,6 +137,7 @@ body {
   display: flex;
   transition: transform 0.3s ease;
   gap: 0.5rem;
+  width: fit-content;
 }
 
 .carousel-item {
@@ -153,8 +154,8 @@ body {
 /* Card form layout - form left, widget right */
 .card-form-layout {
   display: grid;
-  grid-template-columns: 1fr 296px;
-  gap: 2rem;
+  grid-template-columns: 1fr 320px;
+  gap: 3rem;
   align-items: start;
 }
 
@@ -432,7 +433,7 @@ body {
 
 .card-background {
   width: 100%;
-  height: 168px;
+  height: 180px;
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   border-radius: 12px;
   color: white;
@@ -453,7 +454,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  padding: 12px;
+  padding: 16px;
   box-sizing: border-box;
 }
 
@@ -502,22 +503,22 @@ body {
 
 /* Magnetic stripe and signature panel for card back */
 .magnetic-stripe {
-  height: 32px;
+  height: 36px;
   background: #333;
-  width: calc(100% + 24px);
-  margin: -12px -12px 16px -12px;
+  width: calc(100% + 32px);
+  margin: -16px -16px 18px -16px;
   position: relative;
 }
 
 .signature-panel {
   background: #fff;
-  height: 24px;
-  margin: 8px 16px;
+  height: 28px;
+  margin: 10px 18px;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 8px;
+  padding: 0 10px;
   color: #333;
   font-size: 12px;
 }
@@ -582,11 +583,11 @@ body {
 }
 
 .card-number {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: 1px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  margin: 8px 0;
+  margin: 10px 0;
   line-height: 1.2;
   font-family: 'Courier New', monospace;
 }
@@ -611,16 +612,16 @@ body {
 }
 
 .card-label {
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 600;
   opacity: 0.8;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
 .card-name {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -629,11 +630,11 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 120px;
+  max-width: 160px;
 }
 
 .card-expiry, .card-cvc {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 1px;
   line-height: 1.2;
@@ -641,9 +642,9 @@ body {
 
 .card-brand {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  font-size: 12px;
+  top: 16px;
+  right: 16px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 2px;
   opacity: 0.9;
