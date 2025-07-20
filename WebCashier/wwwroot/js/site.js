@@ -24,6 +24,9 @@ function moveCarousel(direction) {
     // Move the track (90px per item + 8px gap = 98px total)
     const translateX = currentSlide * -98;
     track.style.transform = `translateX(${translateX}px)`;
+    
+    // Debug log
+    console.log(`Carousel moved to slide ${currentSlide}, translateX: ${translateX}px`);
 }
 
 // Initialize carousel when page loads
@@ -32,16 +35,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const track = document.querySelector('.carousel-track');
     if (track) {
         track.style.transform = 'translateX(0px)';
+        console.log('Carousel initialized');
     }
+    
+    // Debug: log all carousel items
+    const items = document.querySelectorAll('.carousel-item');
+    console.log(`Found ${items.length} carousel items`);
     
     const prevButton = document.querySelector('.carousel-arrow.prev');
     const nextButton = document.querySelector('.carousel-arrow.next');
     
     if (prevButton) {
         prevButton.addEventListener('click', () => moveCarousel(-1));
+        console.log('Previous button attached');
     }
     
     if (nextButton) {
         nextButton.addEventListener('click', () => moveCarousel(1));
+        console.log('Next button attached');
     }
 });
