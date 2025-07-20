@@ -410,20 +410,22 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  backface-visibility: hidden;
   position: absolute;
   top: 0;
   left: 0;
   padding: 24px;
   box-sizing: border-box;
+  backface-visibility: hidden;
 }
 
 .card-front-content {
+  /* Front side - visible by default */
   transform: rotateY(0deg);
 }
 
 .card-back-content {
-  transform: rotateY(180deg);
+  /* Back side - initially rotated 180deg to be hidden */
+  transform: rotateY(-180deg);
   padding: 0;
 }
 
