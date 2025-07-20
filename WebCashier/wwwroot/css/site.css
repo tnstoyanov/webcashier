@@ -421,12 +421,12 @@ body {
 /* Larger screens - ensure proper spacing */
 @media (min-width: 1200px) {
   .card-form-layout {
-    grid-template-columns: 480px 280px;
+    grid-template-columns: 400px 280px;
     gap: 4rem;
   }
   
   .form-left {
-    width: 480px;
+    width: 400px;
   }
 }
 
