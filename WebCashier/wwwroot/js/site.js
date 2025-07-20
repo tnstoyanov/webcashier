@@ -8,9 +8,13 @@ let currentSlide = 0;
 
 function moveCarousel(direction) {
     const track = document.querySelector('.carousel-track');
-    if (!track) return;
+    if (!track) {
+        console.log('Carousel track not found');
+        return;
+    }
     
     const totalSlides = document.querySelectorAll('.carousel-item').length;
+    console.log(`Total slides: ${totalSlides}`);
     
     currentSlide += direction;
     
@@ -25,8 +29,7 @@ function moveCarousel(direction) {
     const translateX = currentSlide * -98;
     track.style.transform = `translateX(${translateX}px)`;
     
-    // Debug log
-    console.log(`Carousel moved to slide ${currentSlide}, translateX: ${translateX}px`);
+    console.log(`Moved to slide ${currentSlide}, translateX: ${translateX}px`);
 }
 
 // Initialize carousel when page loads
@@ -42,16 +45,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const items = document.querySelectorAll('.carousel-item');
     console.log(`Found ${items.length} carousel items`);
     
-    const prevButton = document.querySelector('.carousel-arrow.prev');
-    const nextButton = document.querySelector('.carousel-arrow.next');
+    const prevButton = document.querySelector('.carousel-arrow.carousel-prev');
+    const nextButton = document.querySelector('.carousel-arrow.carousel-next');
     
     if (prevButton) {
         prevButton.addEventListener('click', () => moveCarousel(-1));
         console.log('Previous button attached');
+    } else {
+        console.log('Previous button not found');
     }
     
     if (nextButton) {
         nextButton.addEventListener('click', () => moveCarousel(1));
         console.log('Next button attached');
+    } else {
+        console.log('Next button not found');
     }
 });

@@ -129,7 +129,7 @@ body {
 
 .method-carousel {
   overflow: hidden;
-  width: 300px;
+  width: 600px;
   position: relative;
 }
 
@@ -138,12 +138,14 @@ body {
   transition: transform 0.3s ease;
   gap: 0.5rem;
   width: fit-content;
+  transform: translateX(0px);
 }
 
 .carousel-item {
   flex: 0 0 90px;
   display: flex;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Payment forms section */
@@ -195,7 +197,7 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
-  width: 100px;
+  width: 90px;
   height: 70px;
   background: white;
   font-size: 0.875rem;
