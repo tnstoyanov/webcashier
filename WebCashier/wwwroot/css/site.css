@@ -383,12 +383,29 @@ body {
   max-width: 380px;
   height: 240px;
   position: relative;
+  perspective: 1000px;
 }
 
-.card-container.flipped {
-  /* Optional: Add a subtle rotation effect during flip */
-  transform: rotateY(5deg);
-  transition: transform 0.3s ease;
+.card-container.flipped .card-background {
+  transform: rotateY(180deg);
+}
+
+.card-background {
+  width: 100%;
+  height: 240px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 16px;
+  padding: 24px;
+  color: white;
+  font-family: 'Courier New', monospace;
+  position: relative;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transition: transform 0.8s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  transform-style: preserve-3d;
 }
 
 .card-content {
@@ -397,29 +414,38 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  backface-visibility: hidden;
   position: absolute;
   top: 0;
   left: 0;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .card-front-content {
-  display: flex;
+  transform: rotateY(0deg);
 }
 
 .card-back-content {
-  display: none;
+  transform: rotateY(180deg);
+  padding: 0;
 }
 
 /* Card hover effects */
-.card-container:hover .card-background {
+.card-background:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+}
+
+.card-container.flipped .card-background:hover {
+  transform: translateY(-2px) rotateY(180deg);
 }
 
 /* Magnetic stripe and signature panel for card back */
 .magnetic-stripe {
   height: 40px;
   background: #333;
+  width: calc(100% + 48px);
   margin: -24px -24px 20px -24px;
   position: relative;
 }
@@ -427,7 +453,7 @@ body {
 .signature-panel {
   background: #fff;
   height: 30px;
-  margin: 10px 0;
+  margin: 10px 20px;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -435,6 +461,18 @@ body {
   padding: 0 10px;
   color: #333;
   font-size: 12px;
+}
+
+.cvv-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-cvv {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  color: #333;
 }
 
 .interactive-credit-card {

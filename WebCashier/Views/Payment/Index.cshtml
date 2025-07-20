@@ -146,7 +146,7 @@
                                             </div>
                                             
                                             <!-- Back content -->
-                                            <div class="card-content card-back-content" style="display: none;">
+                                            <div class="card-content card-back-content">
                                                 <div class="magnetic-stripe"></div>
                                                 <div class="signature-panel">
                                                     <div class="cvv-section">
@@ -297,25 +297,17 @@
 
         // Update CVV - only show user input and handle card flipping
         document.querySelector('[name="CVV"]').addEventListener('focus', function(e) {
-            // Flip card to back side - hide front content, show back content
-            if (cardFrontContent && cardBackContent) {
-                cardFrontContent.style.display = 'none';
-                cardBackContent.style.display = 'flex';
-                if (cardContainer) {
-                    cardContainer.classList.add('flipped');
-                }
+            // Flip card to back side with 3D animation
+            if (cardContainer) {
+                cardContainer.classList.add('flipped');
             }
         });
 
         document.querySelector('[name="CVV"]').addEventListener('blur', function(e) {
             // Flip card back to front side after a short delay
             setTimeout(() => {
-                if (cardFrontContent && cardBackContent) {
-                    cardFrontContent.style.display = 'flex';
-                    cardBackContent.style.display = 'none';
-                    if (cardContainer) {
-                        cardContainer.classList.remove('flipped');
-                    }
+                if (cardContainer) {
+                    cardContainer.classList.remove('flipped');
                 }
             }, 1000);
         });
