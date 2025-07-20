@@ -61,8 +61,8 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    // Production configuration - let Azure handle ports and HTTPS
-    // Azure App Service will automatically configure ports and SSL
+    // Production configuration - let Render.com handle ports and HTTPS
+    // Render.com will automatically configure ports and SSL
 }
 
 var app = builder.Build();
