@@ -384,14 +384,11 @@ body {
   height: 240px;
   perspective: 1000px;
   position: relative;
+  transform-style: preserve-3d;
 }
 
-.card-container.flipped .card-front {
-  transform: rotateY(-180deg);
-}
-
-.card-container.flipped .card-back {
-  transform: rotateY(0deg);
+.card-container.flipped {
+  transform: rotateY(180deg);
 }
 
 .card-front, .card-back {
@@ -411,6 +408,7 @@ body {
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
+  transform-style: preserve-3d;
 }
 
 .card-front {
@@ -423,17 +421,15 @@ body {
   transform: rotateY(180deg);
 }
 
-.card-front:hover, .card-back:hover {
+/* Remove individual card hover effects during flip animation */
+.card-container:not(.flipped) .card-front:hover {
   transform: translateY(-2px) rotateY(0deg);
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
 }
 
-.card-container.flipped .card-front:hover {
-  transform: translateY(-2px) rotateY(-180deg);
-}
-
-.card-container.flipped .card-back:hover {
-  transform: translateY(-2px) rotateY(0deg);
+.card-container:not(.flipped) .card-back:hover {
+  transform: translateY(-2px) rotateY(180deg);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
 }
 
 /* Magnetic stripe and signature panel for card back */
