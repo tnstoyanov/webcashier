@@ -263,6 +263,13 @@
             setTimeout(() => validateCardNumber(), 150);
         });
 
+        // Flip back to front when focusing on card number
+        document.querySelector('[name="CardNumber"]').addEventListener('focus', function(e) {
+            if (cardContainer) {
+                cardContainer.classList.remove('flipped');
+            }
+        });
+
         // Format expiration date and update widget
         document.querySelector('[name="ExpirationDate"]').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
@@ -282,6 +289,13 @@
             setTimeout(() => validateExpirationDate(), 150);
         });
 
+        // Flip back to front when focusing on expiration date
+        document.querySelector('[name="ExpirationDate"]').addEventListener('focus', function(e) {
+            if (cardContainer) {
+                cardContainer.classList.remove('flipped');
+            }
+        });
+
         // Update name on card - only show user input
         document.querySelector('[name="NameOnCard"]').addEventListener('input', function(e) {
             const name = e.target.value.trim().toUpperCase();
@@ -295,6 +309,13 @@
             setTimeout(() => validateNameOnCard(), 150);
         });
 
+        // Flip back to front when focusing on name
+        document.querySelector('[name="NameOnCard"]').addEventListener('focus', function(e) {
+            if (cardContainer) {
+                cardContainer.classList.remove('flipped');
+            }
+        });
+
         // Update CVV - only show user input and handle card flipping
         document.querySelector('[name="CVV"]').addEventListener('focus', function(e) {
             // Flip card to back side with 3D animation
@@ -304,12 +325,7 @@
         });
 
         document.querySelector('[name="CVV"]').addEventListener('blur', function(e) {
-            // Flip card back to front side after a short delay
-            setTimeout(() => {
-                if (cardContainer) {
-                    cardContainer.classList.remove('flipped');
-                }
-            }, 1000);
+            // Don't auto-flip back on blur - let user decide by clicking other inputs
         });
 
         document.querySelector('[name="CVV"]').addEventListener('input', function(e) {
@@ -413,6 +429,13 @@
                 // Validate amount field after setting value
                 validateAmount();
             });
+        });
+
+        // Flip back to front when focusing on amount input
+        document.querySelector('[name="Amount"]').addEventListener('focus', function(e) {
+            if (cardContainer) {
+                cardContainer.classList.remove('flipped');
+            }
         });
 
         // Validation functions
