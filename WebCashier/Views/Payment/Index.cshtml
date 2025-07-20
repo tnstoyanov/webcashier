@@ -221,10 +221,11 @@
         const nameDisplay = document.getElementById('name-display');
         const expiryDisplay = document.getElementById('expiry-display');
         const cvvDisplayBack = document.getElementById('cvv-display-back');
-        const cardBrand = document.getElementById('card-brand');
+        const cardBrandDisplay = document.getElementById('card-brand');
         const cardBrandBack = document.getElementById('card-brand-back');
         const cardContainer = document.querySelector('.card-container');
-        const cardBackground = document.querySelector('.card-background');
+        const cardFront = document.querySelector('.card-front');
+        const cardBack = document.querySelector('.card-back');
 
         // Format card number input and update widget
         document.querySelector('[name="CardNumber"]').addEventListener('input', function(e) {
@@ -327,36 +328,38 @@
             const firstFourDigits = cardNumber.substring(0, 4);
 
             // Reset classes on front side
-            cardFront.className = 'card-front';
+            if (cardFront) {
+                cardFront.className = 'card-background card-front';
+            }
 
             if (cardNumber.length === 0) {
-                cardBrandDisplay.textContent = '';
-                cardBrandBack.textContent = '';
-                cardFront.classList.add('default-card');
+                if (cardBrandDisplay) cardBrandDisplay.textContent = '';
+                if (cardBrandBack) cardBrandBack.textContent = '';
+                if (cardFront) cardFront.classList.add('default-card');
                 return;
             }
 
             let brandName = '';
             if (cardNumber.startsWith('4')) {
                 brandName = 'VISA';
-                cardFront.classList.add('visa-card');
+                if (cardFront) cardFront.classList.add('visa-card');
             } else if (isMastercard(cardNumber)) {
                 brandName = 'MASTERCARD';
-                cardFront.classList.add('mastercard-card');
+                if (cardFront) cardFront.classList.add('mastercard-card');
             } else if (cardNumber.startsWith('34') || cardNumber.startsWith('37')) {
                 brandName = 'AMEX';
-                cardFront.classList.add('amex-card');
+                if (cardFront) cardFront.classList.add('amex-card');
             } else if (cardNumber.startsWith('6011') || firstTwoDigits === '65') {
                 brandName = 'DISCOVER';
-                cardFront.classList.add('discover-card');
+                if (cardFront) cardFront.classList.add('discover-card');
             } else {
                 brandName = '';
-                cardFront.classList.add('default-card');
+                if (cardFront) cardFront.classList.add('default-card');
             }
             
             // Update both front and back brand displays
-            cardBrandDisplay.textContent = brandName;
-            cardBrandBack.textContent = brandName;
+            if (cardBrandDisplay) cardBrandDisplay.textContent = brandName;
+            if (cardBrandBack) cardBrandBack.textContent = brandName;
         }
 
         // Enhanced Mastercard detection function
