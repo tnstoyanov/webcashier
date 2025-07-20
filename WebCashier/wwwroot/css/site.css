@@ -415,18 +415,38 @@ body {
   left: 0;
   padding: 24px;
   box-sizing: border-box;
-  backface-visibility: hidden;
 }
 
 .card-front-content {
   /* Front side - visible by default */
   transform: rotateY(0deg);
+  backface-visibility: hidden;
 }
 
 .card-back-content {
-  /* Back side - initially rotated 180deg to be hidden */
+  /* Back side - initially hidden, rotated to back */
   transform: rotateY(-180deg);
+  backface-visibility: hidden;
   padding: 0;
+}
+
+/* When card is flipped, show back content and hide front */
+.card-container.flipped .card-front-content {
+  display: none;
+}
+
+.card-container.flipped .card-back-content {
+  display: flex;
+  transform: rotateY(0deg);
+}
+
+/* When card is NOT flipped, show front content and hide back */
+.card-container:not(.flipped) .card-front-content {
+  display: flex;
+}
+
+.card-container:not(.flipped) .card-back-content {
+  display: none;
 }
 
 /* Card hover effects - only when not flipped */
