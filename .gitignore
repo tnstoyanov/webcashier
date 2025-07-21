@@ -49,6 +49,24 @@ Generated\ Files/
 TestResult.xml
 nunit-*.xml
 
+# Deployment and build artifacts (ADDED TO REDUCE REPO SIZE)
+*.zip
+*.tar.gz
+temp-publish/
+static-build/
+dist/
+publish/
+app.pid
+
+# Source maps and large development files (ADDED TO REDUCE REPO SIZE)
+*.map
+*.min.css.map
+*.min.js.map
+
+# ASP.NET Core static web assets (ADDED TO REDUCE REPO SIZE)
+*.staticwebassets.json
+staticwebassets.*
+
 # Build Results of an ATL Project
 [Dd]ebugPS/
 [Rr]eleasePS/
