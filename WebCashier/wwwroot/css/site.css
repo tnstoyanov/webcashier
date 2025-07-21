@@ -142,10 +142,11 @@ body {
 }
 
 .carousel-item {
-  flex: 0 0 90px;
+  flex: 0 0 10px;
   display: flex;
   justify-content: center;
   flex-shrink: 0;
+  margin-right: 0px;
 }
 
 /* Payment forms section */
