@@ -221,8 +221,8 @@ body {
 }
 
 .card-icon svg {
-  width: 32px;
-  height: 20px;
+  width: 52px;
+  height: 35px;
 }
 
 .card-icon svg {
@@ -234,6 +234,8 @@ body {
   font-weight: 500;
   color: #374151;
   font-size: 0.6rem;
+  font-family: 'Roboto Condensed', 'Arial Narrow', 'Helvetica Neue', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 /* Amount suggestion buttons */
