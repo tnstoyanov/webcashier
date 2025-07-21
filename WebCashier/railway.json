@@ -1,7 +1,0 @@
-{
-  "deploy": {
-    "startCommand": "dotnet WebCashier.dll",
-    "healthcheckPath": "/",
-    "healthcheckTimeout": 100
-  }
-}
