@@ -385,3 +385,32 @@ FodyWeavers.xsd
 # JetBrains Rider
 .idea/
 *.sln.iml
+# Add these deployment bloat files to gitignore
+# Deployment scripts and documentation
+AZURE_DEPLOYMENT.md
+DEPLOY_GUIDE.sh
+FREE_DEPLOYMENT_GUIDE.md
+GITHUB_DEPLOY.md
+*.deploy*.sh
+deploy-*.sh
+*-deploy.sh
+commit_message.txt
+fly.toml
+heroku-deploy.sh
+ultimate-deploy.sh
+
+# WebCashier deployment files
+WebCashier/deploy-*.sh
+WebCashier/diagnose-*.sh
+WebCashier/fixed-deploy.sh
+WebCashier/free-alternatives.sh
+WebCashier/linux-deploy.sh
+WebCashier/package.json
+WebCashier/quick-deploy.sh
+WebCashier/render.yaml
+WebCashier/simple-deploy.sh
+WebCashier/start-https.sh
+WebCashier/web.config
+
+# GitHub workflows if not needed
+.github/
