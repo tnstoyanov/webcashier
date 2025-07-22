@@ -1,0 +1,72 @@
+# .dockerignore - AGGRESSIVE exclusions to eliminate Docker build bloat
+# Version control and Git files - CRITICAL EXCLUSION
+.git
+.git/**
+.gitignore
+.gitattributes
+
+# Development and IDE files
+.vscode/
+.vs/
+*.swp
+*.swo
+*~
+*.bak
+
+# Build and publish outputs - CRITICAL FOR SIZE REDUCTION
+**/bin/
+**/obj/
+**/out/
+**/publish/
+**/Debug/
+**/Release/
+**/x64/
+**/x86/
+**/AnyCPU/
+
+# NuGet packages and cache
+**/packages/
+**/.nuget/
+**/nuget.exe
+*.nupkg
+**/TestResults/
+
+# Visual Studio files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+**/.vs/
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.cache
+**/.tmp/
+
+# Documentation and README
+README.md
+*.md
+docs/
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+
+# Deployment and CI/CD
+render-deploy.sh
+.github/
+.azure/
+
+# Large library source maps and development files
+**/*.map
+**/*.scss
+**/*.sass
+**/*.less
