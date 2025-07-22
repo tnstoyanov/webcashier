@@ -2,6 +2,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
+# CACHE BUSTING - Force fresh build on Render.com
+ARG CACHE_BUST=20250722134200
+RUN echo "Cache invalidation: $CACHE_BUST - Repository cleaned of 2.7GB bloat" > /tmp/cache_bust.txt
+
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY ["WebCashier/WebCashier.csproj", "WebCashier/"]
