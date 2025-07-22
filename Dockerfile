@@ -3,8 +3,8 @@ WORKDIR /app
 EXPOSE 8080
 
 # CACHE BUSTING - Force fresh build on Render.com
-ARG CACHE_BUST=20250723002000
-RUN echo "Cache invalidation: $CACHE_BUST - Finshark SVG corrected with proper scaling" > /tmp/cache_bust.txt
+ARG CACHE_BUST=20250723002500
+RUN echo "Cache invalidation: $CACHE_BUST - Finshark SVG sized to 72x31" > /tmp/cache_bust.txt
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
