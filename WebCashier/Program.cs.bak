@@ -67,6 +67,9 @@ else
 
 var app = builder.Build();
 
+// Test SSL connectivity on startup
+Console.WriteLine("Testing SSL connection to Praxis API...");
+await WebCashier.SSLTest.TestSSLConnection();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
