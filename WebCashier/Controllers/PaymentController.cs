@@ -135,18 +135,18 @@ namespace WebCashier.Controllers
                     
                     var model = new PaymentReturnModel
                     {
-                        IsSuccess = transaction.transaction_status == "approved",
-                        TransactionId = transaction.transaction_id,
-                        PaymentMethod = transaction.payment_method,
-                        PaymentProcessor = transaction.payment_processor,
-                        Currency = transaction.currency,
-                        Amount = (transaction.amount / 100.0m).ToString("F2"),
-                        CardType = transaction.card?.card_type,
-                        CardNumber = transaction.card?.card_number,
-                        StatusCode = transaction.status_code,
-                        StatusDetails = transaction.status_details,
-                        TransactionStatus = transaction.transaction_status,
-                        OrderId = session.order_id
+                        IsSuccess = transaction?.transaction_status == "approved",
+                        TransactionId = transaction?.transaction_id,
+                        PaymentMethod = transaction?.payment_method,
+                        PaymentProcessor = transaction?.payment_processor,
+                        Currency = transaction?.currency,
+                        Amount = transaction != null ? (transaction.amount / 100.0m).ToString("F2") : "0.00",
+                        CardType = transaction?.card?.card_type,
+                        CardNumber = transaction?.card?.card_number,
+                        StatusCode = transaction?.status_code,
+                        StatusDetails = transaction?.status_details,
+                        TransactionStatus = transaction?.transaction_status,
+                        OrderId = session?.order_id
                     };
 
                     if (model.IsSuccess)
@@ -217,17 +217,17 @@ namespace WebCashier.Controllers
                                 var transaction = callbackData.transaction;
                                 var model = new PaymentReturnModel
                                 {
-                                    IsSuccess = transaction.transaction_status == "approved",
-                                    TransactionId = transaction.transaction_id,
-                                    PaymentMethod = transaction.payment_method,
-                                    PaymentProcessor = transaction.payment_processor,
-                                    Currency = transaction.currency,
-                                    Amount = (transaction.amount / 100.0m).ToString("F2"),
-                                    CardType = transaction.card?.card_type,
-                                    CardNumber = transaction.card?.card_number,
-                                    StatusCode = transaction.status_code,
-                                    StatusDetails = transaction.status_details,
-                                    TransactionStatus = transaction.transaction_status,
+                                    IsSuccess = transaction?.transaction_status == "approved",
+                                    TransactionId = transaction?.transaction_id,
+                                    PaymentMethod = transaction?.payment_method,
+                                    PaymentProcessor = transaction?.payment_processor,
+                                    Currency = transaction?.currency,
+                                    Amount = transaction != null ? (transaction.amount / 100.0m).ToString("F2") : "0.00",
+                                    CardType = transaction?.card?.card_type,
+                                    CardNumber = transaction?.card?.card_number,
+                                    StatusCode = transaction?.status_code,
+                                    StatusDetails = transaction?.status_details,
+                                    TransactionStatus = transaction?.transaction_status,
                                     OrderId = callbackOrderId
                                 };
 
