@@ -551,24 +551,106 @@
             const value = cardInput.value.replace(/\s/g, '').replace(/[^0-9]/g, '');
             
             if (!value) {
-                if (cardError) cardError.style.display = 'block';
+                if (cardError) {
+                    cardError.textContent = 'Card number is required.';
+                    cardError.style.display = 'block';
+                }
                 return false;
             }
             
             // Check length (13-19 digits for most cards)
             if (value.length < 13 || value.length > 19) {
-                if (cardError) cardError.style.display = 'block';
+                if (cardError) {
+                    cardError.textContent = 'Please enter a valid card number (13-19 digits).';
+                    cardError.style.display = 'block';
+                }
                 return false;
             }
             
-            // Luhn algorithm validation
-            if (!isValidLuhn(value)) {
-                if (cardError) cardError.style.display = 'block';
+            // Enhanced card validation (includes Luhn + test pattern rejection + card type validation)
+            if (!isValidCardNumber(value)) {
+                if (cardError) {
+                    cardError.textContent = 'Please enter a valid credit card number.';
+                    cardError.style.display = 'block';
+                }
                 return false;
             }
             
             if (cardError) cardError.style.display = 'none';
             return true;
+        }
+
+        // Enhanced card number validation
+        function isValidCardNumber(cardNumber) {
+            // First check if it passes Luhn algorithm
+            if (!isValidLuhn(cardNumber)) {
+                return false;
+            }
+            
+            // Reject common test card patterns that should not be accepted in production
+            const testPatterns = [
+                /^1111/, // Cards starting with 1111
+                /^2222/, // Cards starting with 2222  
+                /^3333/, // Cards starting with 3333
+                /^4444/, // Cards starting with 4444
+                /^5555/, // Cards starting with 5555
+                /^6666/, // Cards starting with 6666
+                /^7777/, // Cards starting with 7777
+                /^8888/, // Cards starting with 8888
+                /^9999/, // Cards starting with 9999
+                /^0000/, // Cards starting with 0000
+                /^(1111\s*2222\s*3333\s*4444|1111222233334444)$/, // Specific test pattern
+                /^(4000\s*0000\s*0000\s*0002|4000000000000002)$/, // Another common test pattern
+                /^(5555\s*5555\s*5555\s*4444|5555555555554444)$/, // Mastercard test pattern
+            ];
+            
+            // Check against test patterns
+            for (let pattern of testPatterns) {
+                if (pattern.test(cardNumber)) {
+                    return false;
+                }
+            }
+            
+            // Check for valid card type prefixes
+            const cardType = getCardType(cardNumber);
+            if (!cardType) {
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Get card type and validate prefix
+        function getCardType(cardNumber) {
+            const number = cardNumber.replace(/\s/g, '');
+            
+            // Visa: starts with 4, length 13, 16, or 19
+            if (/^4/.test(number)) {
+                if ([13, 16, 19].includes(number.length)) {
+                    // Additional check: reject obvious test patterns like 4111111111111111
+                    if (/^4111111111111111$/.test(number) || /^4000000000000/.test(number)) {
+                        return null;
+                    }
+                    return 'visa';
+                }
+            }
+            
+            // Mastercard: starts with 5[1-5] or 2[2-7], length 16
+            if ((/^5[1-5]/.test(number) || /^2[2-7]/.test(number)) && number.length === 16) {
+                return 'mastercard';
+            }
+            
+            // American Express: starts with 34 or 37, length 15
+            if (/^3[47]/.test(number) && number.length === 15) {
+                return 'amex';
+            }
+            
+            // Discover: starts with 6011, 622[1-9], 64[4-9], or 65, length 16
+            if ((/^6011|^622[1-9]|^64[4-9]|^65/.test(number)) && number.length === 16) {
+                return 'discover';
+            }
+            
+            return null; // Unknown or invalid card type
         }
 
         // Luhn algorithm implementation
