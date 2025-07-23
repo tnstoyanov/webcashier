@@ -141,6 +141,11 @@ body {
 .method-carousel {
   overflow: hidden;
   position: relative;
+  touch-action: pan-y; /* Allow vertical scrolling but handle horizontal gestures */
+  user-select: none; /* Prevent text selection during swipes */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .carousel-track {
@@ -149,6 +154,12 @@ body {
   gap: 0.5rem;
   width: fit-content;
   transform: translateX(0px);
+  will-change: transform; /* Optimize for smooth animations */
+}
+
+/* Disable transition during swipe for better responsiveness */
+.carousel-track.swiping {
+  transition: none;
 }
 
 .carousel-item {
