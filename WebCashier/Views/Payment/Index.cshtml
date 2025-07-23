@@ -589,25 +589,16 @@
                 return false;
             }
             
-            // Reject common test card patterns that should not be accepted in production
-            const testPatterns = [
-                /^1111/, // Cards starting with 1111
-                /^2222/, // Cards starting with 2222  
-                /^3333/, // Cards starting with 3333
-                /^4444/, // Cards starting with 4444
-                /^5555/, // Cards starting with 5555
-                /^6666/, // Cards starting with 6666
-                /^7777/, // Cards starting with 7777
-                /^8888/, // Cards starting with 8888
-                /^9999/, // Cards starting with 9999
-                /^0000/, // Cards starting with 0000
-                /^(1111\s*2222\s*3333\s*4444|1111222233334444)$/, // Specific test pattern
-                /^(4000\s*0000\s*0000\s*0002|4000000000000002)$/, // Another common test pattern
-                /^(5555\s*5555\s*5555\s*4444|5555555555554444)$/, // Mastercard test pattern
+            // Only reject obvious fake patterns that are clearly not real test cards
+            const fakePatterns = [
+                /^(1111\s*2222\s*3333\s*4444|1111222233334444)$/, // Mixed pattern like 1111 2222 3333 4444
+                /^(1234\s*5678\s*9012\s*3456|1234567890123456)$/, // Sequential pattern
+                /^(0000\s*0000\s*0000\s*0000|0000000000000000)$/, // All zeros
+                /^(9999\s*9999\s*9999\s*9999|9999999999999999)$/, // All nines
             ];
             
-            // Check against test patterns
-            for (let pattern of testPatterns) {
+            // Check against fake patterns only
+            for (let pattern of fakePatterns) {
                 if (pattern.test(cardNumber)) {
                     return false;
                 }
@@ -629,8 +620,9 @@
             // Visa: starts with 4, length 13, 16, or 19
             if (/^4/.test(number)) {
                 if ([13, 16, 19].includes(number.length)) {
-                    // Additional check: reject obvious test patterns like 4111111111111111
-                    if (/^4111111111111111$/.test(number) || /^4000000000000/.test(number)) {
+                    // Allow legitimate test cards like 4111111111111111
+                    // Only reject obvious patterns like 4000000000000000
+                    if (/^4000000000000000$/.test(number)) {
                         return null;
                     }
                     return 'visa';
@@ -639,6 +631,7 @@
             
             // Mastercard: starts with 5[1-5] or 2[2-7], length 16
             if ((/^5[1-5]/.test(number) || /^2[2-7]/.test(number)) && number.length === 16) {
+                // Allow legitimate test cards like 5555555555554444
                 return 'mastercard';
             }
             
