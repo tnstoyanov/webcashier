@@ -73,11 +73,30 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    // Production configuration - let Render.com handle ports and HTTPS
-    // Render.com will automatically configure ports and SSL
+    // Production configuration - bind to PORT environment variable (required for Render.com)
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+    builder.WebHost.ConfigureKestrel(serverOptions =>
+    {
+        serverOptions.ListenAnyIP(int.Parse(port));
+    });
 }
 
 var app = builder.Build();
+
+// Add startup logging for debugging
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("WebCashier starting up...");
+logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
+
+if (app.Environment.IsProduction())
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+    logger.LogInformation("Production mode - binding to port: {Port}", port);
+}
+else
+{
+    logger.LogInformation("Development mode - binding to localhost:5182");
+}
 
 
 // Configure the HTTP request pipeline.

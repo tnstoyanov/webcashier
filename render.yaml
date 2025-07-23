@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: webcashier
+    env: dotnet
+    plan: free
+    runtime: dotnet
+    buildCommand: cd WebCashier && dotnet publish --configuration Release --output ../publish
+    startCommand: dotnet ./publish/WebCashier.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:$PORT
