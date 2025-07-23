@@ -219,7 +219,7 @@
 
                 <p class="currency-note">Please note that you might be charged in a different currency</p>
 
-                <button type="submit" class="deposit-btn">DEPOSIT</button>
+                <button type="submit" class="deposit-btn" id="deposit-btn" disabled>DEPOSIT</button>
             </form>
         </div>
     </div>
@@ -499,8 +499,9 @@
                 // Add active class to clicked button
                 this.classList.add('active');
                 
-                // Validate amount field after setting value
+                // Validate amount field after setting value and update deposit button
                 validateAmount();
+                updateDepositButtonState();
             });
         });
 
@@ -519,9 +520,16 @@
             
             if (!amountInput.value || value <= 0) {
                 if (amountError) amountError.style.display = 'block';
+                return false;
             } else {
                 if (amountError) amountError.style.display = 'none';
+                return true;
             }
+        }
+
+        function validateCurrency() {
+            const currencySelect = document.querySelector('[name="Currency"]');
+            return currencySelect.value !== '';
         }
 
         function validateNameOnCard() {
@@ -530,8 +538,10 @@
             
             if (!nameInput.value.trim()) {
                 if (nameError) nameError.style.display = 'block';
+                return false;
             } else {
                 if (nameError) nameError.style.display = 'none';
+                return true;
             }
         }
 
@@ -591,9 +601,36 @@
             
             if (!value || value.length < 5) {
                 if (expiryError) expiryError.style.display = 'block';
-            } else {
-                if (expiryError) expiryError.style.display = 'none';
+                return false;
             }
+            
+            // Additional date validation
+            const parts = value.split('/');
+            if (parts.length !== 2) {
+                if (expiryError) expiryError.style.display = 'block';
+                return false;
+            }
+            
+            const month = parseInt(parts[0]);
+            const year = parseInt(parts[1]) + 2000; // Convert YY to YYYY
+            const currentDate = new Date();
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth() + 1;
+            
+            // Check if month is valid
+            if (month < 1 || month > 12) {
+                if (expiryError) expiryError.style.display = 'block';
+                return false;
+            }
+            
+            // Check if date is not in the past
+            if (year < currentYear || (year === currentYear && month < currentMonth)) {
+                if (expiryError) expiryError.style.display = 'block';
+                return false;
+            }
+            
+            if (expiryError) expiryError.style.display = 'none';
+            return true;
         }
 
         function validateCVV() {
@@ -601,10 +638,57 @@
             const cvvError = cvvInput.parentElement.querySelector('.text-danger');
             const value = cvvInput.value;
             
-            if (!value || value.length < 3) {
+            if (!value || value.length < 3 || value.length > 4) {
                 if (cvvError) cvvError.style.display = 'block';
+                return false;
             } else {
                 if (cvvError) cvvError.style.display = 'none';
+                return true;
+            }
+        }
+
+        // Check if all mandatory fields are valid and update deposit button state
+        function updateDepositButtonState() {
+            const depositBtn = document.getElementById('deposit-btn');
+            
+            // Get current payment method
+            const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked').value;
+            
+            if (selectedPaymentMethod === 'card') {
+                // For card payments, check all mandatory card fields
+                const isAmountValid = validateAmount();
+                const isCurrencyValid = validateCurrency();
+                const isCardNumberValid = validateCardNumber();
+                const isNameValid = validateNameOnCard();
+                const isExpiryValid = validateExpirationDate();
+                const isCVVValid = validateCVV();
+                
+                const allValid = isAmountValid && isCurrencyValid && isCardNumberValid && 
+                               isNameValid && isExpiryValid && isCVVValid;
+                
+                if (allValid) {
+                    depositBtn.disabled = false;
+                    depositBtn.classList.remove('disabled');
+                    depositBtn.textContent = 'DEPOSIT';
+                } else {
+                    depositBtn.disabled = true;
+                    depositBtn.classList.add('disabled');
+                    depositBtn.textContent = 'DEPOSIT';
+                }
+            } else {
+                // For other payment methods, only check amount and currency
+                const isAmountValid = validateAmount();
+                const isCurrencyValid = validateCurrency();
+                
+                if (isAmountValid && isCurrencyValid) {
+                    depositBtn.disabled = false;
+                    depositBtn.classList.remove('disabled');
+                    depositBtn.textContent = 'DEPOSIT';
+                } else {
+                    depositBtn.disabled = true;
+                    depositBtn.classList.add('disabled');
+                    depositBtn.textContent = 'DEPOSIT';
+                }
             }
         }
 
@@ -617,6 +701,7 @@
 
             // Add event listeners for real-time validation with debouncing
             const amountInput = document.querySelector('[name="Amount"]');
+            const currencySelect = document.querySelector('[name="Currency"]');
             const nameInput = document.querySelector('[name="NameOnCard"]');
             const cardInput = document.querySelector('[name="CardNumber"]');
             const expiryInput = document.querySelector('[name="ExpirationDate"]');
@@ -624,25 +709,99 @@
 
             // Use setTimeout to prevent conflicts with jQuery validation
             if (amountInput) {
-                amountInput.addEventListener('input', () => setTimeout(validateAmount, 100));
-                amountInput.addEventListener('blur', () => setTimeout(validateAmount, 100));
+                amountInput.addEventListener('input', () => {
+                    setTimeout(() => {
+                        validateAmount();
+                        updateDepositButtonState();
+                    }, 100);
+                });
+                amountInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        validateAmount();
+                        updateDepositButtonState();
+                    }, 100);
+                });
             }
+            
+            if (currencySelect) {
+                currencySelect.addEventListener('change', () => {
+                    setTimeout(() => {
+                        updateDepositButtonState();
+                    }, 100);
+                });
+            }
+            
             if (nameInput) {
-                nameInput.addEventListener('input', () => setTimeout(validateNameOnCard, 100));
-                nameInput.addEventListener('blur', () => setTimeout(validateNameOnCard, 100));
+                nameInput.addEventListener('input', () => {
+                    setTimeout(() => {
+                        validateNameOnCard();
+                        updateDepositButtonState();
+                    }, 100);
+                });
+                nameInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        validateNameOnCard();
+                        updateDepositButtonState();
+                    }, 100);
+                });
             }
+            
             if (cardInput) {
-                cardInput.addEventListener('input', () => setTimeout(validateCardNumber, 100));
-                cardInput.addEventListener('blur', () => setTimeout(validateCardNumber, 100));
+                cardInput.addEventListener('input', () => {
+                    setTimeout(() => {
+                        validateCardNumber();
+                        updateDepositButtonState();
+                    }, 150);
+                });
+                cardInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        validateCardNumber();
+                        updateDepositButtonState();
+                    }, 150);
+                });
             }
+            
             if (expiryInput) {
-                expiryInput.addEventListener('input', () => setTimeout(validateExpirationDate, 100));
-                expiryInput.addEventListener('blur', () => setTimeout(validateExpirationDate, 100));
+                expiryInput.addEventListener('input', () => {
+                    setTimeout(() => {
+                        validateExpirationDate();
+                        updateDepositButtonState();
+                    }, 150);
+                });
+                expiryInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        validateExpirationDate();
+                        updateDepositButtonState();
+                    }, 150);
+                });
             }
+            
             if (cvvInput) {
-                cvvInput.addEventListener('input', () => setTimeout(validateCVV, 100));
-                cvvInput.addEventListener('blur', () => setTimeout(validateCVV, 100));
+                cvvInput.addEventListener('input', () => {
+                    setTimeout(() => {
+                        validateCVV();
+                        updateDepositButtonState();
+                    }, 150);
+                });
+                cvvInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        validateCVV();
+                        updateDepositButtonState();
+                    }, 150);
+                });
             }
+            
+            // Add event listeners for payment method changes
+            document.querySelectorAll('input[name="PaymentMethod"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    setTimeout(() => {
+                        updateDepositButtonState();
+                    }, 100);
+                });
+            });
+            
+            // Initial deposit button state check
+            updateDepositButtonState();
         }
 
         // Wait for DOM to be fully loaded
