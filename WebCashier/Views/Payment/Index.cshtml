@@ -24,7 +24,7 @@
                 <div class="payment-methods">
                     <p class="method-label">Choose a payment method:</p>
                     <div class="carousel-container">
-                        <button type="button" class="carousel-arrow carousel-prev">
+                        <button type="button" class="carousel-arrow carousel-prev" onclick="moveCarousel(-1)">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -127,7 +127,7 @@
                             </div>
                         </div>
                         
-                        <button type="button" class="carousel-arrow carousel-next">
+                        <button type="button" class="carousel-arrow carousel-next" onclick="moveCarousel(1)">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -136,7 +136,8 @@
                 </div>
 
                 <div class="payment-forms">
-                    <div id="card-details" class="card-details">
+                    <!-- Praxis Credit Card Form (Default) -->
+                    <div id="card-details" class="payment-form-container active">
                         <div class="card-form-layout">
                             <div class="form-left">
                                 <!-- Amount suggestion buttons -->
@@ -220,6 +221,269 @@
                                                 <div class="card-brand-back" id="card-brand-back"></div>
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PayPal Form -->
+                    <div id="paypal-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
+                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
+                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="PayPalAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="PayPalCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <input name="PayPalPromotionCode" class="form-control" placeholder="Promotion code (optional)" />
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>PayPal Payment</h3>
+                                    <p>You will be redirected to PayPal to complete your payment securely.</p>
+                                    <div class="paypal-logo-large">
+                                        <img src="https://www.paypalobjects.com/marketing/web/logos/paypal-logo-full-text.svg" alt="PayPal" width="150" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Finshark Form -->
+                    <div id="safetypay-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
+                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
+                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="FinsharkAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="FinsharkCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <input name="FinsharkPromotionCode" class="form-control" placeholder="Promotion code (optional)" />
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>Finshark Payment</h3>
+                                    <p>Secure payment processing via Finshark platform.</p>
+                                    <div class="finshark-logo-large">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="150" height="65" viewBox="0 0 300 65.156">
+                                          <g id="Logo" transform="translate(-161.42 106.5)">
+                                            <path id="Tracciato_19910" data-name="Tracciato 19910" d="M424.871-70.183,435.64-55.45H425.323L416.26-68.884v-1.971l9-12.465h9.811Z" transform="translate(25.779 2.345)" fill="#011025"></path>
+                                            <path id="Tracciato_19911" data-name="Tracciato 19911" d="M417.066-67.619v13.434H408.29V-95.82h8.776v28.2Z" transform="translate(24.973 1.08)" fill="#011025"></path>
+                                            <path id="Tracciato_19912" data-name="Tracciato 19912" d="M408.233-81.373q-2.61,3.287-5.219,6.6a3.692,3.692,0,0,0-1.432-.98,5.169,5.169,0,0,0-1.949-.341,4.6,4.6,0,0,0-3.469,1.343,5.655,5.655,0,0,0-1.288,4.041V-55.4H386.1v-27.87h8.776v2.114a9.449,9.449,0,0,1,7.169-2.687,9.644,9.644,0,0,1,3.524.595A7.08,7.08,0,0,1,408.233-81.373Z" transform="translate(22.729 2.292)" fill="#011025"></path>
+                                            <path id="Tracciato_19913" data-name="Tracciato 19913" d="M384.214-83.267V-55.4h-8.6v-2.257a9.786,9.786,0,0,1-2.588,1.74,11.69,11.69,0,0,1-5.1,1.09,12.6,12.6,0,0,1-6.86-1.894,13.507,13.507,0,0,1-4.757-5.153,15.571,15.571,0,0,1-1.751-7.466,15.558,15.558,0,0,1,1.751-7.455,13.428,13.428,0,0,1,4.757-5.153,12.6,12.6,0,0,1,6.86-1.894A11.558,11.558,0,0,1,373-82.75a9.955,9.955,0,0,1,2.61,1.784v-2.3Zm-8.259,13.93a7.315,7.315,0,0,0-.771-3.436A5.693,5.693,0,0,0,373-75.1a6.271,6.271,0,0,0-3.237-.837,6.283,6.283,0,0,0-3.248.837,6.051,6.051,0,0,0-2.235,2.323,6.957,6.957,0,0,0-.826,3.436,7.016,7.016,0,0,0,.8,3.392A5.949,5.949,0,0,0,366.5-63.6a6.1,6.1,0,0,0,3.2.859,5.879,5.879,0,0,0,4.537-1.861A6.714,6.714,0,0,0,375.956-69.338Z" transform="translate(19.537 2.292)" fill="#011025"></path>
+                                            <path id="Tracciato_19914" data-name="Tracciato 19914" d="M353.518-72.024v17.839h-8.776v-15.89A4.791,4.791,0,0,0,343.4-73.6a4.613,4.613,0,0,0-3.414-1.343,5.173,5.173,0,0,0-2.522.595,4.4,4.4,0,0,0-1.718,1.729,4.988,4.988,0,0,0-.639,2.544v15.89H326.33V-95.82h8.776V-80a9.992,9.992,0,0,1,1.839-1.288,11.711,11.711,0,0,1,5.682-1.343,11.826,11.826,0,0,1,5.726,1.343,9.591,9.591,0,0,1,3.821,3.733A11.078,11.078,0,0,1,353.518-72.024Z" transform="translate(16.682 1.08)" fill="#011025"></path>
+                                            <path id="Tracciato_19915" data-name="Tracciato 19915" d="M324.8-79.172q-2.494,2.511-4.988,5.043a7.339,7.339,0,0,0-2.951-2.18,8.882,8.882,0,0,0-3.182-.628,4.56,4.56,0,0,0-2.235.429,1.335,1.335,0,0,0-.749,1.233,1.538,1.538,0,0,0,.969,1.376,11.819,11.819,0,0,0,2.533.914c1.024.264,2.114.595,3.259.98a14.327,14.327,0,0,1,3.27,1.542,7.768,7.768,0,0,1,2.533,2.61,8.293,8.293,0,0,1,.969,4.272,7.813,7.813,0,0,1-3.072,6.486q-3.056,2.412-8.281,2.412a18.942,18.942,0,0,1-4.845-.639,17.974,17.974,0,0,1-4.416-1.806a14.229,14.229,0,0,1-3.469-2.72l4.988-5.054a9.483,9.483,0,0,0,3.27,2.323,9.994,9.994,0,0,0,4.129.837,5.007,5.007,0,0,0,2.378-.462,1.4,1.4,0,0,0,.826-1.255,1.714,1.714,0,0,0-1-1.586,12.33,12.33,0,0,0-2.555-.969c-1.024-.286-2.114-.606-3.27-.947a14.587,14.587,0,0,1-3.259-1.432,7.218,7.218,0,0,1-2.533-2.555,8.032,8.032,0,0,1-.969-4.162,8,8,0,0,1,1.376-4.669,9.205,9.205,0,0,1,3.9-3.127,14.252,14.252,0,0,1,5.9-1.145,17.087,17.087,0,0,1,6.574,1.233A11.772,11.772,0,0,1,324.8-79.172Z" transform="translate(14.033 2.271)" fill="#011025"></path>
+                                            <path id="Tracciato_19916" data-name="Tracciato 19916" d="M299.878-73.236V-55.4H291.1v-15.89a4.755,4.755,0,0,0-1.354-3.524,4.6,4.6,0,0,0-3.414-1.343,5.2,5.2,0,0,0-2.522.595,4.4,4.4,0,0,0-1.718,1.729,5.1,5.1,0,0,0-.628,2.544V-55.4H272.69v-27.87h8.776v2.18A9.993,9.993,0,0,1,283.5-82.5a12.206,12.206,0,0,1,5.759-1.343,10.2,10.2,0,0,1,5.473,1.465A10.736,10.736,0,0,1,298.5-78.51,10.5,10.5,0,0,1,299.878-73.236Z" transform="translate(11.256 2.292)" fill="#011025"></path>
+                                            <path id="Tracciato_19917" data-name="Tracciato 19917" d="M268.886-83.32v27.87H260.11V-83.32h8.776Z" transform="translate(9.982 2.345)" fill="#011025"></path>
+                                            <path id="Tracciato_19918" data-name="Tracciato 19918" d="M267.806-92.209a4.565,4.565,0,0,1,1.255,3.27,4.655,4.655,0,0,1-1.255,3.292,4.261,4.261,0,0,1-3.27,1.343,4.271,4.271,0,0,1-3.237-1.343,4.589,4.589,0,0,1-1.288-3.292,4.5,4.5,0,0,1,1.288-3.27,4.333,4.333,0,0,1,3.237-1.321A4.322,4.322,0,0,1,267.806-92.209Z" transform="translate(9.973 1.313)" fill="#011025"></path>
+                                            <path id="Tracciato_19919" data-name="Tracciato 19919" d="M262.375-94.22c-1.453,2.147-2.907,4.284-4.35,6.431a3.877,3.877,0,0,0-1.123-.573,3.72,3.72,0,0,0-1.178-.176,2.751,2.751,0,0,0-2.18.837,3.242,3.242,0,0,0-.738,2.257V-82h5.219v7.455h-5.219v20.416H244.03V-74.542H238.81V-82h5.219v-2.984a11.7,11.7,0,0,1,1.432-5.792,10.693,10.693,0,0,1,4.041-4.1,12.039,12.039,0,0,1,6.222-1.531,11.657,11.657,0,0,1,3.557.518A10.47,10.47,0,0,1,262.375-94.22Z" transform="translate(7.828 1.021)" fill="#011025"></path>
+                                            <path id="Tracciato_19920" data-name="Tracciato 19920" d="M225.827-55.237a64.532,64.532,0,0,1,.738,9.778,62.178,62.178,0,0,1-32.572-8.732,62.205,62.205,0,0,1-32.572,8.732,64.532,64.532,0,0,1,.738-9.778A55.394,55.394,0,0,0,193.992-65.83,55.367,55.367,0,0,0,225.827-55.237Z" transform="translate(0 4.114)" fill="#011025"></path>
+                                            <path id="Tracciato_19921" data-name="Tracciato 19921" d="M226.374-106.5a62.15,62.15,0,0,1-8.732,32.572,64.433,64.433,0,0,1,6.651,16.242A48.15,48.15,0,0,1,213.6-59.337a54.66,54.66,0,0,0-7.6-14.59,53.508,53.508,0,0,0,9.525-21.726A55.364,55.364,0,0,0,174-59.337a48.148,48.148,0,0,1-10.7,1.652A65.16,65.16,0,0,1,226.374-106.5Z" transform="translate(0.189)" fill="#011025"></path>
+                                          </g>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Skrill Form -->
+                    <div id="skrill-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
+                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
+                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="SkrillAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="SkrillCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <input name="SkrillPromotionCode" class="form-control" placeholder="Promotion code (optional)" />
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>Skrill Payment</h3>
+                                    <p>You will be redirected to Skrill to complete your payment securely.</p>
+                                    <div class="skrill-logo-large">
+                                        <img src="https://www.skrill.com/typo3conf/ext/sitepackage/Resources/Public/images/Skrill-Logo.svg" alt="Skrill" width="150" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Zota Form -->
+                    <div id="zmg-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
+                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
+                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="ZotaAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="ZotaCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <input name="ZotaPromotionCode" class="form-control" placeholder="Promotion code (optional)" />
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card" style="background-color: #0C0B42; color: white;">
+                                    <h3 style="color: white;">Zota Payment</h3>
+                                    <p style="color: white;">Secure payment processing via Zota platform.</p>
+                                    <div class="zota-logo-large">
+                                        <img src="https://zota.com/wp-content/uploads/2023/01/zota-logo.svg" alt="Zota" width="150" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Google Pay Form -->
+                    <div id="gpay-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
+                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
+                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="GPayAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="GPayCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <input name="GPayPromotionCode" class="form-control" placeholder="Promotion code (optional)" />
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>Google Pay</h3>
+                                    <p>Quick and secure payments with Google Pay.</p>
+                                    <div class="gpay-logo-large">
+                                        <img src="https://developers.google.com/static/pay/api/images/brand-guidelines/google-pay-mark.png" alt="Google Pay" width="120" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Luxtak Form -->
+                    <div id="luxtak-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
+                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
+                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="LuxtakAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="LuxtakCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>Luxtak Payment</h3>
+                                    <p>Secure and fast payment processing via Luxtak platform.</p>
+                                    <div class="luxtak-logo-large">
+                                        <img src="https://luxtak.com/_next/static/media/logo.1a31e1d1.svg" alt="Luxtak" width="150" />
                                     </div>
                                 </div>
                             </div>
@@ -476,18 +740,60 @@
             return false;
         }
 
-        // Toggle payment method details
+        // Toggle payment method details and forms
         document.querySelectorAll('input[name="PaymentMethod"]').forEach(radio => {
             radio.addEventListener('change', function() {
+                // Update active state for carousel items
                 document.querySelectorAll('.method-option').forEach(opt => opt.classList.remove('active'));
                 this.nextElementSibling.classList.add('active');
                 
-                const cardDetails = document.getElementById('card-details');
-                if (this.value === 'card') {
-                    cardDetails.style.display = 'block';
-                } else {
-                    cardDetails.style.display = 'none';
+                // Hide all payment forms first
+                document.querySelectorAll('.payment-form-container').forEach(form => {
+                    form.style.display = 'none';
+                    form.classList.remove('active');
+                });
+                
+                // Show the corresponding payment form
+                const selectedMethod = this.value;
+                let targetFormId = '';
+                
+                switch(selectedMethod) {
+                    case 'card':
+                        targetFormId = 'card-details';
+                        break;
+                    case 'paypal':
+                        targetFormId = 'paypal-details';
+                        break;
+                    case 'safetypay':
+                        targetFormId = 'safetypay-details';
+                        break;
+                    case 'skrill':
+                        targetFormId = 'skrill-details';
+                        break;
+                    case 'zmg':
+                        targetFormId = 'zmg-details';
+                        break;
+                    case 'gpay':
+                        targetFormId = 'gpay-details';
+                        break;
+                    case 'luxtak':
+                        targetFormId = 'luxtak-details';
+                        break;
+                    default:
+                        targetFormId = 'card-details'; // fallback to card
                 }
+                
+                // Show the selected form
+                const targetForm = document.getElementById(targetFormId);
+                if (targetForm) {
+                    targetForm.style.display = 'block';
+                    targetForm.classList.add('active');
+                }
+                
+                // Update deposit button state
+                updateDepositButtonState();
+                
+                console.log(`Switched to payment method: ${selectedMethod}, showing form: ${targetFormId}`);
             });
         });
 
@@ -495,16 +801,39 @@
         document.querySelectorAll('.amount-btn').forEach(button => {
             button.addEventListener('click', function() {
                 const amount = this.getAttribute('data-amount');
-                const amountInput = document.querySelector('[name="Amount"]');
-                amountInput.value = amount;
                 
-                // Remove active class from all buttons
-                document.querySelectorAll('.amount-btn').forEach(btn => btn.classList.remove('active'));
+                // Find the active payment form and update its amount input
+                const activeForm = document.querySelector('.payment-form-container.active');
+                if (activeForm) {
+                    const amountInput = activeForm.querySelector('input[type="number"]');
+                    if (amountInput) {
+                        amountInput.value = amount;
+                    }
+                }
+                
+                // Also update the main Amount input for backwards compatibility
+                const mainAmountInput = document.querySelector('[name="Amount"]');
+                if (mainAmountInput) {
+                    mainAmountInput.value = amount;
+                }
+                
+                // Update Luxtak specific fields if Luxtak is active
+                const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
+                if (selectedPaymentMethod === 'luxtak') {
+                    const luxtakAmountInput = document.querySelector('[name="LuxtakAmount"]');
+                    if (luxtakAmountInput) {
+                        luxtakAmountInput.value = amount;
+                    }
+                }
+                
+                // Remove active class from all buttons in the active form
+                const formAmountBtns = activeForm ? activeForm.querySelectorAll('.amount-btn') : document.querySelectorAll('.amount-btn');
+                formAmountBtns.forEach(btn => btn.classList.remove('active'));
+                
                 // Add active class to clicked button
                 this.classList.add('active');
                 
-                // Validate amount field after setting value and update deposit button
-                validateAmount(false); // Don't show error when user clicks suggestion
+                // Update deposit button state
                 updateDepositButtonState();
             });
         });
@@ -518,7 +847,18 @@
 
         // Validation functions - only show errors after user interaction
         function validateAmount(showErrors = true) {
-            const amountInput = document.querySelector('[name="Amount"]');
+            const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
+            let amountInput;
+            
+            // Get the appropriate amount input based on selected payment method
+            if (selectedPaymentMethod === 'luxtak') {
+                amountInput = document.querySelector('[name="LuxtakAmount"]') || document.querySelector('[name="Amount"]');
+            } else {
+                amountInput = document.querySelector('[name="Amount"]');
+            }
+            
+            if (!amountInput) return false;
+            
             const amountError = amountInput.parentElement.querySelector('.text-danger');
             const value = parseFloat(amountInput.value);
             
@@ -535,8 +875,17 @@
         }
 
         function validateCurrency(showErrors = true) {
-            const currencySelect = document.querySelector('[name="Currency"]');
-            return currencySelect.value !== '';
+            const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
+            let currencySelect;
+            
+            // Get the appropriate currency select based on selected payment method
+            if (selectedPaymentMethod === 'luxtak') {
+                currencySelect = document.querySelector('[name="LuxtakCurrency"]') || document.querySelector('[name="Currency"]');
+            } else {
+                currencySelect = document.querySelector('[name="Currency"]');
+            }
+            
+            return currencySelect && currencySelect.value !== '';
         }
 
         function validateNameOnCard(showErrors = true) {
@@ -964,8 +1313,27 @@
             initializeValidation();
         }
 
-        // Form submission handler for loading overlay
+        // Form submission handler for loading overlay and data preparation
         document.querySelector('.payment-form').addEventListener('submit', function(e) {
+            const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
+            
+            // For Luxtak payment, copy the Luxtak-specific fields to the main form fields
+            if (selectedPaymentMethod === 'luxtak') {
+                const luxtakAmountInput = document.querySelector('[name="LuxtakAmount"]');
+                const luxtakCurrencySelect = document.querySelector('[name="LuxtakCurrency"]');
+                const mainAmountInput = document.querySelector('[name="Amount"]');
+                const mainCurrencySelect = document.querySelector('[name="Currency"]');
+                
+                if (luxtakAmountInput && mainAmountInput) {
+                    mainAmountInput.value = luxtakAmountInput.value;
+                }
+                if (luxtakCurrencySelect && mainCurrencySelect) {
+                    mainCurrencySelect.value = luxtakCurrencySelect.value;
+                }
+                
+                console.log('Luxtak payment - Amount:', luxtakAmountInput?.value, 'Currency:', luxtakCurrencySelect?.value);
+            }
+            
             // Check if form is valid before showing loading overlay
             const form = e.target;
             const isValid = form.checkValidity();
@@ -985,5 +1353,31 @@
                 }
             }
         });
+
+        // Carousel navigation function
+        function moveCarousel(direction) {
+            const carousel = document.querySelector('.method-carousel');
+            const track = document.querySelector('.carousel-track');
+            const items = document.querySelectorAll('.carousel-item');
+            const itemWidth = items[0].offsetWidth + 20; // Add gap
+            
+            if (!carousel.currentPosition) {
+                carousel.currentPosition = 0;
+            }
+            
+            const maxPosition = -(items.length - 3) * itemWidth; // Show 3 items at once
+            
+            carousel.currentPosition += direction * itemWidth;
+            
+            // Boundary checks
+            if (carousel.currentPosition > 0) {
+                carousel.currentPosition = 0;
+            }
+            if (carousel.currentPosition < maxPosition) {
+                carousel.currentPosition = maxPosition;
+            }
+            
+            track.style.transform = `translateX(${carousel.currentPosition}px)`;
+        }
     </script>
 }

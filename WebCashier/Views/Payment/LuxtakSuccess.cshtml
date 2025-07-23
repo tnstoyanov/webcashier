@@ -1,0 +1,187 @@
+@model WebCashier.Models.PaymentReturnModel
+
+@{
+    ViewData["Title"] = "Payment Successful - Luxtak";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="payment-container">
+    <div class="payment-header">
+        <div class="logo-container">
+            <img class="logo" src="https://xcite.platform.thexcite.com/resources/svg/trading_logo.svg" alt="zenstox logo" />
+            <a href="/" class="back-link">Back to platform</a>
+        </div>
+    </div>
+
+    <div class="payment-content">
+        <div class="result-card luxtak-success">
+            <div class="success-icon">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" fill="#22c55e"/>
+                    <path d="M9 12l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            
+            <h1 class="result-title">Payment Successful!</h1>
+            <p class="result-message">Your payment has been processed successfully through Luxtak.</p>
+            
+            <div class="payment-summary">
+                <div class="summary-row">
+                    <span class="summary-label">Transaction ID:</span>
+                    <span class="summary-value">@Model.TransactionId</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Amount:</span>
+                    <span class="summary-value">@Model.Currency @Model.Amount</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Payment Method:</span>
+                    <span class="summary-value">@Model.PaymentMethod</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Status:</span>
+                    <span class="summary-value success-status">@Model.TransactionStatus</span>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.OrderId))
+                {
+                    <div class="summary-row">
+                        <span class="summary-label">Order ID:</span>
+                        <span class="summary-value">@Model.OrderId</span>
+                    </div>
+                }
+            </div>
+            
+            <div class="luxtak-branding">
+                <img src="https://luxtak.com/_next/static/media/logo.1a31e1d1.svg" alt="Luxtak" width="120" />
+                <p class="branding-text">Payment processed securely</p>
+            </div>
+
+            <div class="action-buttons">
+                <a href="/" class="btn btn-primary">Continue to Platform</a>
+                <button onclick="window.print()" class="btn btn-secondary">Print Receipt</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.luxtak-success {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    color: white;
+    text-align: center;
+    padding: 3rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    margin: 2rem auto;
+}
+
+.success-icon {
+    margin-bottom: 2rem;
+}
+
+.result-title {
+    color: white;
+    margin-bottom: 1rem;
+    font-size: 2.2rem;
+    font-weight: 700;
+}
+
+.result-message {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 2.5rem;
+    font-size: 1.2rem;
+}
+
+.payment-summary {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.summary-row:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.summary-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.summary-value {
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.success-status {
+    color: #86efac;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.luxtak-branding {
+    margin: 2rem 0;
+    padding: 2rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.branding-text {
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.btn {
+    padding: 0.8rem 2rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: white;
+    color: #22c55e;
+}
+
+.btn-primary:hover {
+    background: #f3f4f6;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: white;
+}
+</style>

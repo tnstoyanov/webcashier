@@ -1,0 +1,131 @@
+@model WebCashier.Models.PaymentModel
+
+@{
+    ViewData["Title"] = "Processing Luxtak Payment";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="payment-container">
+    <div class="payment-header">
+        <div class="logo-container">
+            <img class="logo" src="https://xcite.platform.thexcite.com/resources/svg/trading_logo.svg" alt="zenstox logo" />
+            <a href="/" class="back-link">Back to platform</a>
+        </div>
+    </div>
+
+    <div class="payment-content">
+        <div class="processing-card luxtak-processing">
+            <div class="processing-animation">
+                <div class="spinner"></div>
+            </div>
+            
+            <h1 class="processing-title">Processing Your Luxtak Payment</h1>
+            <p class="processing-message">Please wait while we process your payment through Luxtak...</p>
+            
+            <div class="payment-details">
+                <div class="detail-row">
+                    <span class="detail-label">Amount:</span>
+                    <span class="detail-value">@Model.Currency @Model.Amount.ToString("F2")</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment Method:</span>
+                    <span class="detail-value">Luxtak</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Order ID:</span>
+                    <span class="detail-value">@ViewBag.OrderId</span>
+                </div>
+            </div>
+            
+            <div class="luxtak-branding">
+                <img src="https://luxtak.com/_next/static/media/logo.1a31e1d1.svg" alt="Luxtak" width="120" />
+                <p class="branding-text">Secure payment processing</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.luxtak-processing {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+    padding: 3rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    margin: 2rem auto;
+}
+
+.processing-animation {
+    margin-bottom: 2rem;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.processing-title {
+    color: white;
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.processing-message {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+.payment-details {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: left;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+}
+
+.detail-row:last-child {
+    margin-bottom: 0;
+}
+
+.detail-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+}
+
+.detail-value {
+    color: white;
+    font-weight: 600;
+}
+
+.luxtak-branding {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.branding-text {
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+</style>

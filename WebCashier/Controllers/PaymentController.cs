@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using WebCashier.Models;
 using WebCashier.Services;
 using WebCashier.Models.Praxis;
+using WebCashier.Models.Luxtak;
 using System.Text.Json;
 
 namespace WebCashier.Controllers
@@ -10,12 +11,14 @@ namespace WebCashier.Controllers
     {
         private readonly ILogger<PaymentController> _logger;
         private readonly IPraxisService _praxisService;
+        private readonly LuxtakService _luxtakService;
         private readonly IPaymentStateService _paymentStateService;
 
-        public PaymentController(ILogger<PaymentController> logger, IPraxisService praxisService, IPaymentStateService paymentStateService)
+        public PaymentController(ILogger<PaymentController> logger, IPraxisService praxisService, LuxtakService luxtakService, IPaymentStateService paymentStateService)
         {
             _logger = logger;
             _praxisService = praxisService;
+            _luxtakService = luxtakService;
             _paymentStateService = paymentStateService;
         }
 
@@ -43,27 +46,22 @@ namespace WebCashier.Controllers
                 // Get client IP address
                 var clientIp = GetClientIpAddress();
                 
-                _logger.LogInformation("Processing payment for amount {Amount} with OrderId {OrderId}", model.Amount, orderId);
+                _logger.LogInformation("Processing {PaymentMethod} payment for amount {Amount} with OrderId {OrderId}", 
+                    model.PaymentMethod, model.Amount, orderId);
 
                 // Set payment as pending
                 _paymentStateService.SetPaymentPending(orderId, "");
 
-                // Call Praxis API
-                var praxisResponse = await _praxisService.ProcessPaymentAsync(model, clientIp, orderId);
-
-                // Update with transaction ID from Praxis response
-                _paymentStateService.SetPaymentPending(orderId, praxisResponse.transaction_id ?? "");
-
-                // Check if Praxis returned a redirect URL (for 3DS authentication)
-                if (!string.IsNullOrEmpty(praxisResponse.redirect_url))
+                // Handle different payment methods
+                switch (model.PaymentMethod?.ToLower())
                 {
-                    _logger.LogInformation("Redirecting to 3DS authentication: {RedirectUrl}", praxisResponse.redirect_url);
-                    return Redirect(praxisResponse.redirect_url);
+                    case "luxtak":
+                        return await ProcessLuxtakPayment(model, orderId);
+                    
+                    case "card":
+                    default:
+                        return await ProcessPraxisPayment(model, orderId, clientIp);
                 }
-
-                // Always redirect to processing page to wait for callback
-                ViewBag.OrderId = orderId;
-                return View("Processing", model);
             }
             catch (Exception ex)
             {
@@ -74,6 +72,73 @@ namespace WebCashier.Controllers
                     Success = false,
                     Message = "An error occurred while processing your payment. Please try again.",
                     TransactionId = ""
+                };
+
+                return View("PaymentFailure", result);
+            }
+        }
+
+        private async Task<IActionResult> ProcessPraxisPayment(PaymentModel model, string orderId, string clientIp)
+        {
+            // Call Praxis API
+            var praxisResponse = await _praxisService.ProcessPaymentAsync(model, clientIp, orderId);
+
+            // Update with transaction ID from Praxis response
+            _paymentStateService.SetPaymentPending(orderId, praxisResponse.transaction_id ?? "");
+
+            // Check if Praxis returned a redirect URL (for 3DS authentication)
+            if (!string.IsNullOrEmpty(praxisResponse.redirect_url))
+            {
+                _logger.LogInformation("Redirecting to 3DS authentication: {RedirectUrl}", praxisResponse.redirect_url);
+                return Redirect(praxisResponse.redirect_url);
+            }
+
+            // Always redirect to processing page to wait for callback
+            ViewBag.OrderId = orderId;
+            return View("Processing", model);
+        }
+
+        private async Task<IActionResult> ProcessLuxtakPayment(PaymentModel model, string orderId)
+        {
+            _logger.LogInformation("Processing Luxtak payment for OrderId: {OrderId}, Amount: {Amount}, Currency: {Currency}", 
+                orderId, model.Amount, model.Currency);
+
+            // Extract amount and currency from form data
+            var amount = model.Amount;
+            var currency = model.Currency ?? "USD";
+
+            // Call Luxtak API
+            var luxtakResponse = await _luxtakService.CreateTradeAsync(amount, currency);
+
+            _logger.LogInformation("Luxtak API response: {@Response}", luxtakResponse);
+
+            // Check if Luxtak API call was successful
+            if (luxtakResponse.Code == "20000" && luxtakResponse.Data != null)
+            {
+                // Update payment state with Luxtak transaction ID
+                _paymentStateService.SetPaymentPending(orderId, luxtakResponse.Data.TradeNo);
+
+                // If there's a payment URL, redirect to it
+                if (!string.IsNullOrEmpty(luxtakResponse.Data.PaymentUrl))
+                {
+                    _logger.LogInformation("Redirecting to Luxtak payment URL: {PaymentUrl}", luxtakResponse.Data.PaymentUrl);
+                    return Redirect(luxtakResponse.Data.PaymentUrl);
+                }
+
+                // Otherwise, show processing page
+                ViewBag.OrderId = orderId;
+                ViewBag.PaymentMethod = "luxtak";
+                return View("LuxtakProcessing", model);
+            }
+            else
+            {
+                _logger.LogError("Luxtak API error - Code: {Code}, Message: {Message}", luxtakResponse.Code, luxtakResponse.Message);
+                
+                var result = new PaymentResult
+                {
+                    Success = false,
+                    Message = $"Luxtak payment failed: {luxtakResponse.Message}",
+                    TransactionId = orderId
                 };
 
                 return View("PaymentFailure", result);
@@ -189,67 +254,20 @@ namespace WebCashier.Controllers
                 _logger.LogInformation("Return URL query parameters: {QueryParams}", 
                     string.Join(", ", Request.Query.Select(kv => $"{kv.Key}={kv.Value}")));
 
-                // If this is a POST request with JSON (callback), handle it as a callback
+                // Check if this is a Luxtak return based on query parameters
+                var queryParams = Request.Query;
+                if (queryParams.ContainsKey("trade_status") || queryParams.ContainsKey("trade_no"))
+                {
+                    return await HandleLuxtakReturn(queryParams);
+                }
+
+                // If this is a POST request with JSON (callback), handle it as a Praxis callback
                 if (Request.Method == "POST" && Request.ContentType?.Contains("application/json") == true)
                 {
-                    Request.EnableBuffering();
-                    using var reader = new StreamReader(Request.Body);
-                    var jsonBody = await reader.ReadToEndAsync();
-                    
-                    _logger.LogInformation("Praxis callback received at Return endpoint: {JsonBody}", jsonBody);
-                    
-                    if (!string.IsNullOrEmpty(jsonBody))
-                    {
-                        try
-                        {
-                            var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody);
-                            
-                            if (callbackData?.session?.order_id != null)
-                            {
-                                var callbackOrderId = callbackData.session.order_id;
-                                
-                                _logger.LogInformation("Processing callback for OrderId: {OrderId}", callbackOrderId);
-                                
-                                // Update payment state
-                                _paymentStateService.SetPaymentCompleted(callbackOrderId, callbackData);
-                                
-                                // Create result model
-                                var transaction = callbackData.transaction;
-                                var model = new PaymentReturnModel
-                                {
-                                    IsSuccess = transaction?.transaction_status == "approved",
-                                    TransactionId = transaction?.transaction_id,
-                                    PaymentMethod = transaction?.payment_method,
-                                    PaymentProcessor = transaction?.payment_processor,
-                                    Currency = transaction?.currency,
-                                    Amount = transaction != null ? (transaction.amount / 100.0m).ToString("F2") : "0.00",
-                                    CardType = transaction?.card?.card_type,
-                                    CardNumber = transaction?.card?.card_number,
-                                    StatusCode = transaction?.status_code,
-                                    StatusDetails = transaction?.status_details,
-                                    TransactionStatus = transaction?.transaction_status,
-                                    OrderId = callbackOrderId
-                                };
-
-                                if (model.IsSuccess)
-                                {
-                                    return View("PaymentSuccess", model);
-                                }
-                                else
-                                {
-                                    return View("PaymentFailure", model);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to parse callback JSON at Return endpoint");
-                        }
-                    }
+                    return await HandlePraxisCallback();
                 }
 
                 // Handle GET request with query parameters or fallback
-                var queryParams = Request.Query;
                 var orderId = queryParams["order_id"].ToString();
                 
                 if (!string.IsNullOrEmpty(orderId))
@@ -270,7 +288,7 @@ namespace WebCashier.Controllers
                 return View("PaymentFailure", new PaymentReturnModel
                 {
                     IsSuccess = false,
-                    StatusDetails = "No callback received from Praxis!"
+                    StatusDetails = "No callback received from payment processor!"
                 });
             }
             catch (Exception ex)
@@ -282,6 +300,120 @@ namespace WebCashier.Controllers
                     StatusDetails = "An error occurred while processing the payment return"
                 });
             }
+        }
+
+        private async Task<IActionResult> HandleLuxtakReturn(IQueryCollection queryParams)
+        {
+            _logger.LogInformation("Handling Luxtak return with parameters: {@Params}", queryParams.ToDictionary(k => k.Key, v => v.Value.ToString()));
+
+            var tradeStatus = queryParams["trade_status"].ToString();
+            var tradeNo = queryParams["trade_no"].ToString();
+            var outTradeNo = queryParams["out_trade_no"].ToString();
+            var orderAmount = queryParams["order_amount"].ToString();
+            var orderCurrency = queryParams["order_currency"].ToString();
+
+            var model = new PaymentReturnModel
+            {
+                TransactionId = tradeNo,
+                OrderId = outTradeNo,
+                Amount = orderAmount,
+                Currency = orderCurrency,
+                PaymentMethod = "Luxtak",
+                PaymentProcessor = "Luxtak",
+                TransactionStatus = tradeStatus
+            };
+
+            switch (tradeStatus?.ToUpper())
+            {
+                case "SUCCESS":
+                    model.IsSuccess = true;
+                    model.StatusDetails = "Payment completed successfully via Luxtak";
+                    _logger.LogInformation("Luxtak payment SUCCESS for OrderId: {OrderId}, TradeNo: {TradeNo}", outTradeNo, tradeNo);
+                    return View("LuxtakSuccess", model);
+
+                case "PROCESSING":
+                    model.IsSuccess = false;
+                    model.StatusDetails = "Payment is being processed via Luxtak";
+                    _logger.LogInformation("Luxtak payment PROCESSING for OrderId: {OrderId}, TradeNo: {TradeNo}", outTradeNo, tradeNo);
+                    return View("LuxtakPending", model);
+
+                case "CANCEL":
+                case "CANCELLED":
+                    model.IsSuccess = false;
+                    model.StatusDetails = "Payment was cancelled via Luxtak";
+                    _logger.LogInformation("Luxtak payment CANCELLED for OrderId: {OrderId}, TradeNo: {TradeNo}", outTradeNo, tradeNo);
+                    return View("LuxtakCancelled", model);
+
+                default:
+                    model.IsSuccess = false;
+                    model.StatusDetails = $"Unknown payment status: {tradeStatus}";
+                    _logger.LogWarning("Unknown Luxtak payment status '{Status}' for OrderId: {OrderId}, TradeNo: {TradeNo}", tradeStatus, outTradeNo, tradeNo);
+                    return View("PaymentFailure", model);
+            }
+        }
+
+        private async Task<IActionResult> HandlePraxisCallback()
+        {
+            Request.EnableBuffering();
+            using var reader = new StreamReader(Request.Body);
+            var jsonBody = await reader.ReadToEndAsync();
+            
+            _logger.LogInformation("Praxis callback received at Return endpoint: {JsonBody}", jsonBody);
+            
+            if (!string.IsNullOrEmpty(jsonBody))
+            {
+                try
+                {
+                    var callbackData = JsonSerializer.Deserialize<PraxisCallbackModel>(jsonBody);
+                    
+                    if (callbackData?.session?.order_id != null)
+                    {
+                        var callbackOrderId = callbackData.session.order_id;
+                        
+                        _logger.LogInformation("Processing Praxis callback for OrderId: {OrderId}", callbackOrderId);
+                        
+                        // Update payment state
+                        _paymentStateService.SetPaymentCompleted(callbackOrderId, callbackData);
+                        
+                        // Create result model
+                        var transaction = callbackData.transaction;
+                        var model = new PaymentReturnModel
+                        {
+                            IsSuccess = transaction?.transaction_status == "approved",
+                            TransactionId = transaction?.transaction_id,
+                            PaymentMethod = transaction?.payment_method,
+                            PaymentProcessor = transaction?.payment_processor,
+                            Currency = transaction?.currency,
+                            Amount = transaction != null ? (transaction.amount / 100.0m).ToString("F2") : "0.00",
+                            CardType = transaction?.card?.card_type,
+                            CardNumber = transaction?.card?.card_number,
+                            StatusCode = transaction?.status_code,
+                            StatusDetails = transaction?.status_details,
+                            TransactionStatus = transaction?.transaction_status,
+                            OrderId = callbackOrderId
+                        };
+
+                        if (model.IsSuccess)
+                        {
+                            return View("PaymentSuccess", model);
+                        }
+                        else
+                        {
+                            return View("PaymentFailure", model);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to parse Praxis callback JSON at Return endpoint");
+                }
+            }
+
+            return View("PaymentFailure", new PaymentReturnModel
+            {
+                IsSuccess = false,
+                StatusDetails = "Invalid callback data received"
+            });
         }
 
         [HttpGet]

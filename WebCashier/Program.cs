@@ -59,6 +59,28 @@ builder.Services.AddHttpClient<IPraxisService, PraxisService>(client =>
     return handler;
 });
 
+// Register HttpClient and LuxtakService
+builder.Services.AddHttpClient<LuxtakService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "WebCashier/1.0");
+})
+.AddHttpMessageHandler<LoggingHandler>()
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    var handler = new HttpClientHandler();
+    handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+    handler.CheckCertificateRevocationList = false;
+    handler.UseCookies = false;
+    
+    if (builder.Environment.IsDevelopment())
+    {
+        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+    }
+    
+    return handler;
+});
+
 // Register PaymentStateService as singleton to maintain state across requests
 builder.Services.AddSingleton<IPaymentStateService, PaymentStateService>();
 
