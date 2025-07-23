@@ -368,7 +368,7 @@
             }
             
             // Validate name on card with delay
-            setTimeout(() => validateNameOnCard(), 150);
+            setTimeout(() => validateNameOnCard(true), 150);
         });
 
         // Flip back to front when focusing on name
@@ -404,7 +404,7 @@
             }
             
             // Validate CVV with delay
-            setTimeout(() => validateCVV(), 150);
+            setTimeout(() => validateCVV(true), 150);
         });
 
         // Card brand detection and styling
@@ -494,7 +494,7 @@
                 this.classList.add('active');
                 
                 // Validate amount field after setting value and update deposit button
-                validateAmount();
+                validateAmount(false); // Don't show error when user clicks suggestion
                 updateDepositButtonState();
             });
         });
@@ -506,14 +506,14 @@
             }
         });
 
-        // Validation functions
-        function validateAmount() {
+        // Validation functions - only show errors after user interaction
+        function validateAmount(showErrors = true) {
             const amountInput = document.querySelector('[name="Amount"]');
             const amountError = amountInput.parentElement.querySelector('.text-danger');
             const value = parseFloat(amountInput.value);
             
             if (!amountInput.value || value <= 0) {
-                if (amountError) {
+                if (amountError && showErrors) {
                     amountError.textContent = 'Please enter a valid amount greater than 0.';
                     amountError.style.display = 'block';
                 }
@@ -524,17 +524,17 @@
             }
         }
 
-        function validateCurrency() {
+        function validateCurrency(showErrors = true) {
             const currencySelect = document.querySelector('[name="Currency"]');
             return currencySelect.value !== '';
         }
 
-        function validateNameOnCard() {
+        function validateNameOnCard(showErrors = true) {
             const nameInput = document.querySelector('[name="NameOnCard"]');
             const nameError = nameInput.parentElement.querySelector('.text-danger');
             
             if (!nameInput.value.trim()) {
-                if (nameError) {
+                if (nameError && showErrors) {
                     nameError.textContent = 'Cardholder name is required.';
                     nameError.style.display = 'block';
                 }
@@ -545,13 +545,13 @@
             }
         }
 
-        function validateCardNumber() {
+        function validateCardNumber(showErrors = true) {
             const cardInput = document.querySelector('[name="CardNumber"]');
             const cardError = cardInput.parentElement.querySelector('.text-danger');
             const value = cardInput.value.replace(/\s/g, '').replace(/[^0-9]/g, '');
             
             if (!value) {
-                if (cardError) {
+                if (cardError && showErrors) {
                     cardError.textContent = 'Card number is required.';
                     cardError.style.display = 'block';
                 }
@@ -560,7 +560,7 @@
             
             // Check length (13-19 digits for most cards)
             if (value.length < 13 || value.length > 19) {
-                if (cardError) {
+                if (cardError && showErrors) {
                     cardError.textContent = 'Please enter a valid card number (13-19 digits).';
                     cardError.style.display = 'block';
                 }
@@ -569,7 +569,7 @@
             
             // Enhanced card validation (includes Luhn + test pattern rejection + card type validation)
             if (!isValidCardNumber(value)) {
-                if (cardError) {
+                if (cardError && showErrors) {
                     cardError.textContent = 'Please enter a valid credit card number.';
                     cardError.style.display = 'block';
                 }
@@ -678,13 +678,13 @@
             return (sum % 10) === 0;
         }
 
-        function validateExpirationDate() {
+        function validateExpirationDate(showErrors = true) {
             const expiryInput = document.querySelector('[name="ExpirationDate"]');
             const expiryError = expiryInput.parentElement.querySelector('.text-danger');
             const value = expiryInput.value;
             
             if (!value || value.length < 5) {
-                if (expiryError) {
+                if (expiryError && showErrors) {
                     expiryError.textContent = 'Expiration date is required (MM/YY).';
                     expiryError.style.display = 'block';
                 }
@@ -694,7 +694,7 @@
             // Additional date validation
             const parts = value.split('/');
             if (parts.length !== 2) {
-                if (expiryError) {
+                if (expiryError && showErrors) {
                     expiryError.textContent = 'Please enter date in MM/YY format.';
                     expiryError.style.display = 'block';
                 }
@@ -709,7 +709,7 @@
             
             // Check if month is valid
             if (month < 1 || month > 12) {
-                if (expiryError) {
+                if (expiryError && showErrors) {
                     expiryError.textContent = 'Please enter a valid month (01-12).';
                     expiryError.style.display = 'block';
                 }
@@ -718,7 +718,7 @@
             
             // Check if date is not in the past
             if (year < currentYear || (year === currentYear && month < currentMonth)) {
-                if (expiryError) {
+                if (expiryError && showErrors) {
                     expiryError.textContent = 'Card has expired. Please use a valid card.';
                     expiryError.style.display = 'block';
                 }
@@ -729,13 +729,13 @@
             return true;
         }
 
-        function validateCVV() {
+        function validateCVV(showErrors = true) {
             const cvvInput = document.querySelector('[name="CVV"]');
             const cvvError = cvvInput.parentElement.querySelector('.text-danger');
             const value = cvvInput.value;
             
             if (!value || value.length < 3 || value.length > 4) {
-                if (cvvError) {
+                if (cvvError && showErrors) {
                     cvvError.textContent = 'Please enter a valid CVV (3-4 digits).';
                     cvvError.style.display = 'block';
                 }
@@ -754,13 +754,13 @@
             const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked').value;
             
             if (selectedPaymentMethod === 'card') {
-                // For card payments, check all mandatory card fields
-                const isAmountValid = validateAmount();
-                const isCurrencyValid = validateCurrency();
-                const isCardNumberValid = validateCardNumber();
-                const isNameValid = validateNameOnCard();
-                const isExpiryValid = validateExpirationDate();
-                const isCVVValid = validateCVV();
+                // For card payments, check all mandatory card fields (without showing errors)
+                const isAmountValid = validateAmount(false);
+                const isCurrencyValid = validateCurrency(false);
+                const isCardNumberValid = validateCardNumber(false);
+                const isNameValid = validateNameOnCard(false);
+                const isExpiryValid = validateExpirationDate(false);
+                const isCVVValid = validateCVV(false);
                 
                 const allValid = isAmountValid && isCurrencyValid && isCardNumberValid && 
                                isNameValid && isExpiryValid && isCVVValid;
@@ -775,9 +775,9 @@
                     depositBtn.textContent = 'DEPOSIT';
                 }
             } else {
-                // For other payment methods, only check amount and currency
-                const isAmountValid = validateAmount();
-                const isCurrencyValid = validateCurrency();
+                // For other payment methods, only check amount and currency (without showing errors)
+                const isAmountValid = validateAmount(false);
+                const isCurrencyValid = validateCurrency(false);
                 
                 if (isAmountValid && isCurrencyValid) {
                     depositBtn.disabled = false;
@@ -813,13 +813,13 @@
             if (amountInput) {
                 amountInput.addEventListener('input', () => {
                     setTimeout(() => {
-                        validateAmount();
+                        validateAmount(true); // Show errors during input
                         updateDepositButtonState();
                     }, 100);
                 });
                 amountInput.addEventListener('blur', () => {
                     setTimeout(() => {
-                        validateAmount();
+                        validateAmount(true); // Show errors on blur
                         updateDepositButtonState();
                     }, 100);
                 });
@@ -836,13 +836,13 @@
             if (nameInput) {
                 nameInput.addEventListener('input', () => {
                     setTimeout(() => {
-                        validateNameOnCard();
+                        validateNameOnCard(true); // Show errors during input
                         updateDepositButtonState();
                     }, 100);
                 });
                 nameInput.addEventListener('blur', () => {
                     setTimeout(() => {
-                        validateNameOnCard();
+                        validateNameOnCard(true); // Show errors on blur
                         updateDepositButtonState();
                     }, 100);
                 });
@@ -881,13 +881,13 @@
                     
                     // Then validate with delay
                     setTimeout(() => {
-                        validateCardNumber();
+                        validateCardNumber(true); // Show errors during input
                         updateDepositButtonState();
                     }, 150);
                 });
                 cardInput.addEventListener('blur', () => {
                     setTimeout(() => {
-                        validateCardNumber();
+                        validateCardNumber(true); // Show errors on blur
                         updateDepositButtonState();
                     }, 150);
                 });
@@ -914,13 +914,13 @@
                     
                     // Then validate with delay
                     setTimeout(() => {
-                        validateExpirationDate();
+                        validateExpirationDate(true); // Show errors during input
                         updateDepositButtonState();
                     }, 150);
                 });
                 expiryInput.addEventListener('blur', () => {
                     setTimeout(() => {
-                        validateExpirationDate();
+                        validateExpirationDate(true); // Show errors on blur
                         updateDepositButtonState();
                     }, 150);
                 });
@@ -929,13 +929,13 @@
             if (cvvInput) {
                 cvvInput.addEventListener('input', () => {
                     setTimeout(() => {
-                        validateCVV();
+                        validateCVV(true); // Show errors during input
                         updateDepositButtonState();
                     }, 150);
                 });
                 cvvInput.addEventListener('blur', () => {
                     setTimeout(() => {
-                        validateCVV();
+                        validateCVV(true); // Show errors on blur
                         updateDepositButtonState();
                     }, 150);
                 });
