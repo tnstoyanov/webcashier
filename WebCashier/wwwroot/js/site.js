@@ -14,22 +14,58 @@ function moveCarousel(direction) {
     }
     
     const totalSlides = document.querySelectorAll('.carousel-item').length;
-    console.log(`Total slides: ${totalSlides}`);
+    const newSlide = currentSlide + direction;
     
-    currentSlide += direction;
-    
-    // Wrap around if needed
-    if (currentSlide < 0) {
-        currentSlide = totalSlides - 1;
-    } else if (currentSlide >= totalSlides) {
-        currentSlide = 0;
+    // Don't move if we're at the boundaries
+    if (newSlide < 0 || newSlide >= totalSlides) {
+        console.log(`Cannot move to slide ${newSlide}, at boundary`);
+        return;
     }
+    
+    currentSlide = newSlide;
     
     // Move the track (90px per item + 8px gap = 98px total)
     const translateX = currentSlide * -98;
     track.style.transform = `translateX(${translateX}px)`;
     
+    // Update arrow states
+    updateArrowStates();
+    
     console.log(`Moved to slide ${currentSlide}, translateX: ${translateX}px`);
+}
+
+function updateArrowStates() {
+    const prevButton = document.querySelector('.carousel-arrow.carousel-prev');
+    const nextButton = document.querySelector('.carousel-arrow.carousel-next');
+    const totalSlides = document.querySelectorAll('.carousel-item').length;
+    
+    if (prevButton) {
+        prevButton.disabled = currentSlide === 0;
+    }
+    
+    if (nextButton) {
+        nextButton.disabled = currentSlide >= totalSlides - 1;
+    }
+}
+
+function goToSlide(slideIndex) {
+    const track = document.querySelector('.carousel-track');
+    const totalSlides = document.querySelectorAll('.carousel-item').length;
+    
+    if (!track || slideIndex < 0 || slideIndex >= totalSlides) {
+        return;
+    }
+    
+    currentSlide = slideIndex;
+    
+    // Move the track
+    const translateX = currentSlide * -98;
+    track.style.transform = `translateX(${translateX}px)`;
+    
+    // Update arrow states
+    updateArrowStates();
+    
+    console.log(`Jumped to slide ${currentSlide}, translateX: ${translateX}px`);
 }
 
 // Initialize carousel when page loads
@@ -61,4 +97,50 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log('Next button not found');
     }
+    
+    // Set initial arrow states
+    updateArrowStates();
+    
+    // Add tap/touch support for carousel items
+    items.forEach((item, index) => {
+        item.addEventListener('click', function(e) {
+            // Don't interfere with radio button selection
+            const radioInput = item.querySelector('input[type="radio"]');
+            if (radioInput && !radioInput.checked) {
+                radioInput.checked = true;
+                // Trigger change event for the radio button
+                radioInput.dispatchEvent(new Event('change'));
+            }
+            
+            // Move carousel to show this item
+            goToSlide(index);
+        });
+        
+        // Add touch support for mobile devices
+        item.addEventListener('touchend', function(e) {
+            e.preventDefault(); // Prevent double-click on mobile
+            const radioInput = item.querySelector('input[type="radio"]');
+            if (radioInput && !radioInput.checked) {
+                radioInput.checked = true;
+                radioInput.dispatchEvent(new Event('change'));
+            }
+            goToSlide(index);
+        });
+        
+        // Make items focusable for keyboard accessibility
+        item.setAttribute('tabindex', '0');
+        
+        // Add keyboard support
+        item.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const radioInput = item.querySelector('input[type="radio"]');
+                if (radioInput && !radioInput.checked) {
+                    radioInput.checked = true;
+                    radioInput.dispatchEvent(new Event('change'));
+                }
+                goToSlide(index);
+            }
+        });
+    });
 });

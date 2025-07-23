@@ -126,8 +126,16 @@ body {
 }
 
 .carousel-arrow:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  color: #d1d5db;
+}
+
+.carousel-arrow:disabled:hover {
+  background: #f9fafb;
+  border-color: #e5e7eb;
 }
 
 .method-carousel {
@@ -149,6 +157,28 @@ body {
   justify-content: center;
   flex-shrink: 0;
   margin-right: 0px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.carousel-item:hover {
+  transform: scale(1.02);
+}
+
+.carousel-item:active {
+  transform: scale(0.98);
+}
+
+/* Touch feedback for mobile devices */
+@media (hover: none) and (pointer: coarse) {
+  .carousel-item:hover {
+    transform: none;
+  }
+  
+  .carousel-item:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
 }
 
 /* Payment forms section */
@@ -208,6 +238,11 @@ body {
 
 .method-option:hover {
   border-color: #22c55e;
+}
+
+.method-option:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
 
 .method-option.active {
