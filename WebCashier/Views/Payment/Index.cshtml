@@ -324,9 +324,6 @@
             
             // Detect card brand and update styling
             updateCardBrand(value);
-            
-            // Validate card number with delay to avoid jQuery validation conflicts
-            setTimeout(() => validateCardNumber(), 150);
         });
 
         // Flip back to front when focusing on card number
@@ -352,9 +349,6 @@
             } else {
                 expiryDisplay.textContent = 'MM/YY';
             }
-            
-            // Validate expiration date with delay
-            setTimeout(() => validateExpirationDate(), 150);
         });
 
         // Flip back to front when focusing on expiration date
@@ -519,7 +513,10 @@
             const value = parseFloat(amountInput.value);
             
             if (!amountInput.value || value <= 0) {
-                if (amountError) amountError.style.display = 'block';
+                if (amountError) {
+                    amountError.textContent = 'Please enter a valid amount greater than 0.';
+                    amountError.style.display = 'block';
+                }
                 return false;
             } else {
                 if (amountError) amountError.style.display = 'none';
@@ -537,7 +534,10 @@
             const nameError = nameInput.parentElement.querySelector('.text-danger');
             
             if (!nameInput.value.trim()) {
-                if (nameError) nameError.style.display = 'block';
+                if (nameError) {
+                    nameError.textContent = 'Cardholder name is required.';
+                    nameError.style.display = 'block';
+                }
                 return false;
             } else {
                 if (nameError) nameError.style.display = 'none';
@@ -576,7 +576,9 @@
                 return false;
             }
             
-            if (cardError) cardError.style.display = 'none';
+            if (cardError) {
+                cardError.style.display = 'none';
+            }
             return true;
         }
 
@@ -682,14 +684,20 @@
             const value = expiryInput.value;
             
             if (!value || value.length < 5) {
-                if (expiryError) expiryError.style.display = 'block';
+                if (expiryError) {
+                    expiryError.textContent = 'Expiration date is required (MM/YY).';
+                    expiryError.style.display = 'block';
+                }
                 return false;
             }
             
             // Additional date validation
             const parts = value.split('/');
             if (parts.length !== 2) {
-                if (expiryError) expiryError.style.display = 'block';
+                if (expiryError) {
+                    expiryError.textContent = 'Please enter date in MM/YY format.';
+                    expiryError.style.display = 'block';
+                }
                 return false;
             }
             
@@ -701,13 +709,19 @@
             
             // Check if month is valid
             if (month < 1 || month > 12) {
-                if (expiryError) expiryError.style.display = 'block';
+                if (expiryError) {
+                    expiryError.textContent = 'Please enter a valid month (01-12).';
+                    expiryError.style.display = 'block';
+                }
                 return false;
             }
             
             // Check if date is not in the past
             if (year < currentYear || (year === currentYear && month < currentMonth)) {
-                if (expiryError) expiryError.style.display = 'block';
+                if (expiryError) {
+                    expiryError.textContent = 'Card has expired. Please use a valid card.';
+                    expiryError.style.display = 'block';
+                }
                 return false;
             }
             
@@ -721,7 +735,10 @@
             const value = cvvInput.value;
             
             if (!value || value.length < 3 || value.length > 4) {
-                if (cvvError) cvvError.style.display = 'block';
+                if (cvvError) {
+                    cvvError.textContent = 'Please enter a valid CVV (3-4 digits).';
+                    cvvError.style.display = 'block';
+                }
                 return false;
             } else {
                 if (cvvError) cvvError.style.display = 'none';
@@ -776,9 +793,12 @@
 
         // Initialize validation on page load
         function initializeValidation() {
-            // Hide all validation messages initially
+            // Hide all validation messages initially and clear any custom content
             document.querySelectorAll('.text-danger').forEach(error => {
-                if (error) error.style.display = 'none';
+                if (error) {
+                    error.style.display = 'none';
+                    error.textContent = ''; // Clear any existing content
+                }
             });
 
             // Add event listeners for real-time validation with debouncing
@@ -829,7 +849,37 @@
             }
             
             if (cardInput) {
-                cardInput.addEventListener('input', () => {
+                cardInput.addEventListener('input', (e) => {
+                    // First handle formatting
+                    let value = e.target.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
+                    let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+                    e.target.value = formattedValue;
+                    
+                    // Update card display
+                    const cardDisplay = document.getElementById('card-display');
+                    if (cardDisplay) {
+                        if (value.length > 0) {
+                            let displayValue = '';
+                            for (let i = 0; i < 16; i++) {
+                                if (i < value.length) {
+                                    displayValue += value[i];
+                                } else {
+                                    displayValue += '•';
+                                }
+                                if ((i + 1) % 4 === 0 && i < 15) {
+                                    displayValue += ' ';
+                                }
+                            }
+                            cardDisplay.textContent = displayValue;
+                        } else {
+                            cardDisplay.textContent = '•••• •••• •••• ••••';
+                        }
+                    }
+                    
+                    // Update card brand
+                    updateCardBrand(value);
+                    
+                    // Then validate with delay
                     setTimeout(() => {
                         validateCardNumber();
                         updateDepositButtonState();
@@ -844,7 +894,25 @@
             }
             
             if (expiryInput) {
-                expiryInput.addEventListener('input', () => {
+                expiryInput.addEventListener('input', (e) => {
+                    // First handle formatting
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length >= 2) {
+                        value = value.substring(0,2) + '/' + value.substring(2,4);
+                    }
+                    e.target.value = value;
+                    
+                    // Update expiry display
+                    const expiryDisplay = document.getElementById('expiry-display');
+                    if (expiryDisplay) {
+                        if (value.length > 0) {
+                            expiryDisplay.textContent = value;
+                        } else {
+                            expiryDisplay.textContent = 'MM/YY';
+                        }
+                    }
+                    
+                    // Then validate with delay
                     setTimeout(() => {
                         validateExpirationDate();
                         updateDepositButtonState();
