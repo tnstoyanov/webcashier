@@ -1314,11 +1314,11 @@
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
                 initializeValidation();
-                setTimeout(initializeCarousel, 100);
+                setTimeout(initializeCarousel, 200); // Increased delay
             });
         } else {
             initializeValidation();
-            setTimeout(initializeCarousel, 100);
+            setTimeout(initializeCarousel, 200); // Increased delay
         }
 
         // Form submission handler for loading overlay and data preparation
@@ -1366,7 +1366,28 @@
         let carouselCurrentPosition = 0;
         
         function initializeCarousel() {
-            updateCarouselButtons();
+            console.log('Initializing carousel...');
+            const carousel = document.querySelector('.method-carousel');
+            const track = document.querySelector('.carousel-track');
+            const items = document.querySelectorAll('.carousel-item');
+            
+            if (!items.length || !carousel || !track) {
+                console.log('Carousel elements not found during init');
+                return;
+            }
+            
+            console.log('Found', items.length, 'carousel items');
+            console.log('Carousel width:', carousel.offsetWidth);
+            console.log('Track width:', track.scrollWidth);
+            
+            // Reset position to ensure clean start
+            carouselCurrentPosition = 0;
+            track.style.transform = `translateX(0px)`;
+            
+            // Update button states after a short delay to ensure layout is complete
+            setTimeout(() => {
+                updateCarouselButtons();
+            }, 50);
         }
         
         function updateCarouselButtons() {
@@ -1376,27 +1397,41 @@
             const track = document.querySelector('.carousel-track');
             const items = document.querySelectorAll('.carousel-item');
             
-            if (!items.length || !carousel || !track) return;
+            if (!items.length || !carousel || !track) {
+                console.log('Elements not found in updateCarouselButtons');
+                return;
+            }
             
             const carouselWidth = carousel.offsetWidth;
             const trackWidth = track.scrollWidth;
             const maxScroll = trackWidth - carouselWidth;
             
+            console.log('Button update - Carousel width:', carouselWidth, 'Track width:', trackWidth, 'Max scroll:', maxScroll, 'Current pos:', carouselCurrentPosition);
+            
             // Update button states
             if (prevBtn) {
-                prevBtn.disabled = carouselCurrentPosition >= 0;
+                const shouldDisablePrev = carouselCurrentPosition >= 0;
+                prevBtn.disabled = shouldDisablePrev;
+                console.log('Prev button disabled:', shouldDisablePrev);
             }
             if (nextBtn) {
-                nextBtn.disabled = carouselCurrentPosition <= -maxScroll || maxScroll <= 0;
+                const shouldDisableNext = carouselCurrentPosition <= -maxScroll || maxScroll <= 0;
+                nextBtn.disabled = shouldDisableNext;
+                console.log('Next button disabled:', shouldDisableNext);
             }
         }
         
         function moveCarousel(direction) {
+            console.log('moveCarousel called with direction:', direction);
+            
             const carousel = document.querySelector('.method-carousel');
             const track = document.querySelector('.carousel-track');
             const items = document.querySelectorAll('.carousel-item');
             
-            if (!items.length || !carousel || !track) return;
+            if (!items.length || !carousel || !track) {
+                console.log('Elements not found in moveCarousel');
+                return;
+            }
             
             const itemWidth = items[0].offsetWidth;
             const gap = 8; // 0.5rem gap
@@ -1405,20 +1440,38 @@
             const trackWidth = track.scrollWidth;
             const maxScroll = -(trackWidth - carouselWidth);
             
+            console.log('Move carousel debug:', {
+                direction,
+                currentPosition: carouselCurrentPosition,
+                itemWidth,
+                gap,
+                moveDistance,
+                carouselWidth,
+                trackWidth,
+                maxScroll
+            });
+            
             // Calculate new position
             const newPosition = carouselCurrentPosition + (direction * moveDistance);
+            console.log('Calculated new position:', newPosition);
             
             // Apply boundaries
             if (newPosition > 0) {
                 carouselCurrentPosition = 0;
+                console.log('Hit left boundary, setting to 0');
             } else if (newPosition < maxScroll) {
                 carouselCurrentPosition = maxScroll;
+                console.log('Hit right boundary, setting to maxScroll:', maxScroll);
             } else {
                 carouselCurrentPosition = newPosition;
+                console.log('Using new position:', newPosition);
             }
+            
+            console.log('Final position:', carouselCurrentPosition);
             
             // Apply transform
             track.style.transform = `translateX(${carouselCurrentPosition}px)`;
+            console.log('Applied transform:', `translateX(${carouselCurrentPosition}px)`);
             
             // Update button states
             updateCarouselButtons();

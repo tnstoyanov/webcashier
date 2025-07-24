@@ -101,7 +101,7 @@ body {
   gap: 1rem;
   margin-bottom: 2rem;
   justify-content: flex-start;
-  max-width: 750px;
+  max-width: 550px; /* Reduced from 750px to force overflow */
   margin-left: auto;
   margin-right: auto;
 }
@@ -141,8 +141,9 @@ body {
 .method-carousel {
   overflow: hidden;
   position: relative;
-  flex: 1; /* Take available space but allow content to determine min-width */
-  min-width: 0; /* Allow flex item to shrink below content size */
+  flex: 1;
+  min-width: 0;
+  max-width: 450px; /* Force overflow by limiting visible area */
   touch-action: pan-y; /* Allow vertical scrolling but handle horizontal gestures */
   user-select: none; /* Prevent text selection during swipes */
   -webkit-user-select: none;
