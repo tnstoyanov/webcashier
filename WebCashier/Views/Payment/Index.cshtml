@@ -1406,14 +1406,15 @@
             const maxScroll = -(trackWidth - carouselWidth);
             
             // Calculate new position
-            carouselCurrentPosition += direction * moveDistance;
+            const newPosition = carouselCurrentPosition + (direction * moveDistance);
             
             // Apply boundaries
-            if (carouselCurrentPosition > 0) {
+            if (newPosition > 0) {
                 carouselCurrentPosition = 0;
-            }
-            if (carouselCurrentPosition < maxScroll) {
+            } else if (newPosition < maxScroll) {
                 carouselCurrentPosition = maxScroll;
+            } else {
+                carouselCurrentPosition = newPosition;
             }
             
             // Apply transform

@@ -141,6 +141,8 @@ body {
 .method-carousel {
   overflow: hidden;
   position: relative;
+  flex: 1; /* Take available space but allow content to determine min-width */
+  min-width: 0; /* Allow flex item to shrink below content size */
   touch-action: pan-y; /* Allow vertical scrolling but handle horizontal gestures */
   user-select: none; /* Prevent text selection during swipes */
   -webkit-user-select: none;
