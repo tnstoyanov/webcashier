@@ -1477,21 +1477,28 @@
         window.addEventListener('resize', function() {
             setTimeout(updateCarouselButtons, 100);
         });
+        // Get current visible payment method index
+        function getCurrentMethodIndex() {
+            const carousel = document.querySelector('.method-carousel');
+            if (!carousel) return 0;
+            
+            const scrollLeft = carousel.scrollLeft;
+            const methodWidth = carousel.querySelector('.payment-method').offsetWidth;
+            return Math.round(scrollLeft / methodWidth);
+        }
+        
         // Update amount buttons to reflect payment method currency
         function updatePaymentMethodCurrency() {
             const currentMethodIndex = getCurrentMethodIndex();
-            const method = methods[currentMethodIndex];
-            let currency = 'EUR'; // default
+            const methods = document.querySelectorAll('.payment-method');
             
-            // Get currency from active payment method's dropdown
-            if (method && method.element) {
-                const currencySelect = method.element.querySelector('select[name*="Currency"]');
-                if (currencySelect) {
-                    currency = currencySelect.value;
-                }
+            if (methods[currentMethodIndex]) {
+                const currencySelect = methods[currentMethodIndex].querySelector('select[name*="Currency"]');
+                const currency = currencySelect ? currencySelect.value : 'EUR';
+                updateAmountSuggestions(currency);
+            } else {
+                updateAmountSuggestions('EUR');
             }
-            
-            updateAmountSuggestions(currency);
         }
         
         // Initialize currency handlers and set initial values
