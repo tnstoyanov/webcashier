@@ -1362,6 +1362,41 @@
             }
         });
 
+        // Currency symbol functionality
+        function getCurrencySymbol(currency) {
+            const symbols = {
+                'USD': '$',
+                'EUR': '€',
+                'GBP': '£',
+                'BRL': 'R$'
+            };
+            return symbols[currency] || currency;
+        }
+        
+        function updateAmountSuggestions(currency) {
+            const symbol = getCurrencySymbol(currency);
+            const amountButtons = document.querySelectorAll('.amount-btn');
+            
+            amountButtons.forEach(button => {
+                const amount = button.getAttribute('data-amount');
+                button.textContent = `${symbol}${amount}`;
+            });
+        }
+        
+        // Add event listeners to all currency dropdowns
+        function initializeCurrencyHandlers() {
+            const currencySelects = document.querySelectorAll('select[name="Currency"], select[name="PayPalCurrency"], select[name="FinsharkCurrency"], select[name="LuxtakCurrency"]');
+            
+            currencySelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    updateAmountSuggestions(this.value);
+                });
+            });
+            
+            // Initialize with default EUR
+            updateAmountSuggestions('EUR');
+        }
+
         // Clean carousel implementation from scratch
         let currentPosition = 0;
         
@@ -1442,5 +1477,28 @@
         window.addEventListener('resize', function() {
             setTimeout(updateCarouselButtons, 100);
         });
+        // Update amount buttons to reflect payment method currency
+        function updatePaymentMethodCurrency() {
+            const currentMethodIndex = getCurrentMethodIndex();
+            const method = methods[currentMethodIndex];
+            let currency = 'EUR'; // default
+            
+            // Get currency from active payment method's dropdown
+            if (method && method.element) {
+                const currencySelect = method.element.querySelector('select[name*="Currency"]');
+                if (currencySelect) {
+                    currency = currencySelect.value;
+                }
+            }
+            
+            updateAmountSuggestions(currency);
+        }
+        
+        // Initialize currency handlers and set initial values
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCurrencyHandlers();
+            updatePaymentMethodCurrency();
+        });
+        
     </script>
 }
