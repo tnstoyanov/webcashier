@@ -141,6 +141,7 @@ body {
 .method-carousel {
   overflow: hidden;
   position: relative;
+  width: 500px; /* Show approximately 4 items (120px each + gaps) */
   touch-action: pan-y; /* Allow vertical scrolling but handle horizontal gestures */
   user-select: none; /* Prevent text selection during swipes */
   -webkit-user-select: none;
@@ -163,7 +164,7 @@ body {
 }
 
 .carousel-item {
-  flex: 0 0 10px;
+  flex: 0 0 120px;
   display: flex;
   justify-content: center;
   flex-shrink: 0;

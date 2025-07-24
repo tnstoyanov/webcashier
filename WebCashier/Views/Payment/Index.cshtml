@@ -1363,13 +1363,14 @@
             const carousel = document.querySelector('.method-carousel');
             const track = document.querySelector('.carousel-track');
             const items = document.querySelectorAll('.carousel-item');
-            const itemWidth = items[0].offsetWidth + 20; // Add gap
+            const itemWidth = items[0].offsetWidth + 8; // Add gap (0.5rem = 8px)
             
             if (!carousel.currentPosition) {
                 carousel.currentPosition = 0;
             }
             
-            const maxPosition = -(items.length - 3) * itemWidth; // Show 3 items at once
+            const visibleItems = 4; // Show 4 items at once
+            const maxPosition = -(items.length - visibleItems) * itemWidth;
             
             carousel.currentPosition += direction * itemWidth;
             
