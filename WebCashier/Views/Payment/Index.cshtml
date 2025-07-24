@@ -1475,36 +1475,36 @@
         
         // Update carousel on window resize
         window.addEventListener('resize', function() {
-            setTimeout(updateCarouselButtons, 100);
+            setTimeout(updateButtons, 100);
         });
+        
         // Get current visible payment method index
         function getCurrentMethodIndex() {
             const carousel = document.querySelector('.method-carousel');
             if (!carousel) return 0;
             
+            const firstMethod = carousel.querySelector('.payment-method');
+            if (!firstMethod) return 0;
+            
             const scrollLeft = carousel.scrollLeft;
-            const methodWidth = carousel.querySelector('.payment-method').offsetWidth;
+            const methodWidth = firstMethod.offsetWidth;
             return Math.round(scrollLeft / methodWidth);
         }
         
         // Update amount buttons to reflect payment method currency
         function updatePaymentMethodCurrency() {
-            const currentMethodIndex = getCurrentMethodIndex();
-            const methods = document.querySelectorAll('.payment-method');
-            
-            if (methods[currentMethodIndex]) {
-                const currencySelect = methods[currentMethodIndex].querySelector('select[name*="Currency"]');
-                const currency = currencySelect ? currencySelect.value : 'EUR';
-                updateAmountSuggestions(currency);
-            } else {
-                updateAmountSuggestions('EUR');
-            }
+            // Just update all buttons with EUR as default for now
+            // This avoids the timing issues with carousel initialization
+            updateAmountSuggestions('EUR');
         }
         
         // Initialize currency handlers and set initial values
         document.addEventListener('DOMContentLoaded', function() {
-            initializeCurrencyHandlers();
-            updatePaymentMethodCurrency();
+            // Wait a bit for the DOM to be fully ready
+            setTimeout(function() {
+                initializeCurrencyHandlers();
+                updatePaymentMethodCurrency();
+            }, 100);
         });
         
     </script>
