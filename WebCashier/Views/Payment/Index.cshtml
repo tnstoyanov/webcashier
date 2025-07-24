@@ -1312,9 +1312,13 @@
 
         // Wait for DOM to be fully loaded
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeValidation);
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeValidation();
+                setTimeout(initializeCarousel, 100);
+            });
         } else {
             initializeValidation();
+            setTimeout(initializeCarousel, 100);
         }
 
         // Form submission handler for loading overlay and data preparation
@@ -1358,31 +1362,71 @@
             }
         });
 
-        // Carousel navigation function
+        // Carousel navigation functionality
+        let carouselCurrentPosition = 0;
+        
+        function initializeCarousel() {
+            updateCarouselButtons();
+        }
+        
+        function updateCarouselButtons() {
+            const prevBtn = document.querySelector('.carousel-prev');
+            const nextBtn = document.querySelector('.carousel-next');
+            const carousel = document.querySelector('.method-carousel');
+            const track = document.querySelector('.carousel-track');
+            const items = document.querySelectorAll('.carousel-item');
+            
+            if (!items.length || !carousel || !track) return;
+            
+            const carouselWidth = carousel.offsetWidth;
+            const trackWidth = track.scrollWidth;
+            const maxScroll = trackWidth - carouselWidth;
+            
+            // Update button states
+            if (prevBtn) {
+                prevBtn.disabled = carouselCurrentPosition >= 0;
+            }
+            if (nextBtn) {
+                nextBtn.disabled = carouselCurrentPosition <= -maxScroll || maxScroll <= 0;
+            }
+        }
+        
         function moveCarousel(direction) {
             const carousel = document.querySelector('.method-carousel');
             const track = document.querySelector('.carousel-track');
             const items = document.querySelectorAll('.carousel-item');
-            const itemWidth = items[0].offsetWidth + 8; // Add gap (0.5rem = 8px)
             
-            if (!carousel.currentPosition) {
-                carousel.currentPosition = 0;
+            if (!items.length || !carousel || !track) return;
+            
+            const itemWidth = items[0].offsetWidth;
+            const gap = 8; // 0.5rem gap
+            const moveDistance = itemWidth + gap;
+            const carouselWidth = carousel.offsetWidth;
+            const trackWidth = track.scrollWidth;
+            const maxScroll = -(trackWidth - carouselWidth);
+            
+            // Calculate new position
+            carouselCurrentPosition += direction * moveDistance;
+            
+            // Apply boundaries
+            if (carouselCurrentPosition > 0) {
+                carouselCurrentPosition = 0;
+            }
+            if (carouselCurrentPosition < maxScroll) {
+                carouselCurrentPosition = maxScroll;
             }
             
-            const visibleItems = 4; // Show 4 items at once
-            const maxPosition = -(items.length - visibleItems) * itemWidth;
+            // Apply transform
+            track.style.transform = `translateX(${carouselCurrentPosition}px)`;
             
-            carousel.currentPosition += direction * itemWidth;
-            
-            // Boundary checks
-            if (carousel.currentPosition > 0) {
-                carousel.currentPosition = 0;
-            }
-            if (carousel.currentPosition < maxPosition) {
-                carousel.currentPosition = maxPosition;
-            }
-            
-            track.style.transform = `translateX(${carousel.currentPosition}px)`;
+            // Update button states
+            updateCarouselButtons();
         }
+        
+        
+        // Update carousel on window resize
+        window.addEventListener('resize', function() {
+            setTimeout(updateCarouselButtons, 100);
+        });
     </script>
 }
