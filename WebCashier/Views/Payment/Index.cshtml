@@ -24,7 +24,7 @@
                 <div class="payment-methods">
                     <p class="method-label">Choose a payment method:</p>
                     <div class="carousel-container">
-                        <button type="button" class="carousel-arrow carousel-prev" onclick="moveCarousel(-1)">
+                        <button type="button" class="carousel-arrow carousel-prev" onclick="movePaymentCarousel(-1)">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -127,7 +127,7 @@
                             </div>
                         </div>
                         
-                        <button type="button" class="carousel-arrow carousel-next" onclick="moveCarousel(1)">
+                        <button type="button" class="carousel-arrow carousel-next" onclick="movePaymentCarousel(1)">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
@@ -1362,119 +1362,79 @@
             }
         });
 
-        // Carousel navigation functionality
-        let carouselCurrentPosition = 0;
+        // Clean carousel implementation from scratch
+        let currentPosition = 0;
         
         function initializeCarousel() {
-            console.log('Initializing carousel...');
             const carousel = document.querySelector('.method-carousel');
             const track = document.querySelector('.carousel-track');
             const items = document.querySelectorAll('.carousel-item');
             
-            if (!items.length || !carousel || !track) {
-                console.log('Carousel elements not found during init');
-                return;
-            }
+            if (!items.length || !carousel || !track) return;
             
-            console.log('Found', items.length, 'carousel items');
-            console.log('Carousel width:', carousel.offsetWidth);
-            console.log('Track width:', track.scrollWidth);
+            // Reset to initial state
+            currentPosition = 0;
+            track.style.transform = 'translateX(0px)';
             
-            // Reset position to ensure clean start
-            carouselCurrentPosition = 0;
-            track.style.transform = `translateX(0px)`;
-            
-            // Update button states after a short delay to ensure layout is complete
-            setTimeout(() => {
-                updateCarouselButtons();
-            }, 50);
+            updateButtons();
         }
         
-        function updateCarouselButtons() {
+        function updateButtons() {
             const prevBtn = document.querySelector('.carousel-prev');
             const nextBtn = document.querySelector('.carousel-next');
             const carousel = document.querySelector('.method-carousel');
             const track = document.querySelector('.carousel-track');
-            const items = document.querySelectorAll('.carousel-item');
             
-            if (!items.length || !carousel || !track) {
-                console.log('Elements not found in updateCarouselButtons');
-                return;
-            }
+            if (!carousel || !track) return;
             
             const carouselWidth = carousel.offsetWidth;
             const trackWidth = track.scrollWidth;
-            const maxScroll = trackWidth - carouselWidth;
+            const maxScrollLeft = trackWidth - carouselWidth;
             
-            console.log('Button update - Carousel width:', carouselWidth, 'Track width:', trackWidth, 'Max scroll:', maxScroll, 'Current pos:', carouselCurrentPosition);
-            
-            // Update button states
+            // Left button: disabled when at start (position = 0)
             if (prevBtn) {
-                const shouldDisablePrev = carouselCurrentPosition >= 0;
-                prevBtn.disabled = shouldDisablePrev;
-                console.log('Prev button disabled:', shouldDisablePrev);
+                prevBtn.disabled = currentPosition >= 0;
             }
+            
+            // Right button: disabled when at end (can't scroll more left)
             if (nextBtn) {
-                const shouldDisableNext = carouselCurrentPosition <= -maxScroll || maxScroll <= 0;
-                nextBtn.disabled = shouldDisableNext;
-                console.log('Next button disabled:', shouldDisableNext);
+                nextBtn.disabled = Math.abs(currentPosition) >= maxScrollLeft;
             }
         }
         
-        function moveCarousel(direction) {
-            console.log('moveCarousel called with direction:', direction);
-            
+        function movePaymentCarousel(direction) {
             const carousel = document.querySelector('.method-carousel');
             const track = document.querySelector('.carousel-track');
             const items = document.querySelectorAll('.carousel-item');
             
-            if (!items.length || !carousel || !track) {
-                console.log('Elements not found in moveCarousel');
-                return;
-            }
+            if (!items.length || !carousel || !track) return;
             
-            const itemWidth = items[0].offsetWidth;
-            const gap = 8; // 0.5rem gap
-            const moveDistance = itemWidth + gap;
+            const itemWidth = 120; // Fixed width from CSS
+            const gap = 8; // 0.5rem
+            const scrollAmount = itemWidth + gap;
+            
             const carouselWidth = carousel.offsetWidth;
             const trackWidth = track.scrollWidth;
-            const maxScroll = -(trackWidth - carouselWidth);
-            
-            console.log('Move carousel debug:', {
-                direction,
-                currentPosition: carouselCurrentPosition,
-                itemWidth,
-                gap,
-                moveDistance,
-                carouselWidth,
-                trackWidth,
-                maxScroll
-            });
+            const maxScrollLeft = trackWidth - carouselWidth;
             
             // Calculate new position
-            const newPosition = carouselCurrentPosition + (direction * moveDistance);
-            console.log('Calculated new position:', newPosition);
+            // direction: 1 = right arrow = scroll left (negative)
+            // direction: -1 = left arrow = scroll right (positive) 
+            const newPosition = currentPosition + (direction * -scrollAmount);
             
             // Apply boundaries
             if (newPosition > 0) {
-                carouselCurrentPosition = 0;
-                console.log('Hit left boundary, setting to 0');
-            } else if (newPosition < maxScroll) {
-                carouselCurrentPosition = maxScroll;
-                console.log('Hit right boundary, setting to maxScroll:', maxScroll);
+                currentPosition = 0; // Can't scroll past start
+            } else if (Math.abs(newPosition) > maxScrollLeft) {
+                currentPosition = -maxScrollLeft; // Can't scroll past end
             } else {
-                carouselCurrentPosition = newPosition;
-                console.log('Using new position:', newPosition);
+                currentPosition = newPosition;
             }
             
-            console.log('Final position:', carouselCurrentPosition);
-            
             // Apply transform
-            track.style.transform = `translateX(${carouselCurrentPosition}px)`;
-            console.log('Applied transform:', `translateX(${carouselCurrentPosition}px)`);
+            track.style.transform = `translateX(${currentPosition}px)`;
             
-            // Update button states
-            updateCarouselButtons();
+            updateButtons();
         }
         
         
