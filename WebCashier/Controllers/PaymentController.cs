@@ -33,8 +33,20 @@ namespace WebCashier.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessPayment(PaymentModel model)
         {
+            _logger.LogInformation("=== PAYMENT PROCESSING START ===");
+            _logger.LogInformation("Received payment request: {@Model}", model);
+            _logger.LogInformation("ModelState IsValid: {IsValid}", ModelState.IsValid);
+            
             if (!ModelState.IsValid)
             {
+                _logger.LogWarning("ModelState is invalid, returning to Index view");
+                foreach (var error in ModelState)
+                {
+                    foreach (var subError in error.Value.Errors)
+                    {
+                        _logger.LogWarning("ModelState Error - Key: {Key}, Error: {Error}", error.Key, subError.ErrorMessage);
+                    }
+                }
                 return View("Index", model);
             }
 
@@ -46,8 +58,9 @@ namespace WebCashier.Controllers
                 // Get client IP address
                 var clientIp = GetClientIpAddress();
                 
-                _logger.LogInformation("Processing {PaymentMethod} payment for amount {Amount} with OrderId {OrderId}", 
-                    model.PaymentMethod, model.Amount, orderId);
+                _logger.LogInformation("Generated OrderId: {OrderId}, Client IP: {ClientIp}", orderId, clientIp);
+                _logger.LogInformation("Processing {PaymentMethod} payment for amount {Amount} {Currency} with OrderId {OrderId}", 
+                    model.PaymentMethod, model.Amount, model.Currency, orderId);
 
                 // Set payment as pending
                 _paymentStateService.SetPaymentPending(orderId, "");
@@ -56,16 +69,21 @@ namespace WebCashier.Controllers
                 switch (model.PaymentMethod?.ToLower())
                 {
                     case "luxtak":
+                        _logger.LogInformation("Routing to Luxtak payment processing");
                         return await ProcessLuxtakPayment(model, orderId);
                     
                     case "card":
                     default:
+                        _logger.LogInformation("Routing to Praxis (card) payment processing");
                         return await ProcessPraxisPayment(model, orderId, clientIp);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing payment");
+                _logger.LogError(ex, "=== PAYMENT PROCESSING EXCEPTION ===");
+                _logger.LogError("Unexpected error processing payment: {Message}", ex.Message);
+                _logger.LogError("Exception Type: {Type}", ex.GetType().Name);
+                _logger.LogError("Stack Trace: {StackTrace}", ex.StackTrace);
                 
                 var result = new PaymentResult
                 {
@@ -100,6 +118,7 @@ namespace WebCashier.Controllers
 
         private async Task<IActionResult> ProcessLuxtakPayment(PaymentModel model, string orderId)
         {
+            _logger.LogInformation("=== PROCESSING LUXTAK PAYMENT START ===");
             _logger.LogInformation("Processing Luxtak payment for OrderId: {OrderId}, Amount: {Amount}, Currency: {Currency}", 
                 orderId, model.Amount, model.Currency);
 
@@ -107,31 +126,88 @@ namespace WebCashier.Controllers
             var amount = model.Amount;
             var currency = model.Currency ?? "USD";
 
+            _logger.LogInformation("Final payment parameters - Amount: {Amount}, Currency: {Currency}", amount, currency);
+            _logger.LogInformation("Request Headers: {@Headers}", Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()));
+            _logger.LogInformation("Is AJAX Request: {IsAjax}", Request.Headers["X-Requested-With"] == "XMLHttpRequest");
+
             // Call Luxtak API
+            _logger.LogInformation("Calling LuxtakService.CreateTradeAsync...");
             var luxtakResponse = await _luxtakService.CreateTradeAsync(amount, currency);
 
-            _logger.LogInformation("Luxtak API response: {@Response}", luxtakResponse);
+            _logger.LogInformation("LuxtakService returned response: {@Response}", luxtakResponse);
 
-            // Check if Luxtak API call was successful
-            if (luxtakResponse.Code == "20000" && luxtakResponse.Data != null)
+            // Check if request was for AJAX (from the Luxtak form)
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
-                // Update payment state with Luxtak transaction ID
-                _paymentStateService.SetPaymentPending(orderId, luxtakResponse.Data.TradeNo);
-
-                // If there's a payment URL, redirect to it
-                if (!string.IsNullOrEmpty(luxtakResponse.Data.PaymentUrl))
+                _logger.LogInformation("Processing AJAX request for Luxtak payment");
+                
+                // Return JSON response for AJAX handling
+                if (luxtakResponse.Code == "10000" && !string.IsNullOrEmpty(luxtakResponse.WebUrl))
                 {
-                    _logger.LogInformation("Redirecting to Luxtak payment URL: {PaymentUrl}", luxtakResponse.Data.PaymentUrl);
-                    return Redirect(luxtakResponse.Data.PaymentUrl);
+                    _logger.LogInformation("=== LUXTAK PAYMENT SUCCESS ===");
+                    _logger.LogInformation("Success case with web_url: {WebUrl}", luxtakResponse.WebUrl);
+                    
+                    // Success case with web_url
+                    _paymentStateService.SetPaymentPending(orderId, luxtakResponse.TradeNo ?? orderId);
+                    
+                    var successResult = new { 
+                        success = true, 
+                        webUrl = luxtakResponse.WebUrl,
+                        tradeNo = luxtakResponse.TradeNo 
+                    };
+                    
+                    _logger.LogInformation("Returning success JSON: {@Result}", successResult);
+                    _logger.LogInformation("=== PROCESSING LUXTAK PAYMENT END - AJAX SUCCESS ===");
+                    
+                    return Json(successResult);
                 }
+                else
+                {
+                    _logger.LogWarning("=== LUXTAK PAYMENT ERROR ===");
+                    _logger.LogWarning("Error case - Code: {Code}, Message: {Message}, SubCode: {SubCode}, SubMessage: {SubMessage}", 
+                        luxtakResponse.Code, luxtakResponse.Message, luxtakResponse.SubCode, luxtakResponse.SubMessage);
+                    
+                    // Error case - format error message
+                    var errorMessage = $"Code: {luxtakResponse.Code}";
+                    if (!string.IsNullOrEmpty(luxtakResponse.Message))
+                        errorMessage += $". {luxtakResponse.Message}";
+                    if (!string.IsNullOrEmpty(luxtakResponse.SubCode))
+                        errorMessage += $" {luxtakResponse.SubCode}";
+                    if (!string.IsNullOrEmpty(luxtakResponse.SubMessage))
+                        errorMessage += $" {luxtakResponse.SubMessage}";
 
-                // Otherwise, show processing page
-                ViewBag.OrderId = orderId;
-                ViewBag.PaymentMethod = "luxtak";
-                return View("LuxtakProcessing", model);
+                    var errorResult = new { 
+                        success = false, 
+                        error = errorMessage 
+                    };
+                    
+                    _logger.LogWarning("Returning error JSON: {@Result}", errorResult);
+                    _logger.LogWarning("=== PROCESSING LUXTAK PAYMENT END - AJAX ERROR ===");
+                    
+                    return Json(errorResult);
+                }
+            }
+
+            _logger.LogInformation("Processing non-AJAX request for Luxtak payment (legacy handling)");
+            
+            // Legacy handling for non-AJAX requests
+            // Check if Luxtak API call was successful
+            if (luxtakResponse.Code == "10000" && !string.IsNullOrEmpty(luxtakResponse.WebUrl))
+            {
+                _logger.LogInformation("=== LUXTAK PAYMENT SUCCESS (LEGACY) ===");
+                
+                // Update payment state with Luxtak transaction ID
+                _paymentStateService.SetPaymentPending(orderId, luxtakResponse.TradeNo ?? orderId);
+
+                // Redirect to web_url
+                _logger.LogInformation("Redirecting to Luxtak web_url: {WebUrl}", luxtakResponse.WebUrl);
+                _logger.LogInformation("=== PROCESSING LUXTAK PAYMENT END - LEGACY REDIRECT ===");
+                
+                return Redirect(luxtakResponse.WebUrl);
             }
             else
             {
+                _logger.LogError("=== LUXTAK PAYMENT FAILURE (LEGACY) ===");
                 _logger.LogError("Luxtak API error - Code: {Code}, Message: {Message}", luxtakResponse.Code, luxtakResponse.Message);
                 
                 var result = new PaymentResult
@@ -141,6 +217,9 @@ namespace WebCashier.Controllers
                     TransactionId = orderId
                 };
 
+                _logger.LogError("Showing PaymentFailure view with result: {@Result}", result);
+                _logger.LogError("=== PROCESSING LUXTAK PAYMENT END - LEGACY FAILURE ===");
+                
                 return View("PaymentFailure", result);
             }
         }

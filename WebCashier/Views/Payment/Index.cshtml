@@ -514,6 +514,22 @@
     </div>
 </div>
 
+<!-- Luxtak Modal -->
+<div id="luxtak-modal" class="luxtak-modal" style="display: none;">
+    <div class="luxtak-modal-content">
+        <div class="luxtak-modal-header">
+            <h3 id="luxtak-modal-title">Luxtak Payment</h3>
+        </div>
+        <div class="luxtak-modal-body">
+            <p id="luxtak-modal-message"></p>
+        </div>
+        <div class="luxtak-modal-footer">
+            <button id="luxtak-ok-btn" class="btn-ok" style="display: none;">OK</button>
+            <button id="luxtak-cancel-btn" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
@@ -1325,21 +1341,11 @@
         document.querySelector('.payment-form').addEventListener('submit', function(e) {
             const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
             
-            // For Luxtak payment, copy the Luxtak-specific fields to the main form fields
+            // For Luxtak payment, handle with AJAX
             if (selectedPaymentMethod === 'luxtak') {
-                const luxtakAmountInput = document.querySelector('[name="LuxtakAmount"]');
-                const luxtakCurrencySelect = document.querySelector('[name="LuxtakCurrency"]');
-                const mainAmountInput = document.querySelector('[name="Amount"]');
-                const mainCurrencySelect = document.querySelector('[name="Currency"]');
-                
-                if (luxtakAmountInput && mainAmountInput) {
-                    mainAmountInput.value = luxtakAmountInput.value;
-                }
-                if (luxtakCurrencySelect && mainCurrencySelect) {
-                    mainCurrencySelect.value = luxtakCurrencySelect.value;
-                }
-                
-                console.log('Luxtak payment - Amount:', luxtakAmountInput?.value, 'Currency:', luxtakCurrencySelect?.value);
+                e.preventDefault(); // Prevent default form submission
+                handleLuxtakPayment(e.target);
+                return;
             }
             
             // Check if form is valid before showing loading overlay
@@ -1361,6 +1367,103 @@
                 }
             }
         });
+
+        // Handle Luxtak payment with AJAX
+        async function handleLuxtakPayment(form) {
+            const luxtakAmountInput = document.querySelector('[name="LuxtakAmount"]');
+            const luxtakCurrencySelect = document.querySelector('[name="LuxtakCurrency"]');
+            
+            if (!luxtakAmountInput?.value || !luxtakCurrencySelect?.value) {
+                alert('Please fill in amount and currency for Luxtak payment');
+                return;
+            }
+
+            // Show loading
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('PaymentMethod', 'luxtak');
+                formData.append('Amount', luxtakAmountInput.value);
+                formData.append('Currency', luxtakCurrencySelect.value);
+
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                // Hide loading
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'none';
+                }
+
+                if (result.success && result.webUrl) {
+                    // Show success modal
+                    showLuxtakModal(result.webUrl, true);
+                } else {
+                    // Show error modal
+                    showLuxtakModal(result.error || 'Payment failed', false);
+                }
+
+            } catch (error) {
+                console.error('Luxtak payment error:', error);
+                
+                // Hide loading
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'none';
+                }
+                
+                showLuxtakModal('Network error occurred. Please try again.', false);
+            }
+        }
+
+        // Show Luxtak modal for success or error cases
+        function showLuxtakModal(messageOrUrl, isSuccess) {
+            const modal = document.getElementById('luxtak-modal');
+            const title = document.getElementById('luxtak-modal-title');
+            const message = document.getElementById('luxtak-modal-message');
+            const okBtn = document.getElementById('luxtak-ok-btn');
+            const cancelBtn = document.getElementById('luxtak-cancel-btn');
+
+            if (isSuccess) {
+                // Success case - show redirect modal
+                title.textContent = 'Luxtak Payment';
+                message.textContent = 'Luxtak will open a new tab. Make the payment there.';
+                okBtn.style.display = 'inline-block';
+                okBtn.textContent = 'OK';
+                cancelBtn.textContent = 'Cancel';
+                
+                // Set up click handlers
+                okBtn.onclick = function() {
+                    window.open(messageOrUrl, '_blank');
+                    modal.style.display = 'none';
+                };
+                
+                cancelBtn.onclick = function() {
+                    modal.style.display = 'none';
+                };
+            } else {
+                // Error case - show error message
+                title.textContent = 'Payment Error';
+                message.textContent = messageOrUrl;
+                okBtn.style.display = 'none';
+                cancelBtn.textContent = 'Close';
+                
+                cancelBtn.onclick = function() {
+                    modal.style.display = 'none';
+                };
+            }
+
+            modal.style.display = 'flex';
+        }
 
         // Currency symbol functionality
         function getCurrencySymbol(currency) {

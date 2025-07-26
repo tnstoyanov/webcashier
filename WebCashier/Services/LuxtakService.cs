@@ -29,6 +29,7 @@ namespace WebCashier.Services
             {
                 var request = CreatePaymentRequest(amount, currency, userEmail, userName);
                 
+                _logger.LogInformation("=== LUXTAK API CALL START ===");
                 _logger.LogInformation("Creating Luxtak trade request: {@Request}", request);
 
                 var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
@@ -37,7 +38,7 @@ namespace WebCashier.Services
                     WriteIndented = true
                 });
 
-                _logger.LogInformation("Luxtak JSON Request: {Json}", json);
+                _logger.LogInformation("Luxtak JSON Request Body: {Json}", json);
 
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 
@@ -47,46 +48,118 @@ namespace WebCashier.Services
                 {
                     _httpClient.DefaultRequestHeaders.Authorization = 
                         new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authToken);
+                    _logger.LogInformation("Authorization header set with Basic auth token");
+                }
+                else
+                {
+                    _logger.LogWarning("No authorization token configured for Luxtak");
                 }
 
                 var endpoint = _configuration[EndpointKey] ?? "https://gateway.luxtak.com/trade/create";
                 
                 _logger.LogInformation("Sending POST request to Luxtak endpoint: {Endpoint}", endpoint);
+                _logger.LogInformation("Request Content-Type: application/json");
+                _logger.LogInformation("Request Content-Length: {Length} bytes", json.Length);
 
+                // Log all request headers
+                foreach (var header in _httpClient.DefaultRequestHeaders)
+                {
+                    _logger.LogInformation("Request Header: {Key} = {Value}", header.Key, string.Join(", ", header.Value));
+                }
+
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 var response = await _httpClient.PostAsync(endpoint, content);
+                stopwatch.Stop();
+                
                 var responseContent = await response.Content.ReadAsStringAsync();
 
-                _logger.LogInformation("Luxtak API Response - Status: {StatusCode}, Content: {Content}", 
-                    response.StatusCode, responseContent);
+                _logger.LogInformation("=== LUXTAK API RESPONSE ===");
+                _logger.LogInformation("Response received in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+                _logger.LogInformation("Response Status Code: {StatusCode} ({StatusCodeInt})", response.StatusCode, (int)response.StatusCode);
+                _logger.LogInformation("Response Reason Phrase: {ReasonPhrase}", response.ReasonPhrase);
+                
+                // Log all response headers
+                foreach (var header in response.Headers)
+                {
+                    _logger.LogInformation("Response Header: {Key} = {Value}", header.Key, string.Join(", ", header.Value));
+                }
+                
+                // Log content headers
+                foreach (var header in response.Content.Headers)
+                {
+                    _logger.LogInformation("Content Header: {Key} = {Value}", header.Key, string.Join(", ", header.Value));
+                }
+
+                _logger.LogInformation("Response Content Length: {Length} bytes", responseContent?.Length ?? 0);
+                _logger.LogInformation("Response Content: {Content}", responseContent);
 
                 if (response.IsSuccessStatusCode)
                 {
+                    _logger.LogInformation("HTTP request successful, attempting to deserialize JSON response");
+                    
                     var luxtakResponse = JsonSerializer.Deserialize<LuxtakPaymentResponse>(responseContent, new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
                     });
 
-                    _logger.LogInformation("Luxtak response deserialized: {@Response}", luxtakResponse);
+                    _logger.LogInformation("Luxtak response deserialized successfully: {@Response}", luxtakResponse);
+                    _logger.LogInformation("=== LUXTAK API CALL END - SUCCESS ===");
+                    
                     return luxtakResponse ?? new LuxtakPaymentResponse { Code = "ERROR", Message = "Failed to deserialize response" };
                 }
                 else
                 {
-                    _logger.LogError("Luxtak API error - Status: {StatusCode}, Content: {Content}", 
-                        response.StatusCode, responseContent);
+                    _logger.LogError("=== LUXTAK API CALL END - HTTP ERROR ===");
+                    _logger.LogError("Luxtak API HTTP error - Status: {StatusCode}, Reason: {ReasonPhrase}, Content: {Content}", 
+                        response.StatusCode, response.ReasonPhrase, responseContent);
                     
                     return new LuxtakPaymentResponse 
                     { 
-                        Code = "ERROR", 
-                        Message = $"HTTP {response.StatusCode}: {responseContent}" 
+                        Code = "HTTP_ERROR", 
+                        Message = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {responseContent}" 
                     };
                 }
             }
-            catch (Exception ex)
+            catch (HttpRequestException httpEx)
             {
-                _logger.LogError(ex, "Error calling Luxtak API");
+                _logger.LogError(httpEx, "=== LUXTAK API CALL END - HTTP EXCEPTION ===");
+                _logger.LogError("HTTP exception calling Luxtak API: {Message}", httpEx.Message);
                 return new LuxtakPaymentResponse 
                 { 
-                    Code = "ERROR", 
+                    Code = "HTTP_EXCEPTION", 
+                    Message = $"HTTP Exception: {httpEx.Message}" 
+                };
+            }
+            catch (TaskCanceledException tcEx)
+            {
+                _logger.LogError(tcEx, "=== LUXTAK API CALL END - TIMEOUT ===");
+                _logger.LogError("Timeout calling Luxtak API: {Message}", tcEx.Message);
+                return new LuxtakPaymentResponse 
+                { 
+                    Code = "TIMEOUT", 
+                    Message = $"Request timeout: {tcEx.Message}" 
+                };
+            }
+            catch (JsonException jsonEx)
+            {
+                _logger.LogError(jsonEx, "=== LUXTAK API CALL END - JSON ERROR ===");
+                _logger.LogError("JSON deserialization error: {Message}", jsonEx.Message);
+                return new LuxtakPaymentResponse 
+                { 
+                    Code = "JSON_ERROR", 
+                    Message = $"JSON Error: {jsonEx.Message}" 
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "=== LUXTAK API CALL END - GENERAL EXCEPTION ===");
+                _logger.LogError("Unexpected error calling Luxtak API: {Message}", ex.Message);
+                _logger.LogError("Exception Type: {Type}", ex.GetType().Name);
+                _logger.LogError("Stack Trace: {StackTrace}", ex.StackTrace);
+                
+                return new LuxtakPaymentResponse 
+                { 
+                    Code = "GENERAL_ERROR", 
                     Message = $"Exception: {ex.Message}" 
                 };
             }
@@ -94,6 +167,8 @@ namespace WebCashier.Services
 
         private LuxtakPaymentRequest CreatePaymentRequest(decimal amount, string currency, string userEmail, string userName)
         {
+            _logger.LogInformation("=== CREATING LUXTAK PAYMENT REQUEST ===");
+            
             var now = DateTime.Now;
             var timestamp = now.ToString("yyyy-MM-dd HH:mm:ss");
             
@@ -106,6 +181,25 @@ namespace WebCashier.Services
             
             var appId = _configuration[AppIdKey] ?? "17529157991280801";
             var notifyUrl = _configuration[NotifyUrlKey] ?? "https://webcashier.onrender.com/api/luxtak/notification";
+            var endpoint = _configuration[EndpointKey] ?? "https://gateway.luxtak.com/trade/create";
+            var hasAuthToken = !string.IsNullOrEmpty(_configuration[AuthTokenKey]);
+
+            _logger.LogInformation("Configuration values:");
+            _logger.LogInformation("- Endpoint: {Endpoint}", endpoint);
+            _logger.LogInformation("- AppId: {AppId}", appId);
+            _logger.LogInformation("- NotifyUrl: {NotifyUrl}", notifyUrl);
+            _logger.LogInformation("- HasAuthToken: {HasAuthToken}", hasAuthToken);
+            
+            _logger.LogInformation("Generated values:");
+            _logger.LogInformation("- OutTradeNo: {OutTradeNo}", outTradeNo);
+            _logger.LogInformation("- BuyerId: {BuyerId}", buyerId);
+            _logger.LogInformation("- Timestamp: {Timestamp}", timestamp);
+            
+            _logger.LogInformation("Request parameters:");
+            _logger.LogInformation("- Amount: {Amount}", amount);
+            _logger.LogInformation("- Currency: {Currency}", currency);
+            _logger.LogInformation("- UserEmail: {UserEmail}", userEmail);
+            _logger.LogInformation("- UserName: {UserName}", userName);
 
             return new LuxtakPaymentRequest
             {

@@ -10,6 +10,24 @@ namespace WebCashier.Models.Luxtak
         [JsonPropertyName("msg")]
         public string Message { get; set; } = string.Empty;
 
+        [JsonPropertyName("sub_code")]
+        public string? SubCode { get; set; }
+
+        [JsonPropertyName("sub_msg")]
+        public string? SubMessage { get; set; }
+
+        [JsonPropertyName("out_trade_no")]
+        public string? OutTradeNo { get; set; }
+
+        [JsonPropertyName("trade_no")]
+        public string? TradeNo { get; set; }
+
+        [JsonPropertyName("web_url")]
+        public string? WebUrl { get; set; }
+
+        [JsonPropertyName("prepay_id")]
+        public string? PrepayId { get; set; }
+
         [JsonPropertyName("data")]
         public LuxtakPaymentData? Data { get; set; }
     }
