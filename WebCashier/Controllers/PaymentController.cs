@@ -31,6 +31,62 @@ namespace WebCashier.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Index(string paymentMethod, decimal amount, string currency)
+        {
+            _logger.LogInformation("=== AJAX PAYMENT REQUEST START ===");
+            _logger.LogInformation("Payment Method: {PaymentMethod}, Amount: {Amount}, Currency: {Currency}", paymentMethod, amount, currency);
+
+            try
+            {
+                if (paymentMethod?.ToLower() == "luxtak")
+                {
+                    _logger.LogInformation("Processing Luxtak payment via AJAX");
+
+                    var response = await _luxtakService.CreateTradeAsync(amount, currency, "tony.stoyanov@tiebreak.dev", "Tony Stoyanov");
+
+                    if (response != null && !string.IsNullOrEmpty(response.WebUrl))
+                    {
+                        _logger.LogInformation("Luxtak payment successful, web_url: {WebUrl}", response.WebUrl);
+                        
+                        return Json(new { 
+                            success = true, 
+                            webUrl = response.WebUrl,
+                            tradeNo = response.TradeNo 
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogError("Luxtak payment failed - no web_url in response: {@Response}", response);
+                        
+                        return Json(new { 
+                            success = false, 
+                            error = "Payment initialization failed. Please try again." 
+                        });
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Unsupported payment method: {PaymentMethod}", paymentMethod);
+                    
+                    return Json(new { 
+                        success = false, 
+                        error = "Unsupported payment method" 
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing AJAX payment request");
+                
+                return Json(new { 
+                    success = false, 
+                    error = "An error occurred while processing your payment. Please try again." 
+                });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessPayment(PaymentModel model)
         {
             _logger.LogInformation("=== PAYMENT PROCESSING START ===");

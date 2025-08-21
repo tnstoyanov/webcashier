@@ -1389,8 +1389,20 @@
                 formData.append('PaymentMethod', 'luxtak');
                 formData.append('Amount', luxtakAmountInput.value);
                 formData.append('Currency', luxtakCurrencySelect.value);
+                
+                // Include anti-forgery token
+                const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (antiForgeryToken) {
+                    formData.append('__RequestVerificationToken', antiForgeryToken.value);
+                }
 
-                const response = await fetch(form.action, {
+                console.log('Sending Luxtak payment request...', {
+                    method: 'POST',
+                    amount: luxtakAmountInput.value,
+                    currency: luxtakCurrencySelect.value
+                });
+
+                const response = await fetch('/Payment', {
                     method: 'POST',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
@@ -1398,7 +1410,25 @@
                     body: formData
                 });
 
-                const result = await response.json();
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (jsonError) {
+                    console.error('JSON parse error:', jsonError);
+                    throw new Error('Invalid JSON response from server');
+                }
+
+                console.log('Parsed result:', result);
 
                 // Hide loading
                 if (loadingOverlay) {
@@ -1407,9 +1437,11 @@
 
                 if (result.success && result.webUrl) {
                     // Show success modal
+                    console.log('Success - redirecting to:', result.webUrl);
                     showLuxtakModal(result.webUrl, true);
                 } else {
                     // Show error modal
+                    console.log('Error result:', result.error || 'Payment failed');
                     showLuxtakModal(result.error || 'Payment failed', false);
                 }
 
