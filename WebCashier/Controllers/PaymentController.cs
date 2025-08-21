@@ -136,6 +136,16 @@ namespace WebCashier.Controllers
 
             _logger.LogInformation("LuxtakService returned response: {@Response}", luxtakResponse);
 
+<<<<<<< HEAD
+            // Check if Luxtak API call was successful
+            if (luxtakResponse.Code == "10000" && !string.IsNullOrEmpty(luxtakResponse.WebUrl))
+            {
+                // Update payment state with Luxtak transaction ID
+                _paymentStateService.SetPaymentPending(orderId, luxtakResponse.TradeNo);
+
+                // Redirect to web_url
+                _logger.LogInformation("Redirecting to Luxtak web_url: {WebUrl}", luxtakResponse.WebUrl);
+=======
             // Check if request was for AJAX (from the Luxtak form)
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
             {
@@ -203,23 +213,26 @@ namespace WebCashier.Controllers
                 _logger.LogInformation("Redirecting to Luxtak web_url: {WebUrl}", luxtakResponse.WebUrl);
                 _logger.LogInformation("=== PROCESSING LUXTAK PAYMENT END - LEGACY REDIRECT ===");
                 
+>>>>>>> 2844ecadaec88cc3e03b7e14ca37b489d4d37aff
                 return Redirect(luxtakResponse.WebUrl);
             }
             else
             {
                 _logger.LogError("=== LUXTAK PAYMENT FAILURE (LEGACY) ===");
                 _logger.LogError("Luxtak API error - Code: {Code}, Message: {Message}", luxtakResponse.Code, luxtakResponse.Message);
-                
                 var result = new PaymentResult
                 {
                     Success = false,
                     Message = $"Luxtak payment failed: {luxtakResponse.Message}",
                     TransactionId = orderId
                 };
+<<<<<<< HEAD
+=======
 
                 _logger.LogError("Showing PaymentFailure view with result: {@Result}", result);
                 _logger.LogError("=== PROCESSING LUXTAK PAYMENT END - LEGACY FAILURE ===");
                 
+>>>>>>> 2844ecadaec88cc3e03b7e14ca37b489d4d37aff
                 return View("PaymentFailure", result);
             }
         }
