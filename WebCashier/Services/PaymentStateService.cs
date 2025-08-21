@@ -10,6 +10,7 @@ namespace WebCashier.Services
         PaymentState? GetPaymentState(string orderId);
         void SetPaymentFailed(string orderId, string reason);
         PaymentState? GetMostRecentCompletedPayment();
+        PaymentState? GetMostRecentPendingPayment();
     }
 
     public class PaymentStateService : IPaymentStateService
@@ -93,6 +94,16 @@ namespace WebCashier.Services
                 .FirstOrDefault();
 
             return completedPayments;
+        }
+
+        public PaymentState? GetMostRecentPendingPayment()
+        {
+            var pendingPayments = _paymentStates.Values
+                .Where(p => p.Status == PaymentStatus.Pending && p.CreatedAt != DateTime.MinValue)
+                .OrderByDescending(p => p.CreatedAt)
+                .FirstOrDefault();
+
+            return pendingPayments;
         }
     }
 

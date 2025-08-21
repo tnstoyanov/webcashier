@@ -18,6 +18,7 @@ namespace WebCashier.Services
         private const string AppIdKey = "Luxtak:AppId";
         private const string AuthTokenKey = "Luxtak:AuthToken";
         private const string NotifyUrlKey = "Luxtak:NotifyUrl";
+        private const string ReturnUrlKey = "Luxtak:ReturnUrl";
 
         public LuxtakService(HttpClient httpClient, IConfiguration configuration, ILogger<LuxtakService> logger)
         {
@@ -215,6 +216,7 @@ namespace WebCashier.Services
             
             var appId = _configuration[AppIdKey] ?? "17529157991280801";
             var notifyUrl = _configuration[NotifyUrlKey] ?? "https://webcashier.onrender.com/api/luxtak/notification";
+            var returnUrl = _configuration[ReturnUrlKey] ?? "https://webcashier.onrender.com/Payment/Return";
             var endpoint = _configuration[EndpointKey] ?? "https://gateway.luxtak.com/trade/create";
             var hasAuthToken = !string.IsNullOrEmpty(_configuration[AuthTokenKey]);
 
@@ -222,6 +224,7 @@ namespace WebCashier.Services
             _logger.LogInformation("- Endpoint: {Endpoint}", endpoint);
             _logger.LogInformation("- AppId: {AppId}", appId);
             _logger.LogInformation("- NotifyUrl: {NotifyUrl}", notifyUrl);
+            _logger.LogInformation("- ReturnUrl: {ReturnUrl}", returnUrl);
             _logger.LogInformation("- HasAuthToken: {HasAuthToken}", hasAuthToken);
             
             _logger.LogInformation("Generated values:");
@@ -243,6 +246,7 @@ namespace WebCashier.Services
                 OrderAmount = amount.ToString("F2"),
                 Timestamp = timestamp,
                 NotifyUrl = notifyUrl,
+                ReturnUrl = returnUrl,
                 BuyerId = buyerId,
                 Customer = new LuxtakCustomer
                 {

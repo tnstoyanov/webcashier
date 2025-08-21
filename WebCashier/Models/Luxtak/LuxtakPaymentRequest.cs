@@ -35,7 +35,7 @@ namespace WebCashier.Models.Luxtak
         public string NotifyUrl { get; set; } = string.Empty;
 
         [JsonPropertyName("return_url")]
-        public string ReturnUrl { get; set; } = "https://tnstoyanov.wixsite.com/payment-response/return";
+        public string ReturnUrl { get; set; } = "https://webcashier.onrender.com/Payment/Return";
 
         [JsonPropertyName("buyer_id")]
         public string BuyerId { get; set; } = string.Empty;

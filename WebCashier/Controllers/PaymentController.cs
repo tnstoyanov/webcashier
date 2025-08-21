@@ -388,6 +388,12 @@ namespace WebCashier.Controllers
                 _logger.LogInformation("Payment Return endpoint called via {Method}", Request.Method);
                 _logger.LogInformation("Return URL query parameters: {QueryParams}", 
                     string.Join(", ", Request.Query.Select(kv => $"{kv.Key}={kv.Value}")));
+                
+                // Log additional information to help identify Luxtak returns
+                var referer = Request.Headers["Referer"].ToString();
+                var userAgent = Request.Headers["User-Agent"].ToString();
+                _logger.LogInformation("Referer: {Referer}", referer);
+                _logger.LogInformation("User-Agent: {UserAgent}", userAgent);
 
                 // Check if this is a Luxtak return based on query parameters
                 var queryParams = Request.Query;
@@ -400,6 +406,46 @@ namespace WebCashier.Controllers
                 if (Request.Method == "POST" && Request.ContentType?.Contains("application/json") == true)
                 {
                     return await HandlePraxisCallback();
+                }
+
+                // Check if this might be a Luxtak return without parameters
+                // This can happen when there's no callback or incomplete redirect
+                var isLikelyLuxtakReturn = false;
+                
+                // Check if referer contains luxtak domain
+                if (!string.IsNullOrEmpty(referer) && (referer.Contains("luxtak.com") || referer.Contains("gateway.luxtak")))
+                {
+                    isLikelyLuxtakReturn = true;
+                    _logger.LogInformation("Detected Luxtak return based on referer: {Referer}", referer);
+                }
+                
+                // Check for recent Luxtak payment in progress
+                var recentLuxtakPayment = _paymentStateService.GetMostRecentPendingPayment();
+                if (recentLuxtakPayment != null && recentLuxtakPayment.CreatedAt != DateTime.MinValue && 
+                    DateTime.UtcNow - recentLuxtakPayment.CreatedAt < TimeSpan.FromMinutes(30))
+                {
+                    isLikelyLuxtakReturn = true;
+                    _logger.LogInformation("Found recent pending payment, likely Luxtak return without callback for OrderId: {OrderId}", recentLuxtakPayment.OrderId);
+                }
+
+                // If this looks like a Luxtak return without proper callback, show pending page
+                if (isLikelyLuxtakReturn)
+                {
+                    var model = new PaymentReturnModel
+                    {
+                        TransactionId = recentLuxtakPayment?.TransactionId ?? "Unknown",
+                        OrderId = recentLuxtakPayment?.OrderId ?? "Unknown",
+                        Amount = "0.00",
+                        Currency = "USD",
+                        PaymentMethod = "Luxtak",
+                        PaymentProcessor = "Luxtak",
+                        TransactionStatus = "PROCESSING",
+                        IsSuccess = false,
+                        StatusDetails = "Payment is being processed via Luxtak"
+                    };
+                    
+                    _logger.LogInformation("Showing Luxtak pending page for return without callback");
+                    return View("LuxtakPending", model);
                 }
 
                 // Handle GET request with query parameters or fallback
