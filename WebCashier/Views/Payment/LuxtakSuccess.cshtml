@@ -20,9 +20,15 @@
                     <circle cx="12" cy="12" r="10" fill="#22c55e"/>
                     <path d="M9 12l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
+                <div class="celebration-particles">
+                    <div class="particle particle-1">🎉</div>
+                    <div class="particle particle-2">✨</div>
+                    <div class="particle particle-3">🎊</div>
+                    <div class="particle particle-4">⭐</div>
+                </div>
             </div>
             
-            <h1 class="result-title">Payment Successful!</h1>
+            <h1 class="result-title">Congrats! Your payment is successful</h1>
             <p class="result-message">Your payment has been processed successfully through Luxtak.</p>
             
             <div class="payment-summary">
@@ -78,6 +84,51 @@
 
 .success-icon {
     margin-bottom: 2rem;
+    position: relative;
+}
+
+.celebration-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    font-size: 1.5rem;
+    animation: float 3s ease-in-out infinite;
+}
+
+.particle-1 {
+    top: -10px;
+    left: -20px;
+    animation-delay: 0s;
+}
+
+.particle-2 {
+    top: -15px;
+    right: -15px;
+    animation-delay: 0.5s;
+}
+
+.particle-3 {
+    bottom: -10px;
+    left: -15px;
+    animation-delay: 1s;
+}
+
+.particle-4 {
+    bottom: -15px;
+    right: -20px;
+    animation-delay: 1.5s;
+}
+
+@@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.7; }
+    50% { transform: translateY(-10px) rotate(180deg); opacity: 1; }
 }
 
 .result-title {

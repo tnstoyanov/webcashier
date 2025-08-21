@@ -393,7 +393,7 @@ namespace WebCashier.Controllers
                 var queryParams = Request.Query;
                 if (queryParams.ContainsKey("trade_status") || queryParams.ContainsKey("trade_no"))
                 {
-                    return await HandleLuxtakReturn(queryParams);
+                    return HandleLuxtakReturn(queryParams);
                 }
 
                 // If this is a POST request with JSON (callback), handle it as a Praxis callback
@@ -437,7 +437,7 @@ namespace WebCashier.Controllers
             }
         }
 
-        private async Task<IActionResult> HandleLuxtakReturn(IQueryCollection queryParams)
+        private IActionResult HandleLuxtakReturn(IQueryCollection queryParams)
         {
             _logger.LogInformation("Handling Luxtak return with parameters: {@Params}", queryParams.ToDictionary(k => k.Key, v => v.Value.ToString()));
 
@@ -474,9 +474,10 @@ namespace WebCashier.Controllers
 
                 case "CANCEL":
                 case "CANCELLED":
+                case "EXPIRED":
                     model.IsSuccess = false;
-                    model.StatusDetails = "Payment was cancelled via Luxtak";
-                    _logger.LogInformation("Luxtak payment CANCELLED for OrderId: {OrderId}, TradeNo: {TradeNo}", outTradeNo, tradeNo);
+                    model.StatusDetails = tradeStatus?.ToUpper() == "EXPIRED" ? "Payment expired via Luxtak" : "Payment was cancelled via Luxtak";
+                    _logger.LogInformation("Luxtak payment {Status} for OrderId: {OrderId}, TradeNo: {TradeNo}", tradeStatus?.ToUpper(), outTradeNo, tradeNo);
                     return View("LuxtakCancelled", model);
 
                 default:
