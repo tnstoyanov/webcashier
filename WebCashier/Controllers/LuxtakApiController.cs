@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
 using System.Text.Json;
 using WebCashier.Models.Luxtak;
 
@@ -9,10 +10,36 @@ namespace WebCashier.Controllers
     public class LuxtakApiController : ControllerBase
     {
         private readonly ILogger<LuxtakApiController> _logger;
+        private readonly HttpClient _httpClient;
+        
+        // Render.com comm logs endpoint
+        private const string RenderCommLogsUrl = "https://webcashier.onrender.com/api/comm-logs";
 
-        public LuxtakApiController(ILogger<LuxtakApiController> logger)
+        public LuxtakApiController(ILogger<LuxtakApiController> logger, HttpClient httpClient)
         {
             _logger = logger;
+            _httpClient = httpClient;
+        }
+
+        private async Task LogToRenderCommLogsAsync(string type, object data)
+        {
+            try
+            {
+                var payload = new
+                {
+                    timestamp = DateTime.UtcNow.ToString("o"),
+                    type,
+                    data
+                };
+                var json = JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                await _httpClient.PostAsync(RenderCommLogsUrl, content);
+                _logger.LogInformation("Logged to Render.com comm logs: {Type}", type);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to log to Render.com comm logs");
+            }
         }
 
         [HttpPost("notification")]
@@ -30,10 +57,12 @@ namespace WebCashier.Controllers
                 var body = await reader.ReadToEndAsync();
 
                 _logger.LogInformation("Luxtak notification body: {Body}", body);
+                await LogToRenderCommLogsAsync("luxtak-callback", body);
 
                 if (string.IsNullOrEmpty(body))
                 {
                     _logger.LogWarning("Luxtak notification received with empty body");
+                    await LogToRenderCommLogsAsync("luxtak-callback-error", "Empty notification body");
                     return BadRequest("Empty notification body");
                 }
 
@@ -52,6 +81,8 @@ namespace WebCashier.Controllers
                         _logger.LogInformation("Luxtak notification - TradeNo: {TradeNo}, OutTradeNo: {OutTradeNo}, Status: {Status}, Amount: {Amount}",
                             notification.TradeNo, notification.OutTradeNo, notification.TradeStatus, notification.OrderAmount);
 
+                        await LogToRenderCommLogsAsync("luxtak-callback-success", notification);
+
                         // TODO: Update payment state in database based on notification
                         // For now, just log the notification
 
@@ -60,6 +91,7 @@ namespace WebCashier.Controllers
                     else
                     {
                         _logger.LogError("Failed to deserialize Luxtak notification");
+                        await LogToRenderCommLogsAsync("luxtak-callback-error", "Failed to deserialize notification");
                         return BadRequest("Invalid notification format");
                     }
                 }
@@ -69,6 +101,7 @@ namespace WebCashier.Controllers
                     
                     // Log raw body for debugging
                     _logger.LogInformation("Raw notification body: {RawBody}", body);
+                    await LogToRenderCommLogsAsync("luxtak-callback-json-error", ex);
                     
                     return BadRequest("Invalid JSON format");
                 }
@@ -76,6 +109,7 @@ namespace WebCashier.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing Luxtak notification");
+                await LogToRenderCommLogsAsync("luxtak-callback-general-error", ex);
                 return StatusCode(500, "Internal server error");
             }
         }

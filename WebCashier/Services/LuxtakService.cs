@@ -6,6 +6,9 @@ namespace WebCashier.Services
 {
     public class LuxtakService
     {
+        // Render.com comm logs endpoint (replace with your actual endpoint if needed)
+        private const string RenderCommLogsUrl = "https://webcashier.onrender.com/api/comm-logs";
+
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
         private readonly ILogger<LuxtakService> _logger;
@@ -23,31 +26,66 @@ namespace WebCashier.Services
             _logger = logger;
         }
 
+        private async Task LogToRenderCommLogsAsync(string type, object data)
+        {
+            try
+            {
+                var payload = new
+                {
+                    timestamp = DateTime.UtcNow.ToString("o"),
+                    type,
+                    data
+                };
+                var json = JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                await _httpClient.PostAsync(RenderCommLogsUrl, content);
+                _logger.LogInformation("Logged to Render.com comm logs: {Type}", type);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to log to Render.com comm logs");
+            }
+        }
+
         public async Task<LuxtakPaymentResponse> CreateTradeAsync(decimal amount, string currency, string userEmail = "tony.stoyanov@tiebreak.dev", string userName = "Tony Stoyanov")
         {
             try
             {
                 var request = CreatePaymentRequest(amount, currency, userEmail, userName);
-                
                 _logger.LogInformation("=== LUXTAK API CALL START ===");
                 _logger.LogInformation("Creating Luxtak trade request: {@Request}", request);
+                await LogToRenderCommLogsAsync("luxtak-request", request);
+
+                // Ensure all required fields match sample
+                request.Subject = "Luxtak Deposit";
+                request.Content = "LATAM operations";
+                request.TradeType = "WEB";
+                request.Version = "2.0";
+                request.Regions = new[] { "BRA" };
+                request.Address = new LuxtakAddress { ZipCode = "38082365" };
 
                 var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-                    WriteIndented = true
+                    PropertyNamingPolicy = null,
+                    WriteIndented = false
                 });
 
                 _logger.LogInformation("Luxtak JSON Request Body: {Json}", json);
 
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
-                // Add authorization header
+
+                // Set Authorization header as Basic <base64>
                 var authToken = _configuration[AuthTokenKey];
                 if (!string.IsNullOrEmpty(authToken))
                 {
-                    _httpClient.DefaultRequestHeaders.Authorization = 
-                        new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authToken);
+                    // If not already base64, encode it
+                    if (!authToken.StartsWith("MT")) // crude check for sample
+                    {
+                        var bytes = Encoding.UTF8.GetBytes(authToken);
+                        authToken = Convert.ToBase64String(bytes);
+                    }
+                    _httpClient.DefaultRequestHeaders.Remove("Authorization");
+                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authToken);
                     _logger.LogInformation("Authorization header set with Basic auth token");
                 }
                 else
@@ -56,12 +94,10 @@ namespace WebCashier.Services
                 }
 
                 var endpoint = _configuration[EndpointKey] ?? "https://gateway.luxtak.com/trade/create";
-                
                 _logger.LogInformation("Sending POST request to Luxtak endpoint: {Endpoint}", endpoint);
                 _logger.LogInformation("Request Content-Type: application/json");
                 _logger.LogInformation("Request Content-Length: {Length} bytes", json.Length);
 
-                // Log all request headers
                 foreach (var header in _httpClient.DefaultRequestHeaders)
                 {
                     _logger.LogInformation("Request Header: {Key} = {Value}", header.Key, string.Join(", ", header.Value));
@@ -70,7 +106,6 @@ namespace WebCashier.Services
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 var response = await _httpClient.PostAsync(endpoint, content);
                 stopwatch.Stop();
-                
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 _logger.LogInformation("=== LUXTAK API RESPONSE ===");
@@ -96,15 +131,10 @@ namespace WebCashier.Services
                 if (response.IsSuccessStatusCode)
                 {
                     _logger.LogInformation("HTTP request successful, attempting to deserialize JSON response");
-                    
-                    var luxtakResponse = JsonSerializer.Deserialize<LuxtakPaymentResponse>(responseContent, new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-                    });
-
+                    var luxtakResponse = JsonSerializer.Deserialize<LuxtakPaymentResponse>(responseContent ?? "{}");
                     _logger.LogInformation("Luxtak response deserialized successfully: {@Response}", luxtakResponse);
                     _logger.LogInformation("=== LUXTAK API CALL END - SUCCESS ===");
-                    
+                    await LogToRenderCommLogsAsync("luxtak-success", luxtakResponse ?? new object());
                     return luxtakResponse ?? new LuxtakPaymentResponse { Code = "ERROR", Message = "Failed to deserialize response" };
                 }
                 else
@@ -112,7 +142,7 @@ namespace WebCashier.Services
                     _logger.LogError("=== LUXTAK API CALL END - HTTP ERROR ===");
                     _logger.LogError("Luxtak API HTTP error - Status: {StatusCode}, Reason: {ReasonPhrase}, Content: {Content}", 
                         response.StatusCode, response.ReasonPhrase, responseContent);
-                    
+                    await LogToRenderCommLogsAsync("luxtak-error", responseContent ?? "Empty response");
                     return new LuxtakPaymentResponse 
                     { 
                         Code = "HTTP_ERROR", 
@@ -124,6 +154,7 @@ namespace WebCashier.Services
             {
                 _logger.LogError(httpEx, "=== LUXTAK API CALL END - HTTP EXCEPTION ===");
                 _logger.LogError("HTTP exception calling Luxtak API: {Message}", httpEx.Message);
+                await LogToRenderCommLogsAsync("luxtak-http-exception", httpEx);
                 return new LuxtakPaymentResponse 
                 { 
                     Code = "HTTP_EXCEPTION", 
@@ -134,6 +165,7 @@ namespace WebCashier.Services
             {
                 _logger.LogError(tcEx, "=== LUXTAK API CALL END - TIMEOUT ===");
                 _logger.LogError("Timeout calling Luxtak API: {Message}", tcEx.Message);
+                await LogToRenderCommLogsAsync("luxtak-timeout", tcEx);
                 return new LuxtakPaymentResponse 
                 { 
                     Code = "TIMEOUT", 
@@ -144,6 +176,7 @@ namespace WebCashier.Services
             {
                 _logger.LogError(jsonEx, "=== LUXTAK API CALL END - JSON ERROR ===");
                 _logger.LogError("JSON deserialization error: {Message}", jsonEx.Message);
+                await LogToRenderCommLogsAsync("luxtak-json-error", jsonEx);
                 return new LuxtakPaymentResponse 
                 { 
                     Code = "JSON_ERROR", 
@@ -156,6 +189,7 @@ namespace WebCashier.Services
                 _logger.LogError("Unexpected error calling Luxtak API: {Message}", ex.Message);
                 _logger.LogError("Exception Type: {Type}", ex.GetType().Name);
                 _logger.LogError("Stack Trace: {StackTrace}", ex.StackTrace);
+                await LogToRenderCommLogsAsync("luxtak-general-exception", ex);
                 
                 return new LuxtakPaymentResponse 
                 { 
@@ -212,13 +246,13 @@ namespace WebCashier.Services
                 BuyerId = buyerId,
                 Customer = new LuxtakCustomer
                 {
-                    Identify = new LuxtakIdentify
-                    {
-                        Type = "CPF",
-                        Number = "50284414727" // Default test CPF
-                    },
                     Name = userName,
+                    Phone = "73984401850",
                     Email = userEmail
+                },
+                Address = new LuxtakAddress
+                {
+                    ZipCode = "38082365"
                 }
             };
         }

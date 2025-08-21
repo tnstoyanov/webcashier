@@ -20,10 +20,10 @@ namespace WebCashier.Models.Luxtak
         public string OrderAmount { get; set; } = string.Empty;
 
         [JsonPropertyName("subject")]
-        public string Subject { get; set; } = "LATAM operations";
+        public string Subject { get; set; } = "Luxtak Deposit";
 
         [JsonPropertyName("content")]
-        public string Content { get; set; } = "Luxtak deposit";
+        public string Content { get; set; } = "LATAM operations";
 
         [JsonPropertyName("trade_type")]
         public string TradeType { get; set; } = "WEB";
@@ -33,6 +33,9 @@ namespace WebCashier.Models.Luxtak
 
         [JsonPropertyName("notify_url")]
         public string NotifyUrl { get; set; } = string.Empty;
+
+        [JsonPropertyName("return_url")]
+        public string ReturnUrl { get; set; } = "https://tnstoyanov.wixsite.com/payment-response/return";
 
         [JsonPropertyName("buyer_id")]
         public string BuyerId { get; set; } = string.Empty;
@@ -52,11 +55,11 @@ namespace WebCashier.Models.Luxtak
 
     public class LuxtakCustomer
     {
-        [JsonPropertyName("identify")]
-        public LuxtakIdentify Identify { get; set; } = new();
-
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
+
+        [JsonPropertyName("phone")]
+        public string Phone { get; set; } = "73984401850";
 
         [JsonPropertyName("email")]
         public string Email { get; set; } = string.Empty;
