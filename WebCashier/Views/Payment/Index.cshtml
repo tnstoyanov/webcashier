@@ -1177,6 +1177,7 @@
 
             // Add event listeners for real-time validation with debouncing
             const amountInput = document.querySelector('[name="Amount"]');
+            const luxtakAmountInput = document.querySelector('[name="LuxtakAmount"]');
             const currencySelect = document.querySelector('[name="Currency"]');
             const nameInput = document.querySelector('[name="NameOnCard"]');
             const cardInput = document.querySelector('[name="CardNumber"]');
@@ -1192,6 +1193,22 @@
                     }, 100);
                 });
                 amountInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        validateAmount(true); // Show errors on blur
+                        updateDepositButtonState();
+                    }, 100);
+                });
+            }
+            
+            // Add event listeners for Luxtak amount input
+            if (luxtakAmountInput) {
+                luxtakAmountInput.addEventListener('input', () => {
+                    setTimeout(() => {
+                        validateAmount(true); // Show errors during input
+                        updateDepositButtonState();
+                    }, 100);
+                });
+                luxtakAmountInput.addEventListener('blur', () => {
                     setTimeout(() => {
                         validateAmount(true); // Show errors on blur
                         updateDepositButtonState();
