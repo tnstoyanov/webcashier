@@ -33,7 +33,8 @@ namespace WebCashier.Services
             var redirectUrl = _configuration["Smilepayz:RedirectUrl"] ?? string.Empty;
             var callbackUrl = _configuration["Smilepayz:CallbackUrl"] ?? string.Empty;
             var merchantName = _configuration["Smilepayz:MerchantName"] ?? "Tiebreak";
-            var paymentMethod = _configuration["Smilepayz:PaymentMethod"] ?? "BANK";
+            // Make payment method configurable with default QRPAY per request
+            var paymentMethod = _configuration["Smilepayz:PaymentMethod"] ?? "QRPAY";
 
             // Build request body
             var rnd = new Random();
