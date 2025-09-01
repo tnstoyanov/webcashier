@@ -35,12 +35,20 @@ namespace WebCashier.Services
             _logger.LogInformation("[CommLog] {Type}/{Category}: {Json}", type, category ?? "general", json);
 
             var endpoint = _configuration["CommLogs:Endpoint"] ?? "https://webcashier.onrender.com/api/comm-logs";
+            var enabled = string.Equals(_configuration["CommLogs:Enabled"], "true", StringComparison.OrdinalIgnoreCase);
             try
             {
-                var client = _httpClientFactory.CreateClient("comm-logs");
-                using var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var response = await client.PostAsync(endpoint, content);
-                _logger.LogInformation("[CommLog] POST {Endpoint} -> {Status}", endpoint, (int)response.StatusCode);
+                if (enabled)
+                {
+                    var client = _httpClientFactory.CreateClient("comm-logs");
+                    using var content = new StringContent(json, Encoding.UTF8, "application/json");
+                    var response = await client.PostAsync(endpoint, content);
+                    _logger.LogInformation("[CommLog] POST {Endpoint} -> {Status}", endpoint, (int)response.StatusCode);
+                }
+                else
+                {
+                    _logger.LogDebug("[CommLog] Remote posting disabled");
+                }
             }
             catch (Exception ex)
             {

@@ -81,8 +81,8 @@ namespace WebCashier.Controllers
                 status = response.Status,
                 orderNo = response.OrderNo,
                 tradeNo = response.TradeNo,
-                amount = response.Money?.Amount?.ToString(),
-                currency = response.Money?.Currency
+                            amount = response.Money?.Amount,
+                            currency = response.Money?.Currency
                         });
                     }
                     else

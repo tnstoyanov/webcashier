@@ -37,12 +37,18 @@ namespace WebCashier.Models.Smilepayz
         [JsonPropertyName("orderNo")] public string? OrderNo { get; set; }
         [JsonPropertyName("status")] public string? Status { get; set; }
         [JsonPropertyName("merchant")] public SmilepayzMerchant? Merchant { get; set; }
-        [JsonPropertyName("money")] public SmilepayzMoney? Money { get; set; }
+        [JsonPropertyName("money")] public SmilepayzMoneyResp? Money { get; set; }
         [JsonPropertyName("channel")] public SmilepayzChannel? Channel { get; set; }
         [JsonPropertyName("code")] public string? Code { get; set; }
         [JsonPropertyName("message")] public string? Message { get; set; }
         [JsonPropertyName("responseCode")] public string? ResponseCode { get; set; }
         [JsonPropertyName("responseMessage")] public string? ResponseMessage { get; set; }
+    }
+
+    public class SmilepayzMoneyResp
+    {
+        [JsonPropertyName("currency")] public string? Currency { get; set; }
+        [JsonPropertyName("amount")] public decimal Amount { get; set; }
     }
 
     public class SmilepayzChannel
