@@ -9,7 +9,7 @@ namespace WebCashier.Models.Smilepayz
         [JsonPropertyName("merchant")] public SmilepayzMerchant Merchant { get; set; } = new();
         [JsonPropertyName("money")] public SmilepayzMoney Money { get; set; } = new();
         [JsonPropertyName("payer")] public SmilepayzPayer Payer { get; set; } = new();
-        [JsonPropertyName("paymentMethod")] public string PaymentMethod { get; set; } = "BANK";
+    [JsonPropertyName("paymentMethod")] public string PaymentMethod { get; set; } = "QRPAY";
         [JsonPropertyName("redirectUrl")] public string RedirectUrl { get; set; } = string.Empty;
         [JsonPropertyName("callbackUrl")] public string CallbackUrl { get; set; } = string.Empty;
     }
