@@ -83,6 +83,38 @@ builder.Services.AddHttpClient<LuxtakService>(client =>
 
 // Register PaymentStateService as singleton to maintain state across requests
 builder.Services.AddSingleton<IPaymentStateService, PaymentStateService>();
+builder.Services.AddSingleton<ICommLogService, CommLogService>();
+builder.Services.AddHttpClient("comm-logs")
+    .ConfigurePrimaryHttpMessageHandler(() =>
+    {
+        var handler = new HttpClientHandler();
+        handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+        if (builder.Environment.IsDevelopment())
+        {
+            handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+        }
+        return handler;
+    });
+
+// Register HttpClient and SmilepayzService
+builder.Services.AddHttpClient<ISmilepayzService, SmilepayzService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "WebCashier/1.0");
+})
+.AddHttpMessageHandler<LoggingHandler>()
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    var handler = new HttpClientHandler();
+    handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+    handler.CheckCertificateRevocationList = false;
+    handler.UseCookies = false;
+    if (builder.Environment.IsDevelopment())
+    {
+        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+    }
+    return handler;
+});
 
 // Configure Kestrel differently for development vs production
 if (builder.Environment.IsDevelopment())

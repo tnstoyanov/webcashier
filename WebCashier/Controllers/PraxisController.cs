@@ -10,12 +10,14 @@ namespace WebCashier.Controllers
     public class PraxisController : ControllerBase
     {
         private readonly ILogger<PraxisController> _logger;
-        private readonly IPaymentStateService _paymentStateService;
+    private readonly IPaymentStateService _paymentStateService;
+    private readonly ICommLogService _comm;
 
-        public PraxisController(ILogger<PraxisController> logger, IPaymentStateService paymentStateService)
+        public PraxisController(ILogger<PraxisController> logger, IPaymentStateService paymentStateService, ICommLogService comm)
         {
             _logger = logger;
             _paymentStateService = paymentStateService;
+            _comm = comm;
         }
 
         [HttpPost("notification")]
@@ -32,6 +34,7 @@ namespace WebCashier.Controllers
                 var requestBody = await new StreamReader(Request.Body).ReadToEndAsync();
                 
                 _logger.LogInformation("Praxis notification payload: {RequestBody}", requestBody);
+                await _comm.LogAsync("praxis-callback", new { headers = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()), body = requestBody }, "praxis");
 
                 if (string.IsNullOrEmpty(requestBody))
                 {
@@ -52,6 +55,7 @@ namespace WebCashier.Controllers
 
                         // Update payment state with callback data
                         _paymentStateService.SetPaymentCompleted(orderId, callbackData);
+                        await _comm.LogAsync("praxis-callback-processed", new { orderId, status = callbackData.transaction?.transaction_status }, "praxis");
                         
                         _logger.LogInformation("Payment state updated successfully for OrderId: {OrderId}", orderId);
                         

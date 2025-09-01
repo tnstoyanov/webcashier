@@ -5,10 +5,12 @@ namespace WebCashier.Services
     public class LoggingHandler : DelegatingHandler
     {
         private readonly ILogger<LoggingHandler> _logger;
+        private readonly ICommLogService _commLogService;
 
-        public LoggingHandler(ILogger<LoggingHandler> logger)
+        public LoggingHandler(ILogger<LoggingHandler> logger, ICommLogService commLogService)
         {
             _logger = logger;
+            _commLogService = commLogService;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -54,7 +56,9 @@ namespace WebCashier.Services
             }
 
             sb.AppendLine("=== END REQUEST ===");
-            _logger.LogInformation(sb.ToString());
+            var text = sb.ToString();
+            _logger.LogInformation(text);
+            await _commLogService.LogAsync("http-request", text, request.RequestUri?.Host);
         }
 
         private async Task LogResponse(HttpResponseMessage response)
@@ -84,7 +88,9 @@ namespace WebCashier.Services
             }
 
             sb.AppendLine("=== END RESPONSE ===");
-            _logger.LogInformation(sb.ToString());
+            var text = sb.ToString();
+            _logger.LogInformation(text);
+            await _commLogService.LogAsync("http-response", text, response.RequestMessage?.RequestUri?.Host);
         }
     }
 }

@@ -126,6 +126,15 @@
 ">Luxtak</span>
                                     </label>
                                 </div>
+                                <div class="carousel-item">
+                                    <input type="radio" id="smilepayz-th" name="PaymentMethod" value="smilepayz-th" />
+                                    <label for="smilepayz-th" class="method-option">
+                                        <div class="smilepayz-icon">
+                                            <img src="https://smilepayz.com/images/logos/logo.png" alt="Smilepayz TH" width="80" height="24" style="margin-top: 12px; object-fit: contain;" />
+                                        </div>
+                                        <span class="payment-brand">Smilepayz TH</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                         
@@ -495,6 +504,42 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Smilepayz TH Form (copied from Luxtak) -->
+                    <div id="smilepayz-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="500">฿500</button>
+                                    <button type="button" class="amount-btn" data-amount="1000">฿1000</button>
+                                    <button type="button" class="amount-btn" data-amount="2000">฿2000</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="SmilepayzAmount" type="number" step="1" class="form-control" placeholder="Amount (THB)" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="SmilepayzCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="THB" selected>THB</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>Smilepayz TH Payment</h3>
+                                    <p>Secure and fast payment processing via Smilepayz Thailand.</p>
+                                    <div class="smilepayz-logo-large">
+                                        <img src="https://smilepayz.com/images/logos/logo.png" alt="Smilepayz" width="150" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <p class="currency-note">Please note that you might be charged in a different currency</p>
@@ -801,6 +846,9 @@
                     case 'luxtak':
                         targetFormId = 'luxtak-details';
                         break;
+                    case 'smilepayz-th':
+                        targetFormId = 'smilepayz-details';
+                        break;
                     default:
                         targetFormId = 'card-details'; // fallback to card
                 }
@@ -846,6 +894,11 @@
                     if (luxtakAmountInput) {
                         luxtakAmountInput.value = amount;
                     }
+                } else if (selectedPaymentMethod === 'smilepayz-th') {
+                    const spAmountInput = document.querySelector('[name="SmilepayzAmount"]');
+                    if (spAmountInput) {
+                        spAmountInput.value = amount;
+                    }
                 }
                 
                 // Remove active class from all buttons in the active form
@@ -875,6 +928,8 @@
             // Get the appropriate amount input based on selected payment method
             if (selectedPaymentMethod === 'luxtak') {
                 amountInput = document.querySelector('[name="LuxtakAmount"]') || document.querySelector('[name="Amount"]');
+            } else if (selectedPaymentMethod === 'smilepayz-th') {
+                amountInput = document.querySelector('[name="SmilepayzAmount"]') || document.querySelector('[name="Amount"]');
             } else {
                 amountInput = document.querySelector('[name="Amount"]');
             }
@@ -903,6 +958,8 @@
             // Get the appropriate currency select based on selected payment method
             if (selectedPaymentMethod === 'luxtak') {
                 currencySelect = document.querySelector('[name="LuxtakCurrency"]') || document.querySelector('[name="Currency"]');
+            } else if (selectedPaymentMethod === 'smilepayz-th') {
+                currencySelect = document.querySelector('[name="SmilepayzCurrency"]') || document.querySelector('[name="Currency"]');
             } else {
                 currencySelect = document.querySelector('[name="Currency"]');
             }
@@ -1178,7 +1235,9 @@
             // Add event listeners for real-time validation with debouncing
             const amountInput = document.querySelector('[name="Amount"]');
             const luxtakAmountInput = document.querySelector('[name="LuxtakAmount"]');
+            const smilepayzAmountInput = document.querySelector('[name="SmilepayzAmount"]');
             const currencySelect = document.querySelector('[name="Currency"]');
+            const smilepayzCurrencySelect = document.querySelector('[name="SmilepayzCurrency"]');
             const nameInput = document.querySelector('[name="NameOnCard"]');
             const cardInput = document.querySelector('[name="CardNumber"]');
             const expiryInput = document.querySelector('[name="ExpirationDate"]');
@@ -1215,9 +1274,30 @@
                     }, 100);
                 });
             }
+            if (smilepayzAmountInput) {
+                smilepayzAmountInput.addEventListener('input', () => {
+                    setTimeout(() => {
+                        validateAmount(true);
+                        updateDepositButtonState();
+                    }, 100);
+                });
+                smilepayzAmountInput.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        validateAmount(true);
+                        updateDepositButtonState();
+                    }, 100);
+                });
+            }
             
             if (currencySelect) {
                 currencySelect.addEventListener('change', () => {
+                    setTimeout(() => {
+                        updateDepositButtonState();
+                    }, 100);
+                });
+            }
+            if (smilepayzCurrencySelect) {
+                smilepayzCurrencySelect.addEventListener('change', () => {
                     setTimeout(() => {
                         updateDepositButtonState();
                     }, 100);
@@ -1364,6 +1444,12 @@
             if (selectedPaymentMethod === 'luxtak') {
                 e.preventDefault(); // Prevent default form submission
                 handleLuxtakPayment(e.target);
+                return;
+            }
+            // For Smilepayz TH payment, handle with AJAX
+            if (selectedPaymentMethod === 'smilepayz-th') {
+                e.preventDefault();
+                handleSmilepayzPayment(e.target);
                 return;
             }
             
@@ -1516,6 +1602,40 @@
             modal.style.display = 'flex';
         }
 
+        // Show Smilepayz modal for success or error cases
+        function showSmilepayzModal(messageOrUrl, isSuccess) {
+            const modal = document.getElementById('luxtak-modal');
+            const title = document.getElementById('luxtak-modal-title');
+            const message = document.getElementById('luxtak-modal-message');
+            const okBtn = document.getElementById('luxtak-ok-btn');
+            const cancelBtn = document.getElementById('luxtak-cancel-btn');
+
+            if (isSuccess) {
+                title.textContent = 'Smilepayz TH Payment';
+                message.textContent = 'Smilepayz will open in a new tab. Make the payment there.';
+                okBtn.style.display = 'inline-block';
+                okBtn.textContent = 'OK';
+                cancelBtn.textContent = 'Cancel';
+                okBtn.onclick = function() {
+                    window.open(messageOrUrl, '_blank');
+                    modal.style.display = 'none';
+                };
+                cancelBtn.onclick = function() {
+                    modal.style.display = 'none';
+                };
+            } else {
+                title.textContent = 'Payment Error';
+                message.textContent = messageOrUrl;
+                okBtn.style.display = 'none';
+                cancelBtn.textContent = 'Close';
+                cancelBtn.onclick = function() {
+                    modal.style.display = 'none';
+                };
+            }
+
+            modal.style.display = 'flex';
+        }
+
         // Currency symbol functionality
         function getCurrencySymbol(currency) {
             const symbols = {
@@ -1539,7 +1659,7 @@
         
         // Add event listeners to all currency dropdowns
         function initializeCurrencyHandlers() {
-            const currencySelects = document.querySelectorAll('select[name="Currency"], select[name="PayPalCurrency"], select[name="FinsharkCurrency"], select[name="LuxtakCurrency"]');
+            const currencySelects = document.querySelectorAll('select[name="Currency"], select[name="PayPalCurrency"], select[name="FinsharkCurrency"], select[name="LuxtakCurrency"], select[name="SmilepayzCurrency"]');
             
             currencySelects.forEach(select => {
                 select.addEventListener('change', function() {
@@ -1549,6 +1669,55 @@
             
             // Initialize with default EUR
             updateAmountSuggestions('EUR');
+        }
+
+        // Handle Smilepayz TH payment with AJAX
+        async function handleSmilepayzPayment(form) {
+            const amountInput = document.querySelector('[name="SmilepayzAmount"]');
+            const currencySelect = document.querySelector('[name="SmilepayzCurrency"]');
+
+            if (!amountInput?.value || !currencySelect?.value) {
+                alert('Please fill in amount and currency for Smilepayz payment');
+                return;
+            }
+
+            // Show loading
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+            try {
+                const formData = new FormData();
+                formData.append('PaymentMethod', 'smilepayz-th');
+                formData.append('Amount', amountInput.value);
+                formData.append('Currency', currencySelect.value);
+                const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (antiForgeryToken) formData.append('__RequestVerificationToken', antiForgeryToken.value);
+
+                const response = await fetch('/Payment', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const text = await response.text();
+                let result;
+                try { result = JSON.parse(text); } catch { throw new Error('Invalid JSON response from server'); }
+
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+
+                if (result.success && result.paymentUrl) {
+                    showSmilepayzModal(result.paymentUrl, true);
+                } else {
+                    showSmilepayzModal(result.error || 'Payment failed', false);
+                }
+            } catch (err) {
+                console.error('Smilepayz error:', err);
+                const loadingOverlay = document.getElementById('loading-overlay');
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                showSmilepayzModal('Network error occurred. Please try again.', false);
+            }
         }
 
         // Clean carousel implementation from scratch

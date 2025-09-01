@@ -11,7 +11,8 @@ namespace WebCashier.Services
 
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
-        private readonly ILogger<LuxtakService> _logger;
+    private readonly ILogger<LuxtakService> _logger;
+    private readonly ICommLogService _comm;
 
         // Configuration keys
         private const string EndpointKey = "Luxtak:Endpoint";
@@ -20,11 +21,12 @@ namespace WebCashier.Services
         private const string NotifyUrlKey = "Luxtak:NotifyUrl";
         private const string ReturnUrlKey = "Luxtak:ReturnUrl";
 
-        public LuxtakService(HttpClient httpClient, IConfiguration configuration, ILogger<LuxtakService> logger)
+        public LuxtakService(HttpClient httpClient, IConfiguration configuration, ILogger<LuxtakService> logger, ICommLogService comm)
         {
             _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
+            _comm = comm;
         }
 
         private async Task LogToRenderCommLogsAsync(string type, object data)
@@ -56,6 +58,7 @@ namespace WebCashier.Services
                 _logger.LogInformation("=== LUXTAK API CALL START ===");
                 _logger.LogInformation("Creating Luxtak trade request: {@Request}", request);
                 await LogToRenderCommLogsAsync("luxtak-request", request);
+                await _comm.LogAsync("luxtak-request", request, "luxtak");
 
                 // Ensure all required fields match sample
                 request.Subject = "Luxtak Deposit";
@@ -72,6 +75,7 @@ namespace WebCashier.Services
                 });
 
                 _logger.LogInformation("Luxtak JSON Request Body: {Json}", json);
+                await _comm.LogAsync("luxtak-json", json, "luxtak");
 
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -136,6 +140,7 @@ namespace WebCashier.Services
                     _logger.LogInformation("Luxtak response deserialized successfully: {@Response}", luxtakResponse);
                     _logger.LogInformation("=== LUXTAK API CALL END - SUCCESS ===");
                     await LogToRenderCommLogsAsync("luxtak-success", luxtakResponse ?? new object());
+                    await _comm.LogAsync("luxtak-success", luxtakResponse ?? new object(), "luxtak");
                     return luxtakResponse ?? new LuxtakPaymentResponse { Code = "ERROR", Message = "Failed to deserialize response" };
                 }
                 else
@@ -144,6 +149,7 @@ namespace WebCashier.Services
                     _logger.LogError("Luxtak API HTTP error - Status: {StatusCode}, Reason: {ReasonPhrase}, Content: {Content}", 
                         response.StatusCode, response.ReasonPhrase, responseContent);
                     await LogToRenderCommLogsAsync("luxtak-error", responseContent ?? "Empty response");
+                    await _comm.LogAsync("luxtak-error", responseContent ?? "Empty response", "luxtak");
                     return new LuxtakPaymentResponse 
                     { 
                         Code = "HTTP_ERROR", 
@@ -156,6 +162,7 @@ namespace WebCashier.Services
                 _logger.LogError(httpEx, "=== LUXTAK API CALL END - HTTP EXCEPTION ===");
                 _logger.LogError("HTTP exception calling Luxtak API: {Message}", httpEx.Message);
                 await LogToRenderCommLogsAsync("luxtak-http-exception", httpEx);
+                await _comm.LogAsync("luxtak-http-exception", httpEx, "luxtak");
                 return new LuxtakPaymentResponse 
                 { 
                     Code = "HTTP_EXCEPTION", 
@@ -167,6 +174,7 @@ namespace WebCashier.Services
                 _logger.LogError(tcEx, "=== LUXTAK API CALL END - TIMEOUT ===");
                 _logger.LogError("Timeout calling Luxtak API: {Message}", tcEx.Message);
                 await LogToRenderCommLogsAsync("luxtak-timeout", tcEx);
+                await _comm.LogAsync("luxtak-timeout", tcEx, "luxtak");
                 return new LuxtakPaymentResponse 
                 { 
                     Code = "TIMEOUT", 
@@ -178,6 +186,7 @@ namespace WebCashier.Services
                 _logger.LogError(jsonEx, "=== LUXTAK API CALL END - JSON ERROR ===");
                 _logger.LogError("JSON deserialization error: {Message}", jsonEx.Message);
                 await LogToRenderCommLogsAsync("luxtak-json-error", jsonEx);
+                await _comm.LogAsync("luxtak-json-error", jsonEx, "luxtak");
                 return new LuxtakPaymentResponse 
                 { 
                     Code = "JSON_ERROR", 
@@ -191,6 +200,7 @@ namespace WebCashier.Services
                 _logger.LogError("Exception Type: {Type}", ex.GetType().Name);
                 _logger.LogError("Stack Trace: {StackTrace}", ex.StackTrace);
                 await LogToRenderCommLogsAsync("luxtak-general-exception", ex);
+                await _comm.LogAsync("luxtak-general-exception", ex, "luxtak");
                 
                 return new LuxtakPaymentResponse 
                 { 

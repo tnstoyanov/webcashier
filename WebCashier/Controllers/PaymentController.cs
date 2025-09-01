@@ -13,13 +13,15 @@ namespace WebCashier.Controllers
         private readonly IPraxisService _praxisService;
         private readonly LuxtakService _luxtakService;
         private readonly IPaymentStateService _paymentStateService;
+        private readonly ISmilepayzService _smilepayzService;
 
-        public PaymentController(ILogger<PaymentController> logger, IPraxisService praxisService, LuxtakService luxtakService, IPaymentStateService paymentStateService)
+        public PaymentController(ILogger<PaymentController> logger, IPraxisService praxisService, LuxtakService luxtakService, IPaymentStateService paymentStateService, ISmilepayzService smilepayzService)
         {
             _logger = logger;
             _praxisService = praxisService;
             _luxtakService = luxtakService;
             _paymentStateService = paymentStateService;
+            _smilepayzService = smilepayzService;
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
@@ -62,6 +64,31 @@ namespace WebCashier.Controllers
                             success = false, 
                             error = "Payment initialization failed. Please try again." 
                         });
+                    }
+                }
+                else if (paymentMethod?.ToLower() == "smilepayz-th")
+                {
+                    _logger.LogInformation("Processing Smilepayz TH payment via AJAX");
+
+                    var response = await _smilepayzService.CreatePayInAsync(amount, currency, "Tony Stoyanov");
+
+            if (response != null && response.Channel?.PaymentUrl != null)
+                    {
+                        _logger.LogInformation("Smilepayz payment initialized, paymentUrl: {Url}, status: {Status}", response.Channel.PaymentUrl, response.Status);
+                        return Json(new {
+                            success = true,
+                            paymentUrl = response.Channel.PaymentUrl,
+                status = response.Status,
+                orderNo = response.OrderNo,
+                tradeNo = response.TradeNo,
+                amount = response.Money?.Amount?.ToString(),
+                currency = response.Money?.Currency
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogError("Smilepayz payment init failed: {@Response}", response);
+                        return Json(new { success = false, error = response?.Message ?? "Payment initialization failed" });
                     }
                 }
                 else
@@ -402,6 +429,21 @@ namespace WebCashier.Controllers
                     return HandleLuxtakReturn(queryParams);
                 }
 
+                // Smilepayz redirect returns usually go back to redirectUrl; we don't have explicit params here.
+                // We rely on explicit status pages after callback polling in a real app. For demo, show generic pending.
+                if (!string.IsNullOrEmpty(referer) && referer.Contains("smilepayz", StringComparison.OrdinalIgnoreCase))
+                {
+                    var model = new PaymentReturnModel
+                    {
+                        IsSuccess = false,
+                        PaymentMethod = "Smilepayz TH",
+                        PaymentProcessor = "Smilepayz",
+                        TransactionStatus = "PROCESSING",
+                        StatusDetails = "Payment is being processed via Smilepayz"
+                    };
+                    return View("LuxtakPending", model);
+                }
+
                 // If this is a POST request with JSON (callback), handle it as a Praxis callback
                 if (Request.Method == "POST" && Request.ContentType?.Contains("application/json") == true)
                 {
@@ -643,6 +685,41 @@ namespace WebCashier.Controllers
             }
 
             return ipAddress ?? "127.0.0.1";
+        }
+
+        [HttpGet]
+        public IActionResult SmilepayzStatus(string status, string? orderNo, string? tradeNo, string? amount, string? currency)
+        {
+            var model = new PaymentReturnModel
+            {
+                TransactionId = tradeNo,
+                OrderId = orderNo,
+                Amount = amount,
+                Currency = string.IsNullOrWhiteSpace(currency) ? "THB" : currency,
+                PaymentMethod = "Smilepayz TH",
+                PaymentProcessor = "Smilepayz",
+                TransactionStatus = status?.ToUpper()
+            };
+
+            switch (status?.ToUpper())
+            {
+                case "SUCCESS":
+                    model.IsSuccess = true;
+                    model.StatusDetails = "Payment completed successfully via Smilepayz";
+                    return View("PaymentSuccess", model);
+                case "PROCESSING":
+                    model.IsSuccess = false;
+                    model.StatusDetails = "Payment is being processed via Smilepayz";
+                    return View("LuxtakPending", model);
+                case "FAILED":
+                    model.IsSuccess = false;
+                    model.StatusDetails = "Payment failed via Smilepayz";
+                    return View("PaymentFailure", model);
+                default:
+                    model.IsSuccess = false;
+                    model.StatusDetails = $"Unknown payment status: {status}";
+                    return View("PaymentFailure", model);
+            }
         }
     }
 }
