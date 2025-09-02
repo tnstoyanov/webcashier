@@ -46,3 +46,24 @@ button.accept-policy {
   white-space: nowrap;
   line-height: 60px;
 }
+
+/* Config forms: monospace, bold, grey background, and wrapping */
+.config-form input.form-control,
+.config-form textarea.form-control {
+  font-family: monospace;
+  font-weight: bold;
+  background-color: #eee;
+}
+
+/* Preserve whitespace but allow wrapping on long values */
+.config-form textarea.form-control {
+  white-space: pre-wrap; /* preserves newlines and spaces, but wraps */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Inputs cannot wrap; allow scrolling on overflow */
+.config-form input.form-control {
+  white-space: pre; /* keep spaces as-is */
+  overflow-x: auto;
+}

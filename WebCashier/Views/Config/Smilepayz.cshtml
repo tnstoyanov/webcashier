@@ -4,7 +4,7 @@
 }
 
 <div class="container py-4">
-    <form asp-action="SaveSmilepayz" asp-controller="Config" method="post">
+    <form asp-action="SaveSmilepayz" asp-controller="Config" method="post" class="config-form">
         @Html.AntiForgeryToken()
         <div class="d-flex align-items-center justify-content-between mb-3">
             <a asp-controller="Config" asp-action="Index" class="btn btn-outline-secondary">← Back</a>
