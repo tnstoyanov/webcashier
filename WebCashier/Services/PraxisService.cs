@@ -13,15 +13,17 @@ namespace WebCashier.Services
 
     public class PraxisService : IPraxisService
     {
-        private readonly HttpClient _httpClient;
-        private readonly PraxisConfig _config;
+    private readonly HttpClient _httpClient;
+    private readonly PraxisConfig _config;
+    private readonly IRuntimeConfigStore _runtime;
         private readonly ILogger<PraxisService> _logger;
 
-        public PraxisService(HttpClient httpClient, PraxisConfig config, ILogger<PraxisService> logger)
+        public PraxisService(HttpClient httpClient, PraxisConfig config, ILogger<PraxisService> logger, IRuntimeConfigStore runtime)
         {
             _httpClient = httpClient;
             _config = config;
             _logger = logger;
+            _runtime = runtime;
         }
 
         public async Task<PraxisResponse> ProcessPaymentAsync(PaymentModel payment, string clientIp, string orderId)
@@ -34,7 +36,8 @@ namespace WebCashier.Services
                 // Use the provided orderId instead of generating a new one
 
                 // Prepare secret key and IV
-                var secretKey = PadLeft(_config.MerchantSecret, 32, '0');
+                var merchantSecret = _runtime.Get("Praxis:MerchantSecret") ?? _config.MerchantSecret;
+                var secretKey = PadLeft(merchantSecret, 32, '0');
                 var requestTimestamp = PadLeft(timestamp.ToString(), 16, '0');
 
                 // Format expiration date correctly (MM/YYYY instead of MM/YY)
@@ -51,9 +54,9 @@ namespace WebCashier.Services
                 // Build request
                 var request = new PraxisRequest
                 {
-                    merchant_id = _config.MerchantId,
-                    application_key = _config.ApplicationKey,
-                    transaction_type = _config.TransactionType,
+                    merchant_id = _runtime.Get("Praxis:MerchantId") ?? _config.MerchantId,
+                    application_key = _runtime.Get("Praxis:ApplicationKey") ?? _config.ApplicationKey,
+                    transaction_type = _runtime.Get("Praxis:TransactionType") ?? _config.TransactionType,
                     currency = payment.Currency,
                     amount = amountInCents,
                     card_data = new PraxisCardData
@@ -94,11 +97,11 @@ namespace WebCashier.Services
                         address = "123 Main St",
                         profile = "0"
                     },
-                    gateway = _config.Gateway,
-                    notification_url = _config.NotificationUrl,
-                    return_url = _config.ReturnUrl,
+                    gateway = _runtime.Get("Praxis:Gateway") ?? _config.Gateway,
+                    notification_url = _runtime.Get("Praxis:NotificationUrl") ?? _config.NotificationUrl,
+                    return_url = _runtime.Get("Praxis:ReturnUrl") ?? _config.ReturnUrl,
                     order_id = orderId,
-                    version = _config.Version,
+                    version = _runtime.Get("Praxis:Version") ?? _config.Version,
                     timestamp = timestamp
                 };
 
@@ -114,7 +117,8 @@ namespace WebCashier.Services
 
                 _logger.LogInformation("Sending payment request to Praxis API");
 
-                var response = await _httpClient.PostAsync(_config.Endpoint, content);
+                var endpoint = _runtime.Get("Praxis:Endpoint") ?? _config.Endpoint;
+                var response = await _httpClient.PostAsync(endpoint, content);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 _logger.LogInformation("Received response from Praxis API: {StatusCode}", response.StatusCode);

@@ -10,7 +10,8 @@ namespace WebCashier.Services
         private const string RenderCommLogsUrl = "https://webcashier.onrender.com/api/comm-logs";
 
         private readonly HttpClient _httpClient;
-        private readonly IConfiguration _configuration;
+    private readonly IConfiguration _configuration;
+    private readonly IRuntimeConfigStore _runtime;
     private readonly ILogger<LuxtakService> _logger;
     private readonly ICommLogService _comm;
 
@@ -21,12 +22,13 @@ namespace WebCashier.Services
         private const string NotifyUrlKey = "Luxtak:NotifyUrl";
         private const string ReturnUrlKey = "Luxtak:ReturnUrl";
 
-        public LuxtakService(HttpClient httpClient, IConfiguration configuration, ILogger<LuxtakService> logger, ICommLogService comm)
+        public LuxtakService(HttpClient httpClient, IConfiguration configuration, ILogger<LuxtakService> logger, ICommLogService comm, IRuntimeConfigStore runtime)
         {
             _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
             _comm = comm;
+            _runtime = runtime;
         }
 
         private async Task LogToRenderCommLogsAsync(string type, object data)
@@ -80,7 +82,7 @@ namespace WebCashier.Services
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 // Set Authorization header as Basic <base64>
-                var authToken = _configuration[AuthTokenKey];
+                var authToken = _runtime.Get(AuthTokenKey) ?? _configuration[AuthTokenKey];
                 if (!string.IsNullOrEmpty(authToken))
                 {
                     // If not already base64, encode it
@@ -98,7 +100,7 @@ namespace WebCashier.Services
                     _logger.LogWarning("No authorization token configured for Luxtak");
                 }
 
-                var endpoint = _configuration[EndpointKey] ?? "https://gateway.luxtak.com/trade/create";
+                var endpoint = _runtime.Get(EndpointKey) ?? _configuration[EndpointKey] ?? "https://gateway.luxtak.com/trade/create";
                 _logger.LogInformation("Sending POST request to Luxtak endpoint: {Endpoint}", endpoint);
                 _logger.LogInformation("Request Content-Type: application/json");
                 _logger.LogInformation("Request Content-Length: {Length} bytes", json.Length);
@@ -224,11 +226,11 @@ namespace WebCashier.Services
             // Generate buyer ID: buyer_7000000 ~ buyer_7999999
             var buyerId = $"buyer_{random.Next(7000000, 8000000)}";
             
-            var appId = _configuration[AppIdKey] ?? "17529157991280801";
-            var notifyUrl = _configuration[NotifyUrlKey] ?? "https://webcashier.onrender.com/api/luxtak/notification";
-            var returnUrl = _configuration[ReturnUrlKey] ?? "https://webcashier.onrender.com/Payment/Return";
-            var endpoint = _configuration[EndpointKey] ?? "https://gateway.luxtak.com/trade/create";
-            var hasAuthToken = !string.IsNullOrEmpty(_configuration[AuthTokenKey]);
+            var appId = _runtime.Get(AppIdKey) ?? _configuration[AppIdKey] ?? "17529157991280801";
+            var notifyUrl = _runtime.Get(NotifyUrlKey) ?? _configuration[NotifyUrlKey] ?? "https://webcashier.onrender.com/api/luxtak/notification";
+            var returnUrl = _runtime.Get(ReturnUrlKey) ?? _configuration[ReturnUrlKey] ?? "https://webcashier.onrender.com/Payment/Return";
+            var endpoint = _runtime.Get(EndpointKey) ?? _configuration[EndpointKey] ?? "https://gateway.luxtak.com/trade/create";
+            var hasAuthToken = !string.IsNullOrEmpty(_runtime.Get(AuthTokenKey) ?? _configuration[AuthTokenKey]);
 
             _logger.LogInformation("Configuration values:");
             _logger.LogInformation("- Endpoint: {Endpoint}", endpoint);

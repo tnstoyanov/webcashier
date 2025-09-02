@@ -1,0 +1,48 @@
+@model IDictionary<string, string?>
+@{
+    ViewData["Title"] = "Praxis Configuration";
+}
+
+<div class="container py-4">
+    <h1 class="h4 mb-3">Praxis Configuration</h1>
+    @if (TempData["Saved"] != null) { <div class="alert alert-success">Saved.</div> }
+    <form asp-action="SavePraxis" asp-controller="Config" method="post">
+        @Html.AntiForgeryToken()
+        <div class="row">
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">Endpoint</label>
+                <input class="form-control" name="Praxis:Endpoint" value="@(Model.ContainsKey("Praxis:Endpoint") ? Model["Praxis:Endpoint"] : null)" />
+            </div></div>
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">Gateway</label>
+                <input class="form-control" name="Praxis:Gateway" value="@(Model.ContainsKey("Praxis:Gateway") ? Model["Praxis:Gateway"] : null)" />
+            </div></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">MerchantId</label>
+                <input class="form-control" name="Praxis:MerchantId" value="@(Model.ContainsKey("Praxis:MerchantId") ? Model["Praxis:MerchantId"] : null)" />
+            </div></div>
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">ApplicationKey</label>
+                <input class="form-control" name="Praxis:ApplicationKey" value="@(Model.ContainsKey("Praxis:ApplicationKey") ? Model["Praxis:ApplicationKey"] : null)" />
+            </div></div>
+        </div>
+        <div class="mb-3"><label class="form-label">MerchantSecret</label>
+            <textarea class="form-control" name="Praxis:MerchantSecret" rows="4" style="font-family: monospace; white-space: pre;">@(Model.ContainsKey("Praxis:MerchantSecret") ? Model["Praxis:MerchantSecret"] : null)</textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">TransactionType</label>
+                <input class="form-control" name="Praxis:TransactionType" value="@(Model.ContainsKey("Praxis:TransactionType") ? Model["Praxis:TransactionType"] : null)" />
+            </div></div>
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">Version</label>
+                <input class="form-control" name="Praxis:Version" value="@(Model.ContainsKey("Praxis:Version") ? Model["Praxis:Version"] : null)" />
+            </div></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">NotificationUrl</label>
+                <input class="form-control" name="Praxis:NotificationUrl" value="@(Model.ContainsKey("Praxis:NotificationUrl") ? Model["Praxis:NotificationUrl"] : null)" />
+            </div></div>
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">ReturnUrl</label>
+                <input class="form-control" name="Praxis:ReturnUrl" value="@(Model.ContainsKey("Praxis:ReturnUrl") ? Model["Praxis:ReturnUrl"] : null)" />
+            </div></div>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+</div>

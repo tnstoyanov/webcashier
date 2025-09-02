@@ -1,0 +1,32 @@
+@model IDictionary<string, string?>
+@{
+    ViewData["Title"] = "Luxtak Configuration";
+}
+
+<div class="container py-4">
+    <h1 class="h4 mb-3">Luxtak Configuration</h1>
+    @if (TempData["Saved"] != null) { <div class="alert alert-success">Saved.</div> }
+    <form asp-action="SaveLuxtak" asp-controller="Config" method="post">
+        @Html.AntiForgeryToken()
+        <div class="mb-3"><label class="form-label">Endpoint</label>
+            <input class="form-control" name="Luxtak:Endpoint" value="@(Model.ContainsKey("Luxtak:Endpoint") ? Model["Luxtak:Endpoint"] : null)" />
+        </div>
+        <div class="row">
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">AppId</label>
+                <input class="form-control" name="Luxtak:AppId" value="@(Model.ContainsKey("Luxtak:AppId") ? Model["Luxtak:AppId"] : null)" />
+            </div></div>
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">AuthToken (Basic)</label>
+                <textarea class="form-control" name="Luxtak:AuthToken" rows="3" style="font-family: monospace; white-space: pre;">@(Model.ContainsKey("Luxtak:AuthToken") ? Model["Luxtak:AuthToken"] : null)</textarea>
+            </div></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">NotifyUrl</label>
+                <input class="form-control" name="Luxtak:NotifyUrl" value="@(Model.ContainsKey("Luxtak:NotifyUrl") ? Model["Luxtak:NotifyUrl"] : null)" />
+            </div></div>
+            <div class="col-md-6"><div class="mb-3"><label class="form-label">ReturnUrl</label>
+                <input class="form-control" name="Luxtak:ReturnUrl" value="@(Model.ContainsKey("Luxtak:ReturnUrl") ? Model["Luxtak:ReturnUrl"] : null)" />
+            </div></div>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+</div>

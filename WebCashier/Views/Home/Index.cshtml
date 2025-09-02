@@ -2,96 +2,22 @@
     ViewData["Title"] = "Home Page";
 }
 
-@model IDictionary<string, string?>
+@{
+    ViewData["Title"] = "Home Page";
+}
 
-<div class="container py-4">
-    <div class="row">
-        <div class="col-md-6">
-            <h1 class="h3 mb-3">Welcome to WebCashier</h1>
-            <p>Secure payment processing system</p>
-            <a asp-controller="Payment" asp-action="Index" class="btn btn-success btn-lg mb-4">
-                Start Payment Process
-            </a>
-        </div>
+<div class="text-center">
+    <h1 class="display-4">Welcome to WebCashier</h1>
+    <p>Secure payment processing system</p>
+    <div class="mt-4">
+        <a asp-controller="Payment" asp-action="Index" class="btn btn-success btn-lg">
+            Start Payment Process
+        </a>
     </div>
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <strong>Smilepayz Configuration</strong>
-                </div>
-                <div class="card-body">
-                    @if (TempData["Saved"] != null)
-                    {
-                        <div class="alert alert-success">Configuration saved.</div>
-                    }
-                    <form asp-action="SaveConfig" asp-controller="Home" method="post">
-                        @Html.AntiForgeryToken()
-
-                        <div class="mb-3">
-                            <label class="form-label">PartnerId</label>
-                            <input class="form-control" name="Smilepayz:PartnerId" value="@(Model.ContainsKey("Smilepayz:PartnerId") ? Model["Smilepayz:PartnerId"] : null)" />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">MerchantSecret</label>
-                            <input class="form-control" name="Smilepayz:MerchantSecret" value="@(Model.ContainsKey("Smilepayz:MerchantSecret") ? Model["Smilepayz:MerchantSecret"] : null)" />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">RSAPublicKey</label>
-                            <textarea class="form-control" name="Smilepayz:RSAPublicKey" rows="8" style="font-family: monospace; white-space: pre;">@(Model.ContainsKey("Smilepayz:RSAPublicKey") ? Model["Smilepayz:RSAPublicKey"] : null)</textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">RSAPrivateKey</label>
-                            <textarea class="form-control" name="Smilepayz:RSAPrivateKey" rows="14" style="font-family: monospace; white-space: pre;">@(Model.ContainsKey("Smilepayz:RSAPrivateKey") ? Model["Smilepayz:RSAPrivateKey"] : null)</textarea>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Endpoint</label>
-                                    <input class="form-control" name="Smilepayz:Endpoint" value="@(Model.ContainsKey("Smilepayz:Endpoint") ? Model["Smilepayz:Endpoint"] : null)" />
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">PaymentMethod</label>
-                                    <input class="form-control" name="Smilepayz:PaymentMethod" value="@(Model.ContainsKey("Smilepayz:PaymentMethod") ? Model["Smilepayz:PaymentMethod"] : null)" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">RedirectUrl</label>
-                                    <input class="form-control" name="Smilepayz:RedirectUrl" value="@(Model.ContainsKey("Smilepayz:RedirectUrl") ? Model["Smilepayz:RedirectUrl"] : null)" />
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">CallbackUrl</label>
-                                    <input class="form-control" name="Smilepayz:CallbackUrl" value="@(Model.ContainsKey("Smilepayz:CallbackUrl") ? Model["Smilepayz:CallbackUrl"] : null)" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Currency</label>
-                                    <input class="form-control" name="Smilepayz:Currency" value="@(Model.ContainsKey("Smilepayz:Currency") ? Model["Smilepayz:Currency"] : null)" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Save</button>
-                    </form>
-                </div>
-            </div>
-        </div>
+    <div class="mt-3">
+        <a asp-controller="Config" asp-action="Index" class="btn btn-outline-primary">
+            Configurations
+        </a>
     </div>
+    <p class="mt-3">Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
 </div>
