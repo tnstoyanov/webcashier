@@ -983,3 +983,13 @@ body {
 .btn-cancel:hover {
   background-color: #dc2626;
 }
+
+/* Config inputs/textareas styling applied globally */
+.config-form input.form-control,
+.config-form textarea.form-control {
+  font-family: monospace;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  background-color: #eee;
+  font-weight: bold;
+}
