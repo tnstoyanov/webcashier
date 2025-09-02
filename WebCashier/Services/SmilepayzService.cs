@@ -16,25 +16,28 @@ namespace WebCashier.Services
     private readonly IConfiguration _configuration;
     private readonly ILogger<SmilepayzService> _logger;
     private readonly ICommLogService _comm;
+    private readonly IRuntimeConfigStore _runtime;
 
-        public SmilepayzService(HttpClient httpClient, IConfiguration configuration, ILogger<SmilepayzService> logger, ICommLogService comm)
+        public SmilepayzService(HttpClient httpClient, IConfiguration configuration, ILogger<SmilepayzService> logger, ICommLogService comm, IRuntimeConfigStore runtime)
         {
             _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
             _comm = comm;
+            _runtime = runtime;
         }
 
         public async Task<SmilepayzResponse> CreatePayInAsync(decimal amount, string currency, string payerName)
         {
-            var endpoint = _configuration["Smilepayz:Endpoint"] ?? "https://sandbox-gateway.smilepayz.com/v2.0/transaction/pay-in";
-            var partnerId = _configuration["Smilepayz:PartnerId"] ?? string.Empty;
-            var merchantSecret = _configuration["Smilepayz:MerchantSecret"] ?? string.Empty;
-            var redirectUrl = _configuration["Smilepayz:RedirectUrl"] ?? string.Empty;
-            var callbackUrl = _configuration["Smilepayz:CallbackUrl"] ?? string.Empty;
-            var merchantName = _configuration["Smilepayz:MerchantName"] ?? "Tiebreak";
+            string Get(string key, string? fallback = null) => _runtime.Get(key) ?? _configuration[key] ?? fallback ?? string.Empty;
+            var endpoint = Get("Smilepayz:Endpoint", "https://sandbox-gateway.smilepayz.com/v2.0/transaction/pay-in");
+            var partnerId = Get("Smilepayz:PartnerId");
+            var merchantSecret = Get("Smilepayz:MerchantSecret");
+            var redirectUrl = Get("Smilepayz:RedirectUrl");
+            var callbackUrl = Get("Smilepayz:CallbackUrl");
+            var merchantName = Get("Smilepayz:MerchantName", "Tiebreak");
             // Make payment method configurable with default QRPAY per request
-            var paymentMethod = _configuration["Smilepayz:PaymentMethod"] ?? "QRPAY";
+            var paymentMethod = Get("Smilepayz:PaymentMethod", "QRPAY");
 
             // Build request body
             var rnd = new Random();
@@ -61,7 +64,7 @@ namespace WebCashier.Services
             var stringToSign = $"{timestamp}|{merchantSecret}|{json}";
 
             // Sign with RSA private key SHA256
-            var privateKeyPem = _configuration["Smilepayz:RSAPrivateKey"] ?? string.Empty;
+            var privateKeyPem = _runtime.Get("Smilepayz:RSAPrivateKey") ?? _configuration["Smilepayz:RSAPrivateKey"] ?? string.Empty;
             var signature = SignWithRsa(privateKeyPem, stringToSign);
             await _comm.LogAsync("smilepayz-headers", new { partnerId, timestamp, signatureLength = signature?.Length }, "smilepayz");
 

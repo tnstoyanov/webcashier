@@ -21,6 +21,8 @@ builder.Services.AddControllersWithViews(options =>
         });
     }
 });
+builder.Services.AddAntiforgery();
+builder.Services.AddSingleton<IRuntimeConfigStore, RuntimeConfigStore>();
 
 // Configure Praxis settings
 builder.Services.Configure<PraxisConfig>(builder.Configuration.GetSection("Praxis"));
