@@ -111,7 +111,7 @@
                                         <div class="gpay-icon">
                                             <img src="https://developers.google.com/static/pay/api/images/brand-guidelines/google-pay-mark.png" alt="Google Pay" width="60" height="30" style="margin-bottom: 3px; margin-top: 8px;" />
                                         </div>
-                                        <span class="payment-brand">G Pay</span>
+                                        <span class="payment-brand">GPay Nuvei</span>
                                     </label>
                                 </div>
 
@@ -546,6 +546,22 @@
 
                 <button type="submit" class="deposit-btn" id="deposit-btn" disabled>DEPOSIT</button>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Nuvei (GPay) Modal -->
+<div id="nuvei-modal" class="luxtak-modal" style="display:none;">
+    <div class="luxtak-modal-content">
+        <div class="luxtak-modal-header">
+            <h3 id="nuvei-modal-title">GPay Nuvei Payment</h3>
+        </div>
+        <div class="luxtak-modal-body">
+            <p id="nuvei-modal-message">Google Pay Nuvei will open in a new tab. Continue?</p>
+        </div>
+        <div class="luxtak-modal-footer">
+            <button id="nuvei-ok-btn" class="btn-ok">OK</button>
+            <button id="nuvei-cancel-btn" class="btn-cancel">Cancel</button>
         </div>
     </div>
 </div>
@@ -1452,6 +1468,12 @@
                 handleSmilepayzPayment(e.target);
                 return;
             }
+            // For GPay Nuvei payment, intercept and show modal first
+            if (selectedPaymentMethod === 'gpay') {
+                e.preventDefault();
+                showNuveiPreModal(e.target);
+                return;
+            }
             
             // Check if form is valid before showing loading overlay
             const form = e.target;
@@ -1560,6 +1582,63 @@
                 }
                 
                 showLuxtakModal('Network error occurred. Please try again.', false);
+            }
+        }
+
+        // Show pre-request Nuvei modal
+        function showNuveiPreModal(form) {
+            const modal = document.getElementById('nuvei-modal');
+            const okBtn = document.getElementById('nuvei-ok-btn');
+            const cancelBtn = document.getElementById('nuvei-cancel-btn');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            cancelBtn.onclick = () => { modal.style.display = 'none'; };
+            okBtn.onclick = () => {
+                modal.style.display = 'none';
+                // Placeholder: will implement actual Nuvei request + open new tab
+                initiateNuveiRequest(form);
+            };
+        }
+
+        // Placeholder Nuvei initiation logic (to be replaced with real request call)
+        async function initiateNuveiRequest(form) {
+            // Gather minimal fields for future use
+            const amountInput = document.querySelector('[name="GPayAmount"]');
+            const currencySelect = document.querySelector('[name="GPayCurrency"]');
+            if (!amountInput?.value || !currencySelect?.value) {
+                alert('Please provide amount and currency for Google Pay Nuvei.');
+                return;
+            }
+            try {
+                const formData = new FormData();
+                formData.append('amount', amountInput.value);
+                formData.append('currency', currencySelect.value);
+                const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (antiForgeryToken) formData.append('__RequestVerificationToken', antiForgeryToken.value);
+                const resp = await fetch('/Nuvei/Create', { method:'POST', body: formData, headers: { 'X-Requested-With':'XMLHttpRequest' } });
+                if(!resp.ok) throw new Error('HTTP ' + resp.status);
+                const data = await resp.json();
+                if(!data.success){ alert(data.error || 'Failed to create Nuvei form'); return; }
+                // Build and submit form in new tab
+                const popup = window.open('', '_blank');
+                if(!popup){ alert('Popup blocked. Please allow popups for this site.'); return; }
+                const doc = popup.document;
+                const f = doc.createElement('form');
+                f.method = 'post';
+                f.action = data.formUrl;
+                f.style.display = 'none';
+                data.fields.forEach(field => {
+                    const inp = doc.createElement('input');
+                    inp.type = 'hidden';
+                    inp.name = field.key || field.Key;
+                    inp.value = field.value || field.Value;
+                    f.appendChild(inp);
+                });
+                doc.body.appendChild(f);
+                f.submit();
+            } catch(err) {
+                console.error('Nuvei create error', err);
+                alert('Error initiating Nuvei payment: ' + err.message);
             }
         }
 

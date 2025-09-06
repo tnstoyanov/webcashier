@@ -19,6 +19,24 @@ namespace WebCashier.Controllers
             return View();
         }
 
+        // Nuvei
+        [HttpGet]
+        public IActionResult Nuvei()
+        {
+            var model = Prefill(new[] { "Nuvei:merchant_id","Nuvei:merchant_site_id","Nuvei:secret_key","Nuvei:endpoint" });
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SaveNuvei([FromForm] Dictionary<string,string?> form)
+        {
+            var allowed = new[] { "Nuvei:merchant_id","Nuvei:merchant_site_id","Nuvei:secret_key","Nuvei:endpoint" };
+            SaveAllowed(form, allowed);
+            TempData["Saved"] = true;
+            return RedirectToAction(nameof(Nuvei));
+        }
+
         // Smilepayz
         [HttpGet]
         public IActionResult Smilepayz()

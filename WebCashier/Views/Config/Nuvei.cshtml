@@ -1,0 +1,44 @@
+@model IDictionary<string, string?>
+@{
+    ViewData["Title"] = "Nuvei Configuration";
+}
+<div class="container py-4">
+    <form asp-action="SaveNuvei" asp-controller="Config" method="post" class="config-form">
+        @Html.AntiForgeryToken()
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <a asp-controller="Config" asp-action="Index" class="btn btn-outline-secondary">← Back</a>
+            <h1 class="h4 m-0">Nuvei Configuration</h1>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+        @if (TempData["Saved"] != null) { <div class="alert alert-success">Configuration saved.</div> }
+        <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted mb-3">Credentials</h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">merchant_id</label>
+                        <input class="form-control" name="Nuvei:merchant_id" value="@(Model.ContainsKey("Nuvei:merchant_id") ? Model["Nuvei:merchant_id"] : null)" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">merchant_site_id</label>
+                        <input class="form-control" name="Nuvei:merchant_site_id" value="@(Model.ContainsKey("Nuvei:merchant_site_id") ? Model["Nuvei:merchant_site_id"] : null)" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">secret_key</label>
+                        <input class="form-control" name="Nuvei:secret_key" value="@(Model.ContainsKey("Nuvei:secret_key") ? Model["Nuvei:secret_key"] : null)" />
+                    </div>
+                </div>
+                <hr class="my-4" />
+                <h6 class="text-uppercase text-muted mb-3">Endpoint</h6>
+                <div class="mb-3">
+                    <label class="form-label">endpoint (optional override)</label>
+                    <input class="form-control" name="Nuvei:endpoint" value="@(Model.ContainsKey("Nuvei:endpoint") ? Model["Nuvei:endpoint"] : null)" />
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between mt-3">
+            <a asp-controller="Config" asp-action="Index" class="btn btn-outline-secondary">← Back</a>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+    </form>
+</div>

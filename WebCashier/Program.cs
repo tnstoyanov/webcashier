@@ -118,6 +118,10 @@ builder.Services.AddHttpClient<ISmilepayzService, SmilepayzService>(client =>
     return handler;
 });
 
+// Nuvei service (no outbound HTTP needed yet; form generation only)
+builder.Services.AddSingleton<INuveiService, NuveiService>();
+builder.Services.AddHttpContextAccessor();
+
 // Configure Kestrel differently for development vs production
 if (builder.Environment.IsDevelopment())
 {
