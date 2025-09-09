@@ -142,8 +142,22 @@ namespace WebCashier.Controllers
             string GV(string k) => formData.TryGetValue(k, out var v) ? v : string.Empty;
 
             // Collect parameter sets
-            var successKeys = new [] { "Status", "merchant_unique_id", "customData", "totalAmount", "total_amount", "currency", "TransactionID", "cardBrand", "issuerName" };
-            var errorKeys = new [] { "Status", "merchant_unique_id", "errApmCode", "errScCode", "errApmDescription", "errScDescription", "Reason", "ReasonCode", "customData", "total_amount", "currency", "TransactionID", "cardBrand", "issuerName" };
+            // Expanded sets: include user requested fields for Success/Error view.
+            // NOTE: Only values coming from callback formData are used (never from any Nuvei outbound response object).
+            var successKeys = new [] {
+                "ppp_status","LifeCycleId","currency","merchant_unique_id","merchant_site_id","merchant_id","merchantLocale","requestVersion",
+                "PPP_TransactionID","productId","userid","customData","payment_method","responseTimeStamp","message","Error","userPaymentOptionId",
+                "externalToken_cardExpiration","externalToken_cardMask","externalToken_extendedCardType","externalToken_Indication","externalToken_tokenValue",
+                "Status","ClientUniqueID","ExErrCode","ErrCode","AuthCode","ReasonCode","Token","tokenId","responsechecksum","advanceResponseChecksum",
+                "totalAmount","TransactionID","dynamicDescriptor","uniqueCC","eci","orderTransactionId",
+                // existing display extras
+                "cardBrand","issuerName"
+            };
+            var errorKeys = new [] {
+                "Status","merchant_unique_id","errApmCode","errScCode","errApmDescription","errScDescription","Reason","ReasonCode","customData",
+                "total_amount","currency","TransactionID","cardBrand","issuerName","ppp_status","LifeCycleId","merchant_site_id","merchant_id","PPP_TransactionID",
+                "payment_method","responseTimeStamp","message","ExErrCode","ErrCode","AuthCode","Token","tokenId","responsechecksum","advanceResponseChecksum"
+            };
 
             bool isSuccess = string.Equals(status, "APPROVED", StringComparison.OrdinalIgnoreCase);
             bool isFailure = string.Equals(status, "DECLINED", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "ERROR", StringComparison.OrdinalIgnoreCase);
