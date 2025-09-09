@@ -17,6 +17,7 @@ namespace WebCashier.Services
         private readonly ConcurrentDictionary<string, string> _values = new();
         private readonly string _persistPath;
         private readonly object _fileLock = new();
+    public string PersistPath => _persistPath;
 
         public RuntimeConfigStore()
         {

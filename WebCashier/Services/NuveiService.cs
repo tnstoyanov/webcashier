@@ -32,11 +32,13 @@ namespace WebCashier.Services
             var amountStr = req.Amount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
             // URLs
-            string notifyUrl = Combine(baseUrl, "/Nuvei/Callback");
-            string successUrl = Combine(baseUrl, "/Nuvei/Success");
-            string errorUrl = Combine(baseUrl, "/Nuvei/Error");
-            string pendingUrl = Combine(baseUrl, "/Nuvei/Pending");
-            string backUrl = Combine(baseUrl, "/Payment?paymentMethod=gpay");
+            // Enforce https externally
+            string ForceHttps(string url) => url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ? "https://" + url.Substring("http://".Length) : url;
+            string notifyUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Callback"));
+            string successUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Success"));
+            string errorUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Error"));
+            string pendingUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Pending"));
+            string backUrl = ForceHttps(Combine(baseUrl, "/Payment?paymentMethod=gpay"));
 
             var fields = new List<NuveiFormField>
             {

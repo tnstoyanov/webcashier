@@ -167,6 +167,17 @@ var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("WebCashier starting up...");
 logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
+var runtimeStore = app.Services.GetRequiredService<IRuntimeConfigStore>() as RuntimeConfigStore;
+if (runtimeStore != null)
+{
+    logger.LogInformation("Runtime config persistence file: {File}", runtimeStore.PersistPath);
+}
+
+// Forwarded headers (Render runs behind reverse proxy providing X-Forwarded-Proto)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost
+});
 
 if (app.Environment.IsProduction())
 {
