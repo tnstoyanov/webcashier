@@ -225,9 +225,19 @@ else
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    // The default HSTS value is 30 days. You may want to change this for production scenarios.
     app.UseHsts();
-    app.UseHttpsRedirection();
+    // Avoid enforcing HTTPS redirection unless proxy headers are enabled; otherwise could 503/loop on Render.
+    var enableFwdHeaders = Environment.GetEnvironmentVariable("ENABLE_FWD_HEADERS");
+    if (string.Equals(enableFwdHeaders, "true", StringComparison.OrdinalIgnoreCase))
+    {
+        app.UseHttpsRedirection();
+    }
+    else
+    {
+        var l = app.Services.GetRequiredService<ILogger<Program>>();
+        l.LogWarning("Skipping UseHttpsRedirection because ENABLE_FWD_HEADERS!=true (set it to true when behind HTTPS proxy)");
+    }
 }
 
 // Configure static files with cache headers for development
