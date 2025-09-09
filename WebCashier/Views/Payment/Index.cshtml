@@ -1664,5 +1664,109 @@
             }
         }
         function escapeHtml(str){ return str.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+        // ==== Missing Functions Implemented ====
+        // Show Luxtak modal (success: auto-redirect to webUrl, error: display message)
+        function showLuxtakModal(content, isSuccess) {
+            const modal = document.getElementById('luxtak-modal');
+            if (!modal) { console.warn('Luxtak modal element not found'); if(isSuccess){ window.location.href = content; } return; }
+            const titleEl = document.getElementById('luxtak-modal-title');
+            const msgEl = document.getElementById('luxtak-modal-message');
+            const okBtn = document.getElementById('luxtak-ok-btn');
+            const cancelBtn = document.getElementById('luxtak-cancel-btn');
+            if (!titleEl || !msgEl || !okBtn || !cancelBtn) { if(isSuccess){ window.location.href = content; } return; }
+
+            if (isSuccess) {
+                titleEl.textContent = 'Luxtak Payment';
+                const webUrl = content;
+                msgEl.innerHTML = 'Redirecting to Luxtak payment page...<br><small>If you are not redirected automatically, <a href="' + webUrl + '" target="_blank" rel="noopener">click here</a>.</small>';
+                okBtn.style.display = 'none';
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.onclick = () => { modal.style.display = 'none'; };
+                modal.style.display = 'flex';
+                // Redirect shortly after showing (allow paint + potential popup blockers)
+                setTimeout(() => { window.location.href = webUrl; }, 400);
+            } else {
+                titleEl.textContent = 'Luxtak Payment Error';
+                msgEl.textContent = content || 'Payment failed';
+                okBtn.style.display = 'inline-block';
+                okBtn.textContent = 'OK';
+                okBtn.onclick = () => { modal.style.display = 'none'; };
+                cancelBtn.textContent = 'Close';
+                cancelBtn.onclick = () => { modal.style.display = 'none'; };
+                modal.style.display = 'flex';
+            }
+        }
+
+        // Smilepayz handler (AJAX similar to Luxtak)
+        async function handleSmilepayzPayment(form) {
+            const amountInput = document.querySelector('[name="SmilepayzAmount"]');
+            const currencySelect = document.querySelector('[name="SmilepayzCurrency"]');
+            if (!amountInput?.value || !currencySelect?.value) {
+                alert('Please fill in amount and currency for Smilepayz payment');
+                return;
+            }
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+            try {
+                const formData = new FormData();
+                formData.append('PaymentMethod', 'smilepayz-th');
+                formData.append('Amount', amountInput.value);
+                formData.append('Currency', currencySelect.value);
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (token) formData.append('__RequestVerificationToken', token.value);
+                const resp = await fetch('/Payment', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: formData });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const text = await resp.text();
+                let data; try { data = JSON.parse(text); } catch { throw new Error('Invalid JSON from server'); }
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                if (data.success && data.paymentUrl) {
+                    // Reuse Luxtak modal for consistency (success path)
+                    showLuxtakModal(data.paymentUrl, true);
+                } else {
+                    showLuxtakModal(data.error || 'Smilepayz payment failed', false);
+                }
+            } catch (err) {
+                console.error('Smilepayz payment error', err);
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                showLuxtakModal('Network error during Smilepayz payment. Please try again.', false);
+            }
+        }
+
+        // Carousel logic
+        let paymentCarouselOffset = 0;
+        let paymentCarouselItemWidth = 0;
+        function initializeCarousel() {
+            const track = document.querySelector('.carousel-track');
+            if (!track) return;
+            const firstItem = track.querySelector('.carousel-item');
+            if (firstItem) {
+                // Include gap estimate (match CSS gap .5rem = 8px)
+                paymentCarouselItemWidth = firstItem.getBoundingClientRect().width + 8;
+            } else {
+                paymentCarouselItemWidth = 128; // fallback
+            }
+            paymentCarouselOffset = 0;
+            track.style.transform = 'translateX(0px)';
+        }
+        function movePaymentCarousel(direction) {
+            const track = document.querySelector('.carousel-track');
+            const container = document.querySelector('.method-carousel');
+            if (!track || !container) return;
+            if (!paymentCarouselItemWidth) initializeCarousel();
+            const items = track.querySelectorAll('.carousel-item');
+            const containerWidth = container.getBoundingClientRect().width;
+            const maxVisible = Math.floor(containerWidth / paymentCarouselItemWidth) || 1;
+            const maxOffset = Math.max(0, (items.length - maxVisible) * paymentCarouselItemWidth);
+            paymentCarouselOffset += direction * paymentCarouselItemWidth;
+            if (paymentCarouselOffset < 0) paymentCarouselOffset = 0;
+            if (paymentCarouselOffset > maxOffset) paymentCarouselOffset = maxOffset;
+            track.style.transform = 'translateX(' + (-paymentCarouselOffset) + 'px)';
+        }
+        // Expose globally for inline onclick handlers
+        window.movePaymentCarousel = movePaymentCarousel;
+        window.handleSmilepayzPayment = handleSmilepayzPayment;
+        window.showLuxtakModal = showLuxtakModal;
+        window.initializeCarousel = initializeCarousel;
     </script>
 }
