@@ -173,11 +173,26 @@ if (runtimeStore != null)
     logger.LogInformation("Runtime config persistence file: {File}", runtimeStore.PersistPath);
 }
 
-// Forwarded headers (Render runs behind reverse proxy providing X-Forwarded-Proto)
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+var enableFwd = Environment.GetEnvironmentVariable("ENABLE_FWD_HEADERS");
+if (string.Equals(enableFwd, "true", StringComparison.OrdinalIgnoreCase))
 {
-    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost
-});
+    try
+    {
+        app.UseForwardedHeaders(new ForwardedHeadersOptions
+        {
+            ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost
+        });
+        logger.LogInformation("Forwarded headers middleware enabled");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed enabling forwarded headers middleware");
+    }
+}
+else
+{
+    logger.LogInformation("Forwarded headers middleware disabled (set ENABLE_FWD_HEADERS=true to enable)");
+}
 
 if (app.Environment.IsProduction())
 {
@@ -224,5 +239,12 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Simple health endpoint
+app.MapGet("/healthz", () => Results.Ok(new {
+    status = "ok",
+    time = DateTime.UtcNow,
+    env = app.Environment.EnvironmentName
+}));
 
 app.Run();

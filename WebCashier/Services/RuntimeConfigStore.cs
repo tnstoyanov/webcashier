@@ -71,9 +71,16 @@ namespace WebCashier.Services
             {
                 if (File.Exists(_persistPath))
                 {
-                    var json = File.ReadAllText(_persistPath);
+                    string json;
+                    using (var fs = File.Open(_persistPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (var sr = new StreamReader(fs))
+                        json = sr.ReadToEnd();
                     var data = JsonSerializer.Deserialize<Dictionary<string,string>>(json) ?? new();
-                    foreach (var kv in data) _values[kv.Key] = kv.Value;
+                    foreach (var kv in data)
+                    {
+                        if (!string.IsNullOrEmpty(kv.Key) && kv.Value != null)
+                            _values[kv.Key] = kv.Value;
+                    }
                 }
             }
             catch (Exception ex)
@@ -90,8 +97,12 @@ namespace WebCashier.Services
                 {
                     var dir = Path.GetDirectoryName(_persistPath);
                     if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                    var json = JsonSerializer.Serialize(_values, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(_persistPath, json);
+                    var snapshot = _values.ToDictionary(k => k.Key, v => v.Value);
+                    var json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true });
+                    var tempFile = _persistPath + ".tmp";
+                    File.WriteAllText(tempFile, json);
+                    if (File.Exists(_persistPath)) File.Replace(tempFile, _persistPath, null);
+                    else File.Move(tempFile, _persistPath);
                 }
             }
             catch (Exception ex)

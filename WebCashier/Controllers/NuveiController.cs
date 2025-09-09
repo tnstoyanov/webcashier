@@ -143,11 +143,9 @@ namespace WebCashier.Controllers
         {
             var request = _http.HttpContext!.Request;
             var scheme = request.Headers.TryGetValue("X-Forwarded-Proto", out var proto) && !string.IsNullOrEmpty(proto) ? proto.ToString() : request.Scheme;
-            if (string.Equals(scheme, "http", StringComparison.OrdinalIgnoreCase) && request.Host.Host.EndsWith("onrender.com", StringComparison.OrdinalIgnoreCase))
-            {
-                // Force https for production external URLs
+            var forceHttps = Environment.GetEnvironmentVariable("REQUIRE_HTTPS_URLS");
+            if (string.Equals(forceHttps, "true", StringComparison.OrdinalIgnoreCase) && !string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase))
                 scheme = "https";
-            }
             return $"{scheme}://{request.Host}";
         }
 
