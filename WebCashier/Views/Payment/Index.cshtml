@@ -1667,7 +1667,7 @@
 
         // ==== Missing Functions Implemented ====
         // Show Luxtak modal (success: auto-redirect to webUrl, error: display message)
-        function showLuxtakModal(content, isSuccess) {
+    function showLuxtakModal(content, isSuccess) {
             const modal = document.getElementById('luxtak-modal');
             if (!modal) { console.warn('Luxtak modal element not found'); if(isSuccess){ window.location.href = content; } return; }
             const titleEl = document.getElementById('luxtak-modal-title');
@@ -1678,14 +1678,14 @@
 
             if (isSuccess) {
                 titleEl.textContent = 'Luxtak Payment';
-                const webUrl = content;
-                msgEl.innerHTML = 'Redirecting to Luxtak payment page...<br><small>If you are not redirected automatically, <a href="' + webUrl + '" target="_blank" rel="noopener">click here</a>.</small>';
-                okBtn.style.display = 'none';
-                cancelBtn.textContent = 'Cancel';
-                cancelBtn.onclick = () => { modal.style.display = 'none'; };
-                modal.style.display = 'flex';
-                // Redirect shortly after showing (allow paint + potential popup blockers)
-                setTimeout(() => { window.location.href = webUrl; }, 400);
+        const webUrl = content; // Payment destination
+        msgEl.innerHTML = 'Ready to redirect to Luxtak payment page.<br><small>Click OK to continue in this tab or Cancel to abort.</small>';
+        okBtn.style.display = 'inline-block';
+        okBtn.textContent = 'OK';
+        okBtn.onclick = () => { modal.style.display = 'none'; window.location.href = webUrl; };
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.onclick = () => { modal.style.display = 'none'; };
+        modal.style.display = 'flex';
             } else {
                 titleEl.textContent = 'Luxtak Payment Error';
                 msgEl.textContent = content || 'Payment failed';
@@ -1721,7 +1721,7 @@
                 let data; try { data = JSON.parse(text); } catch { throw new Error('Invalid JSON from server'); }
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
                 if (data.success && data.paymentUrl) {
-                    // Reuse Luxtak modal for consistency (success path)
+                    // Show confirmation modal (reuse Luxtak modal styling)
                     showLuxtakModal(data.paymentUrl, true);
                 } else {
                     showLuxtakModal(data.error || 'Smilepayz payment failed', false);
