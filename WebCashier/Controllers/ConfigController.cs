@@ -32,7 +32,17 @@ namespace WebCashier.Controllers
         public IActionResult SaveNuvei([FromForm] Dictionary<string,string?> form)
         {
             var allowed = new[] { "Nuvei:merchant_id","Nuvei:merchant_site_id","Nuvei:secret_key","Nuvei:endpoint" };
+            var before = allowed.ToDictionary(k => k, k => _runtime.Get(k));
             SaveAllowed(form, allowed);
+            var after = allowed.ToDictionary(k => k, k => _runtime.Get(k));
+            // Simple diff logging to console for diagnostics (could integrate with comm log later)
+            Console.WriteLine("[Nuvei Config Save] Incoming form values:");
+            foreach (var kv in form) Console.WriteLine($"  {kv.Key}={(string.IsNullOrWhiteSpace(kv.Value)?"<empty>":kv.Value)}");
+            Console.WriteLine("[Nuvei Config Save] Before -> After runtime values:");
+            foreach (var k in allowed)
+            {
+                Console.WriteLine($"  {k}: '{before[k] ?? "<null>"}' -> '{after[k] ?? "<null>"}'");
+            }
             TempData["Saved"] = true;
             return RedirectToAction(nameof(Nuvei));
         }

@@ -36,6 +36,15 @@
                 </div>
             </div>
         </div>
+        <div class="mt-4 small text-muted">
+            <strong>Runtime snapshot:</strong>
+            <ul class="mb-0">
+                <li>merchant_id: @((Model.ContainsKey("Nuvei:merchant_id") ? Model["Nuvei:merchant_id"] : null) ?? "")</li>
+                <li>merchant_site_id: @((Model.ContainsKey("Nuvei:merchant_site_id") ? Model["Nuvei:merchant_site_id"] : null) ?? "")</li>
+                <li>secret_key: @(Model.ContainsKey("Nuvei:secret_key") && !string.IsNullOrEmpty(Model["Nuvei:secret_key"]) ? "*** (set)" : "")</li>
+                <li>endpoint: @((Model.ContainsKey("Nuvei:endpoint") ? Model["Nuvei:endpoint"] : null) ?? "")</li>
+            </ul>
+        </div>
         <div class="d-flex justify-content-between mt-3">
             <a asp-controller="Config" asp-action="Index" class="btn btn-outline-secondary">← Back</a>
             <button type="submit" class="btn btn-primary">Save</button>

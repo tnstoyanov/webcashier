@@ -75,11 +75,29 @@ namespace WebCashier.Services
             fields.Add(F("checksum", checksum));
 
             _logger.LogInformation("Nuvei form built with transactionRef {Ref} checksum {Checksum}", transactionRef, checksum);
-            _ = _commLog.LogAsync("outbound", new {
+
+            // Enhanced redaction rules
+            bool NeedsRedaction(string key) => key.Contains("secret", StringComparison.OrdinalIgnoreCase);
+            bool NeedsMask(string key) => key.Equals("userid", StringComparison.OrdinalIgnoreCase) ||
+                                          key.Equals("user_token_id", StringComparison.OrdinalIgnoreCase) ||
+                                          key.Equals("merchant_unique_id", StringComparison.OrdinalIgnoreCase);
+            string Mask(string? value)
+            {
+                if (string.IsNullOrEmpty(value)) return value ?? string.Empty;
+                if (value.Length <= 6) return new string('*', value.Length);
+                return value.Substring(0, 3) + new string('*', value.Length - 7) + value[^4..];
+            }
+
+            var loggedFields = fields.Select(f => new {
+                f.Key,
+                Value = NeedsRedaction(f.Key) ? "***" : NeedsMask(f.Key) ? Mask(f.Value) : f.Key == "checksum" && f.Value != null ? (f.Value.Length > 12 ? f.Value.Substring(0,6) + "..." + f.Value[^4..] : f.Value) : f.Value
+            });
+
+            _ = _commLog.LogAsync("nuvei-outbound", new {
                 provider = "Nuvei",
                 transactionRef,
                 endpoint,
-                fields = fields.Select(f => new { f.Key, RedactedValue = f.Key.Contains("secret", StringComparison.OrdinalIgnoreCase) ? "***" : f.Value })
+                fields = loggedFields
             }, "nuvei");
             return new NuveiFormResponse(endpoint, fields);
         }

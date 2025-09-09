@@ -21,7 +21,7 @@ namespace WebCashier.Controllers
         {
             try
             {
-                await _commLog.LogAsync("inbound", new { provider = "Nuvei", action = "Create", amount, currency }, "nuvei");
+                await _commLog.LogAsync("nuvei-inbound", new { provider = "Nuvei", action = "Create", amount, currency }, "nuvei");
                 var baseUrl = GetBaseUrl();
                 var form = _nuvei.BuildPaymentForm(new NuveiRequest(amount, currency, "12204834", "cashier"), baseUrl);
                 var responseObj = new
@@ -30,13 +30,24 @@ namespace WebCashier.Controllers
                     formUrl = form.SubmitFormUrl,
                     fields = form.Fields.Select(f => new { f.Key, f.Value })
                 };
-                await _commLog.LogAsync("outbound", responseObj, "nuvei");
+                // Mask sensitive values before logging outbound response (client side form build)
+                var masked = new {
+                    responseObj.success,
+                    responseObj.formUrl,
+                    fields = form.Fields.Select(f => new {
+                        f.Key,
+                        Value = f.Key.Equals("checksum", StringComparison.OrdinalIgnoreCase) && f.Value != null
+                            ? (f.Value.Length > 12 ? f.Value.Substring(0,6) + "..." + f.Value[^4..] : f.Value)
+                            : f.Key.Contains("secret", StringComparison.OrdinalIgnoreCase) ? "***" : f.Value
+                    })
+                };
+                await _commLog.LogAsync("nuvei-outbound-response", masked, "nuvei");
                 return Json(responseObj);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error building Nuvei form");
-                await _commLog.LogAsync("error", new { provider = "Nuvei", action = "Create", message = ex.Message }, "nuvei");
+                await _commLog.LogAsync("nuvei-error", new { provider = "Nuvei", action = "Create", message = ex.Message }, "nuvei");
                 return Json(new { success = false, error = ex.Message });
             }
         }
@@ -47,7 +58,7 @@ namespace WebCashier.Controllers
             _logger.LogInformation("Nuvei callback received");
             var form = Request.HasFormContentType ? Request.Form.ToDictionary(k => k.Key, v => string.Join(",", v.Value.ToArray())) : new Dictionary<string,string>();
             var query = Request.Query.ToDictionary(k => k.Key, v => string.Join(",", v.Value.ToArray()));
-            await _commLog.LogAsync("callback", new { provider = "Nuvei", form, query }, "nuvei");
+            await _commLog.LogAsync("nuvei-callback", new { provider = "Nuvei", form, query }, "nuvei");
             return Ok();
         }
 
