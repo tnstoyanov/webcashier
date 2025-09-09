@@ -23,13 +23,13 @@ namespace WebCashier.Services
         {
             // Default to app base directory runtime-config.json
             _persistPath = Path.Combine(AppContext.BaseDirectory, "runtime-config.json");
-            LoadFromDisk();
+            if (!IsDisabled()) LoadFromDisk();
         }
 
         public RuntimeConfigStore(string persistPath)
         {
             _persistPath = persistPath;
-            LoadFromDisk();
+            if (!IsDisabled()) LoadFromDisk();
         }
 
         public string? Get(string key)
@@ -41,7 +41,7 @@ namespace WebCashier.Services
         {
             if (value is null) return;
             _values[key] = value;
-            Persist();
+            if (!IsDisabled()) Persist();
         }
 
         public void SetRange(IDictionary<string, string?> values)
@@ -53,7 +53,7 @@ namespace WebCashier.Services
                     _values[kv.Key] = kv.Value;
                 }
             }
-            if (values.Count > 0) Persist();
+            if (values.Count > 0 && !IsDisabled()) Persist();
         }
 
         public IReadOnlyDictionary<string, string> GetAll() => _values;
@@ -61,7 +61,7 @@ namespace WebCashier.Services
         public bool Remove(string key)
         {
             var removed = _values.TryRemove(key, out _);
-            if (removed) Persist();
+            if (removed && !IsDisabled()) Persist();
             return removed;
         }
 
@@ -93,6 +93,7 @@ namespace WebCashier.Services
         {
             try
             {
+                if (IsDisabled()) return;
                 lock (_fileLock)
                 {
                     var dir = Path.GetDirectoryName(_persistPath);
@@ -101,8 +102,11 @@ namespace WebCashier.Services
                     var json = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true });
                     var tempFile = _persistPath + ".tmp";
                     File.WriteAllText(tempFile, json);
-                    if (File.Exists(_persistPath)) File.Replace(tempFile, _persistPath, null);
-                    else File.Move(tempFile, _persistPath);
+                    if (File.Exists(_persistPath))
+                    {
+                        try { File.Delete(_persistPath); } catch { }
+                    }
+                    File.Move(tempFile, _persistPath, true);
                 }
             }
             catch (Exception ex)
@@ -110,5 +114,8 @@ namespace WebCashier.Services
                 Console.WriteLine($"[RuntimeConfigStore] Failed persisting config: {ex.Message}");
             }
         }
+
+        private static bool IsDisabled()
+            => string.Equals(Environment.GetEnvironmentVariable("RUNTIME_CONFIG_DISABLE"), "true", StringComparison.OrdinalIgnoreCase);
     }
 }

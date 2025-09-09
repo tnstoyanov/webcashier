@@ -25,23 +25,37 @@ builder.Services.AddAntiforgery();
 // Persistent runtime config (JSON file). For Render ephemeral FS, consider mounting a persistent disk.
 builder.Services.AddSingleton<IRuntimeConfigStore>(_ =>
 {
-    // Allow override via env var for persistent disk mapping
-    var envPath = Environment.GetEnvironmentVariable("RUNTIME_CONFIG_PATH");
-    string file;
-    if (!string.IsNullOrWhiteSpace(envPath))
+    Console.WriteLine("[Startup] Initializing RuntimeConfigStore...");
+    if (string.Equals(Environment.GetEnvironmentVariable("RUNTIME_CONFIG_DISABLE"), "true", StringComparison.OrdinalIgnoreCase))
     {
-        var dir = Path.GetDirectoryName(envPath)!;
-        if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-        file = envPath;
+        Console.WriteLine("[Startup] Runtime config persistence DISABLED via RUNTIME_CONFIG_DISABLE");
+        return new RuntimeConfigStore(); // Will skip load
     }
-    else
+    try
     {
-        var baseDir = Environment.GetEnvironmentVariable("DATA_DIR") ?? AppContext.BaseDirectory;
-        var path = Path.Combine(baseDir, "data");
-        if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-        file = Path.Combine(path, "runtime-config.json");
+        var envPath = Environment.GetEnvironmentVariable("RUNTIME_CONFIG_PATH");
+        string file;
+        if (!string.IsNullOrWhiteSpace(envPath))
+        {
+            var dir = Path.GetDirectoryName(envPath)!;
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            file = envPath;
+        }
+        else
+        {
+            var baseDir = Environment.GetEnvironmentVariable("DATA_DIR") ?? AppContext.BaseDirectory;
+            var path = Path.Combine(baseDir, "data");
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+            file = Path.Combine(path, "runtime-config.json");
+        }
+        Console.WriteLine($"[Startup] Runtime config file path: {file}");
+        return new RuntimeConfigStore(file);
     }
-    return new RuntimeConfigStore(file);
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Startup] Fallback to in-memory runtime config due to exception: {ex.Message}");
+        return new RuntimeConfigStore();
+    }
 });
 
 // Configure Praxis settings
@@ -161,7 +175,9 @@ else
     });
 }
 
+Console.WriteLine("[Startup] Building application host...");
 var app = builder.Build();
+Console.WriteLine("[Startup] Host built.");
 
 // Add startup logging for debugging
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -246,5 +262,17 @@ app.MapGet("/healthz", () => Results.Ok(new {
     time = DateTime.UtcNow,
     env = app.Environment.EnvironmentName
 }));
+
+// Basic diagnostics (do NOT expose secrets in production; filter keys)
+app.MapGet("/diag/env", () =>
+{
+    var whitelist = new[] { "ASPNETCORE_ENVIRONMENT", "RUNTIME_CONFIG_PATH", "RUNTIME_CONFIG_DISABLE", "ENABLE_FWD_HEADERS", "REQUIRE_HTTPS_URLS", "PORT", "DATA_DIR" };
+    var dict = new Dictionary<string,string?>();
+    foreach (var k in whitelist)
+    {
+        dict[k] = Environment.GetEnvironmentVariable(k);
+    }
+    return Results.Ok(new { vars = dict, time = DateTime.UtcNow });
+});
 
 app.Run();

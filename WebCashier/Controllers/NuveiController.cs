@@ -57,9 +57,8 @@ namespace WebCashier.Controllers
             }
         }
 
-        [IgnoreAntiforgeryToken]
-        [Consumes("application/x-www-form-urlencoded", "*/*")]
-        [HttpPost("Callback")]
+    [IgnoreAntiforgeryToken]
+    [HttpPost("Callback")]
         [HttpGet("Callback")] // GET remains for diagnostics; Nuvei should POST
         public async Task<IActionResult> Callback()
         {
