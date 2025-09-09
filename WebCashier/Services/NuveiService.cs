@@ -8,11 +8,12 @@ namespace WebCashier.Services
         private readonly IRuntimeConfigStore _runtime;
         private readonly IConfiguration _config;
         private readonly ILogger<NuveiService> _logger;
+        private readonly ICommLogService _commLog;
         private const string DefaultPppUrl = "https://ppp-test.safecharge.com/ppp/purchase.do";
 
-        public NuveiService(IRuntimeConfigStore runtime, IConfiguration config, ILogger<NuveiService> logger)
+        public NuveiService(IRuntimeConfigStore runtime, IConfiguration config, ILogger<NuveiService> logger, ICommLogService commLog)
         {
-            _runtime = runtime; _config = config; _logger = logger;
+            _runtime = runtime; _config = config; _logger = logger; _commLog = commLog;
         }
 
         public NuveiFormResponse BuildPaymentForm(NuveiRequest req, string baseUrl)
@@ -74,6 +75,12 @@ namespace WebCashier.Services
             fields.Add(F("checksum", checksum));
 
             _logger.LogInformation("Nuvei form built with transactionRef {Ref} checksum {Checksum}", transactionRef, checksum);
+            _ = _commLog.LogAsync("outbound", new {
+                provider = "Nuvei",
+                transactionRef,
+                endpoint,
+                fields = fields.Select(f => new { f.Key, RedactedValue = f.Key.Contains("secret", StringComparison.OrdinalIgnoreCase) ? "***" : f.Value })
+            }, "nuvei");
             return new NuveiFormResponse(endpoint, fields);
         }
 
