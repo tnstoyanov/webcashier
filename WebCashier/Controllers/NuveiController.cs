@@ -127,7 +127,36 @@ namespace WebCashier.Controllers
                 query,
                 headers = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString())
             }, "nuvei");
-            return Ok(new { status = "received" });
+            // Extract Status and decide redirect
+            formData.TryGetValue("Status", out var statusValue);
+            string status = statusValue ?? string.Empty;
+
+            // Helper to safely get value
+            string GV(string k) => formData.TryGetValue(k, out var v) ? v : string.Empty;
+
+            // Collect parameter sets
+            var successKeys = new [] { "Status", "merchant_unique_id", "customData", "total_amount", "currency", "TransactionID", "cardBrand", "issuerName" };
+            var errorKeys = new [] { "Status", "merchant_unique_id", "errApmCode", "errScCode", "errApmDescription", "errScDescription", "Reason", "ReasonCode", "customData", "total_amount", "currency", "TransactionID", "cardBrand", "issuerName" };
+
+            bool isSuccess = string.Equals(status, "APPROVED", StringComparison.OrdinalIgnoreCase);
+            bool isFailure = string.Equals(status, "DECLINED", StringComparison.OrdinalIgnoreCase) || string.Equals(status, "ERROR", StringComparison.OrdinalIgnoreCase);
+
+            if (isSuccess || isFailure)
+            {
+                var keys = isSuccess ? successKeys : errorKeys;
+                var q = System.Web.HttpUtility.ParseQueryString(string.Empty);
+                foreach (var k in keys)
+                {
+                    var val = GV(k);
+                    if (!string.IsNullOrEmpty(val)) q[k] = val;
+                }
+                string baseDest = isSuccess ? "/Nuvei/Success" : "/Nuvei/Error";
+                var redirectUrl = baseDest + "?" + q.ToString();
+                _logger.LogInformation("Nuvei redirecting callback to {Url} for status {Status}", redirectUrl, status);
+                return Redirect(redirectUrl);
+            }
+
+            return Ok(new { status = "received", note = "No redirect performed (status=" + status + ")" });
         }
 
         [HttpGet("Success")] public IActionResult Success() => View();
