@@ -81,8 +81,10 @@ namespace WebCashier.Services
             {
                 concatValues.Append(f.Value ?? string.Empty);
             }
+            var orderedKeys = string.Join("|", fields.Select(f => f.Key));
             var toHash = secretKey + concatValues.ToString();
             var checksum = Sha256Hex(toHash);
+            _logger.LogInformation("Nuvei checksum source keys order: {Keys} (count={Count})", orderedKeys, fields.Count);
             fields.Add(F("checksum", checksum));
 
             _logger.LogInformation("Nuvei form built with transactionRef {Ref} checksum {Checksum}", transactionRef, checksum);
