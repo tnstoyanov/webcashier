@@ -138,12 +138,26 @@ namespace WebCashier.Controllers
         private void SaveAllowed(Dictionary<string, string?> form, IEnumerable<string> allowed)
         {
             var toSave = new Dictionary<string, string?>();
+            var removed = new List<string>();
             foreach (var k in allowed)
             {
-                if (form.TryGetValue(k, out var v) && !string.IsNullOrWhiteSpace(v))
-                    toSave[k] = v;
+                if (form.TryGetValue(k, out var v))
+                {
+                    if (string.IsNullOrWhiteSpace(v))
+                    {
+                        if (_runtime.Remove(k)) removed.Add(k);
+                    }
+                    else
+                    {
+                        toSave[k] = v;
+                    }
+                }
             }
-            _runtime.SetRange(toSave);
+            if (toSave.Count > 0) _runtime.SetRange(toSave);
+            if (removed.Count > 0)
+            {
+                TempData["Cleared"] = string.Join(",", removed);
+            }
         }
     }
 }

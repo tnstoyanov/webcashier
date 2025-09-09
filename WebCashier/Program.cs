@@ -22,7 +22,27 @@ builder.Services.AddControllersWithViews(options =>
     }
 });
 builder.Services.AddAntiforgery();
-builder.Services.AddSingleton<IRuntimeConfigStore, RuntimeConfigStore>();
+// Persistent runtime config (JSON file). For Render ephemeral FS, consider mounting a persistent disk.
+builder.Services.AddSingleton<IRuntimeConfigStore>(_ =>
+{
+    // Allow override via env var for persistent disk mapping
+    var envPath = Environment.GetEnvironmentVariable("RUNTIME_CONFIG_PATH");
+    string file;
+    if (!string.IsNullOrWhiteSpace(envPath))
+    {
+        var dir = Path.GetDirectoryName(envPath)!;
+        if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+        file = envPath;
+    }
+    else
+    {
+        var baseDir = Environment.GetEnvironmentVariable("DATA_DIR") ?? AppContext.BaseDirectory;
+        var path = Path.Combine(baseDir, "data");
+        if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+        file = Path.Combine(path, "runtime-config.json");
+    }
+    return new RuntimeConfigStore(file);
+});
 
 // Configure Praxis settings
 builder.Services.Configure<PraxisConfig>(builder.Configuration.GetSection("Praxis"));
