@@ -135,7 +135,7 @@ namespace WebCashier.Controllers
             string GV(string k) => formData.TryGetValue(k, out var v) ? v : string.Empty;
 
             // Collect parameter sets
-            var successKeys = new [] { "Status", "merchant_unique_id", "customData", "total_amount", "currency", "TransactionID", "cardBrand", "issuerName" };
+            var successKeys = new [] { "Status", "merchant_unique_id", "customData", "totalAmount", "total_amount", "currency", "TransactionID", "cardBrand", "issuerName" };
             var errorKeys = new [] { "Status", "merchant_unique_id", "errApmCode", "errScCode", "errApmDescription", "errScDescription", "Reason", "ReasonCode", "customData", "total_amount", "currency", "TransactionID", "cardBrand", "issuerName" };
 
             bool isSuccess = string.Equals(status, "APPROVED", StringComparison.OrdinalIgnoreCase);

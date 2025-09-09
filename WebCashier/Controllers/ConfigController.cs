@@ -43,6 +43,42 @@ namespace WebCashier.Controllers
             {
                 Console.WriteLine($"  {k}: '{before[k] ?? "<null>"}' -> '{after[k] ?? "<null>"}'");
             }
+
+            // Attempt to persist into appsettings.json (best-effort; may fail in read-only container)
+            try
+            {
+                var appSettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+                if (System.IO.File.Exists(appSettingsPath))
+                {
+                    var jsonText = System.IO.File.ReadAllText(appSettingsPath);
+                    using var doc = System.Text.Json.JsonDocument.Parse(jsonText);
+                    var root = doc.RootElement.Clone();
+                    // Build mutable dictionary representation
+                    var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonText) ?? new();
+                    // Nuvei typically not present; create/update section
+                    var nuveiSection = new Dictionary<string,string?>
+                    {
+                        { "merchant_id", after["Nuvei:merchant_id"] },
+                        { "merchant_site_id", after["Nuvei:merchant_site_id"] },
+                        { "secret_key", after["Nuvei:secret_key"] },
+                        { "endpoint", after["Nuvei:endpoint"] }
+                    };
+                    dict["Nuvei"] = nuveiSection;
+                    var newJson = System.Text.Json.JsonSerializer.Serialize(dict, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                    var backupPath = appSettingsPath + ".bak";
+                    try { System.IO.File.Copy(appSettingsPath, backupPath, true); } catch { }
+                    System.IO.File.WriteAllText(appSettingsPath, newJson);
+                    Console.WriteLine("[Nuvei Config Save] appsettings.json updated with Nuvei section.");
+                }
+                else
+                {
+                    Console.WriteLine("[Nuvei Config Save] appsettings.json not found for persistence");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Nuvei Config Save] Failed to persist to appsettings.json: " + ex.Message);
+            }
             TempData["Saved"] = true;
             return RedirectToAction(nameof(Nuvei));
         }

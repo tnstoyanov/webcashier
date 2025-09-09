@@ -13,11 +13,16 @@
             </thead>
             <tbody>
 @{
-    string[] keys = { "Status","merchant_unique_id","customData","total_amount","currency","TransactionID","cardBrand","issuerName" };
-    foreach (var k in keys)
+    // Prefer totalAmount; if absent fall back to total_amount. Avoid duplication.
+    var raw = Context.Request.Query;
+    var ordered = new List<string> { "Status","merchant_unique_id","customData","totalAmount","total_amount","currency","TransactionID","cardBrand","issuerName" };
+    var seenLogical = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var k in ordered)
     {
-        var v = Context.Request.Query[k].ToString();
+        if ((k == "total_amount" || k == "totalAmount") && seenLogical.Contains("totalAmount")) continue;
+        var v = raw[k].ToString();
         if (!string.IsNullOrEmpty(v)) {
+            if (k == "total_amount" || k == "totalAmount") seenLogical.Add("totalAmount");
             <tr><td>@k</td><td>@v</td></tr>;
         }
     }
