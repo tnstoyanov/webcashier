@@ -3,6 +3,7 @@ using WebCashier.Services;
 
 namespace WebCashier.Controllers
 {
+    [Route("Nuvei")] // Ensure base path /Nuvei
     public class NuveiController : Controller
     {
         private readonly INuveiService _nuvei;
@@ -15,8 +16,8 @@ namespace WebCashier.Controllers
             _nuvei = nuvei; _logger = logger; _http = http; _commLog = commLog;
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+    [HttpPost("Create")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create([FromForm] decimal amount, [FromForm] string currency)
         {
             try
@@ -52,19 +53,25 @@ namespace WebCashier.Controllers
             }
         }
 
-        [HttpPost]
+        [IgnoreAntiforgeryToken]
+        [HttpPost("Callback")]
+        [HttpGet("Callback")] // Allow GET temporarily for diagnostics
         public async Task<IActionResult> Callback()
         {
             _logger.LogInformation("Nuvei callback received");
             var form = Request.HasFormContentType ? Request.Form.ToDictionary(k => k.Key, v => string.Join(",", v.Value.ToArray())) : new Dictionary<string,string>();
             var query = Request.Query.ToDictionary(k => k.Key, v => string.Join(",", v.Value.ToArray()));
-            await _commLog.LogAsync("nuvei-callback", new { provider = "Nuvei", form, query }, "nuvei");
+            await _commLog.LogAsync("nuvei-callback", new { provider = "Nuvei", method = Request.Method, path = Request.Path.ToString(), form, query, headers = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString()) }, "nuvei");
             return Ok();
         }
 
-        public IActionResult Success() => View();
-        public IActionResult Error() => View();
-        public IActionResult Pending() => View();
+        [HttpGet("Success")] public IActionResult Success() => View();
+        [HttpGet("Error")] public IActionResult Error() => View();
+        [HttpGet("Pending")] public IActionResult Pending() => View();
+
+    // Diagnostic: quick ping to verify base route reachable
+    [HttpGet("")]
+    public IActionResult Index() => Ok(new { status = "nuvei-controller-ok", time = DateTime.UtcNow });
 
         private string GetBaseUrl()
         {
