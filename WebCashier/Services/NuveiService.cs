@@ -21,7 +21,12 @@ namespace WebCashier.Services
             var merchantId = Get("Nuvei:merchant_id");
             var merchantSiteId = Get("Nuvei:merchant_site_id");
             var secretKey = Get("Nuvei:secret_key");
-            var endpoint = Get("Nuvei:endpoint") ?? DefaultPppUrl;
+            var configuredEndpoint = Get("Nuvei:endpoint");
+            var endpoint = string.IsNullOrWhiteSpace(configuredEndpoint) ? DefaultPppUrl : configuredEndpoint;
+            if (string.IsNullOrWhiteSpace(configuredEndpoint))
+            {
+                _logger.LogWarning("Nuvei endpoint not configured or blank. Falling back to default {Default}", DefaultPppUrl);
+            }
 
             if (string.IsNullOrWhiteSpace(merchantId) || string.IsNullOrWhiteSpace(merchantSiteId) || string.IsNullOrWhiteSpace(secretKey))
                 throw new InvalidOperationException("Nuvei configuration incomplete");

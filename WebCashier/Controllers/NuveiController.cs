@@ -29,10 +29,17 @@ namespace WebCashier.Controllers
                 await _commLog.LogAsync("nuvei-inbound", new { provider = "Nuvei", action = "Create", amount, currency }, "nuvei");
                 var baseUrl = GetBaseUrl();
                 var form = _nuvei.BuildPaymentForm(new NuveiRequest(amount, currency, "12204834", "cashier"), baseUrl);
+                var formUrl = form.SubmitFormUrl;
+                if (string.IsNullOrWhiteSpace(formUrl))
+                {
+                    // Fallback to default PPP endpoint if missing (misconfiguration or blank runtime value)
+                    formUrl = "https://ppp-test.safecharge.com/ppp/purchase.do";
+                    _logger.LogWarning("Nuvei form SubmitFormUrl was blank. Using default PPP URL fallback.");
+                }
                 var responseObj = new
                 {
                     success = true,
-                    formUrl = form.SubmitFormUrl,
+                    formUrl,
                     fields = form.Fields.Select(f => new { f.Key, f.Value })
                 };
                 // Mask sensitive values before logging outbound response (client side form build)
