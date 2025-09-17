@@ -21,12 +21,12 @@ public class ZotaController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create([FromBody] ZotaCreateRequest req, CancellationToken ct)
     {
-        await _comm.LogAsync("zota-inbound", "zota", new { path = "/Zota/Create", req });
+    await _comm.LogAsync("zota-inbound", new { path = "/Zota/Create", req }, "zota");
         if (req is null || req.Amount <= 0 || string.IsNullOrWhiteSpace(req.Currency))
             return BadRequest(new { success = false, message = "Invalid amount/currency" });
 
         var result = await _zota.CreateDepositAsync(req.Amount, req.Currency!, HttpContext, ct);
-        await _comm.LogAsync("zota-outbound-response", "zota", new { result });
+    await _comm.LogAsync("zota-outbound-response", new { result }, "zota");
 
         return Json(new { success = result.Success, depositUrl = result.DepositUrl, orderId = result.OrderId, merchantOrderId = result.MerchantOrderId });
     }
@@ -56,7 +56,7 @@ public class ZotaController : Controller
             using var reader = new StreamReader(Request.Body);
             body = await reader.ReadToEndAsync();
         }
-        await _comm.LogAsync("zota-callback", "zota", new { form, body });
+    await _comm.LogAsync("zota-callback", new { form, body }, "zota");
         return Ok();
     }
 }

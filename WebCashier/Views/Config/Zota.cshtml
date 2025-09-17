@@ -18,31 +18,31 @@
         <div class="row g-3">
             <div class="col-md-6">
                 <label class="form-label">EndpointID</label>
-                <input class="form-control" name="Zota:EndpointID" value="@Model.GetValueOrDefault("Zota:EndpointID")" />
+                <input class="form-control" name="Zota:EndpointID" value="@(Model.ContainsKey("Zota:EndpointID") ? Model["Zota:EndpointID"] : null)" />
             </div>
             <div class="col-md-6">
                 <label class="form-label">MerchantSecretKey</label>
-                <input class="form-control" name="Zota:MerchantSecretKey" value="@Model.GetValueOrDefault("Zota:MerchantSecretKey")" />
+                <input class="form-control" name="Zota:MerchantSecretKey" value="@(Model.ContainsKey("Zota:MerchantSecretKey") ? Model["Zota:MerchantSecretKey"] : null)" />
             </div>
             <div class="col-md-6">
                 <label class="form-label">orderCurrency</label>
-                <input class="form-control" name="Zota:orderCurrency" value="@Model.GetValueOrDefault("Zota:orderCurrency")" placeholder="EUR" />
+                <input class="form-control" name="Zota:orderCurrency" value="@(Model.ContainsKey("Zota:orderCurrency") ? Model["Zota:orderCurrency"] : null)" placeholder="EUR" />
             </div>
             <div class="col-md-6">
                 <label class="form-label">CustomerEmail</label>
-                <input class="form-control" name="Zota:CustomerEmail" value="@Model.GetValueOrDefault("Zota:CustomerEmail")" placeholder="demo@example.com" />
+                <input class="form-control" name="Zota:CustomerEmail" value="@(Model.ContainsKey("Zota:CustomerEmail") ? Model["Zota:CustomerEmail"] : null)" placeholder="demo@example.com" />
             </div>
             <div class="col-md-6">
                 <label class="form-label">RedirectUrl</label>
-                <input class="form-control" name="Zota:RedirectUrl" value="@Model.GetValueOrDefault("Zota:RedirectUrl")" placeholder="https://webcashier.onrender.com/Zota/Return" />
+                <input class="form-control" name="Zota:RedirectUrl" value="@(Model.ContainsKey("Zota:RedirectUrl") ? Model["Zota:RedirectUrl"] : null)" placeholder="https://webcashier.onrender.com/Zota/Return" />
             </div>
             <div class="col-md-6">
                 <label class="form-label">CallbackUrl</label>
-                <input class="form-control" name="Zota:CallbackUrl" value="@Model.GetValueOrDefault("Zota:CallbackUrl")" placeholder="https://webcashier.onrender.com/Zota/Callback" />
+                <input class="form-control" name="Zota:CallbackUrl" value="@(Model.ContainsKey("Zota:CallbackUrl") ? Model["Zota:CallbackUrl"] : null)" placeholder="https://webcashier.onrender.com/Zota/Callback" />
             </div>
             <div class="col-md-6">
                 <label class="form-label">CheckoutUrl</label>
-                <input class="form-control" name="Zota:CheckoutUrl" value="@Model.GetValueOrDefault("Zota:CheckoutUrl")" placeholder="https://webcashier.onrender.com/Payment" />
+                <input class="form-control" name="Zota:CheckoutUrl" value="@(Model.ContainsKey("Zota:CheckoutUrl") ? Model["Zota:CheckoutUrl"] : null)" placeholder="https://webcashier.onrender.com/Payment" />
             </div>
         </div>
         <div class="mt-3">

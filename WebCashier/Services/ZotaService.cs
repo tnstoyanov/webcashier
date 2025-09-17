@@ -73,14 +73,14 @@ public class ZotaService : IZotaService
 
         var url = $"https://api.zotapay-sandbox.com/api/v1/deposit/request/{endpointId}";
 
-        await _comm.LogAsync("zota-outbound", "zota", new { url, body });
+    await _comm.LogAsync("zota-outbound", new { url, body }, "zota");
 
         using var req = new HttpRequestMessage(HttpMethod.Post, url);
         req.Content = JsonContent.Create(body);
         var res = await _http.SendAsync(req, ct);
         var text = await res.Content.ReadAsStringAsync(ct);
 
-        await _comm.LogAsync("zota-response", "zota", new { status = (int)res.StatusCode, body = text });
+    await _comm.LogAsync("zota-response", new { status = (int)res.StatusCode, body = text }, "zota");
 
         string? depositUrl = null;
         string? orderId = null;
