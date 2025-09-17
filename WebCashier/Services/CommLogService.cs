@@ -31,7 +31,12 @@ namespace WebCashier.Services
                 data
             };
 
-            var json = JsonSerializer.Serialize(payload);
+            var jsonOptions = new JsonSerializerOptions
+            {
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                WriteIndented = false
+            };
+            var json = JsonSerializer.Serialize(payload, jsonOptions);
             _logger.LogInformation("[CommLog] {Type}/{Category}: {Json}", type, category ?? "general", json);
 
             var endpoint = _configuration["CommLogs:Endpoint"] ?? "https://webcashier.onrender.com/api/comm-logs";
