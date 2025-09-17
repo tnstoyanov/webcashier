@@ -95,13 +95,13 @@
                                     </label>
                                 </div>
 
-                                <div class="carousel-item" id="zmg-item">
+                                <div class="carousel-item" id="zmg-item" tabindex="0">
                                     <input type="radio" id="zmg" name="PaymentMethod" value="zmg" />
                                     <label for="zmg" class="method-option" id="zota-label" style="background-color: #0C0B42; border-radius: 8px;">
                                         <div class="zmg-icon">
                                             <img src="https://zota.com/wp-content/uploads/2023/01/zota-logo.svg" alt="Zota" width="60" height="20" />
                                         </div>
-                                        <span class="payment-brand" style="color: white;">Zota MG v1.0</span>
+                                        <span class="payment-brand" style="color: white;">Zota MG APMs</span>
                                     </label>
                                 </div>
 
@@ -566,6 +566,23 @@
     </div>
 </div>
 
+<!-- Zota MG Modal -->
+<div id="zota-modal" class="luxtak-modal" style="display:none;">
+    <div class="luxtak-modal-content">
+        <div class="luxtak-modal-header">
+            <h3 id="zota-modal-title">Open Zota MG</h3>
+        </div>
+        <div class="luxtak-modal-body">
+            <p id="zota-modal-message">Zota MG will open in a new tab. Continue?</p>
+            <div id="zota-error" class="text-danger" style="display:none;"></div>
+        </div>
+        <div class="luxtak-modal-footer">
+            <button id="zota-ok-btn" class="btn-ok">OK</button>
+            <button id="zota-cancel-btn" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+    
+</div>
 <!-- Loading Overlay -->
 <div id="loading-overlay" class="loading-overlay" style="display: none;">
     <div class="loading-content">
@@ -1474,6 +1491,11 @@
                 showNuveiPreModal(e.target);
                 return;
             }
+            if (selectedPaymentMethod === 'zmg') {
+                e.preventDefault();
+                handleZotaPayment(e.target);
+                return;
+            }
             
             // Check if form is valid before showing loading overlay
             const form = e.target;
@@ -1584,6 +1606,48 @@
                 showLuxtakModal('Network error occurred. Please try again.', false);
             }
         }
+        // Zota handler (AJAX)
+        async function handleZotaPayment(form){
+            const amountInput = document.querySelector('[name="ZotaAmount"]') || document.querySelector('[name="Amount"]');
+            const currencySelect = document.querySelector('[name="ZotaCurrency"]') || document.querySelector('[name="Currency"]');
+            if(!amountInput?.value || !currencySelect?.value){ alert('Please provide amount and currency for Zota MG.'); return; }
+            try{
+                const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                const resp = await fetch('/Zota/Create', {
+                    method:'POST',
+                    headers:{ 'Content-Type':'application/json', ...(antiForgery? { 'RequestVerificationToken': antiForgery }: {}) },
+                    credentials:'same-origin',
+                    body: JSON.stringify({ amount: parseFloat(amountInput.value), currency: currencySelect.value })
+                });
+                const data = await resp.json();
+                if(!data?.success || !data?.depositUrl){
+                    showZotaModal(null, data?.message || 'Failed to get a deposit URL from Zota.');
+                    return;
+                }
+                showZotaModal(data.depositUrl, null);
+            } catch(err){
+                console.error('Zota MG error', err);
+                showZotaModal(null, 'Unexpected error. Please try again.');
+            }
+        }
+
+        function showZotaModal(depositUrl, errMsg){
+            const modal = document.getElementById('zota-modal');
+            if(!modal){ if(depositUrl) window.open(depositUrl,'_blank','noopener'); return; }
+            const msg = document.getElementById('zota-modal-message');
+            const err = document.getElementById('zota-error');
+            const ok = document.getElementById('zota-ok-btn');
+            const cancel = document.getElementById('zota-cancel-btn');
+            err.style.display = errMsg ? 'block' : 'none';
+            err.textContent = errMsg || '';
+            msg.textContent = errMsg ? 'Could not open Zota MG' : 'Zota MG will open in a new tab. Continue?';
+            ok.onclick = () => { modal.style.display = 'none'; if(depositUrl){ window.open(depositUrl,'_blank','noopener'); }};
+            cancel.onclick = () => { modal.style.display = 'none'; };
+            modal.style.display = 'flex';
+        }
+
+        window.handleZotaPayment = handleZotaPayment;
+        window.showZotaModal = showZotaModal;
 
         // Show pre-request Nuvei modal
         function showNuveiPreModal(form) {

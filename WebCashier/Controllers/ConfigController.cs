@@ -161,6 +161,30 @@ namespace WebCashier.Controllers
             return RedirectToAction(nameof(Luxtak));
         }
 
+        // Zota MG
+        [HttpGet]
+        public IActionResult Zota()
+        {
+            var model = Prefill(new[]
+            {
+                "Zota:EndpointID","Zota:MerchantSecretKey","Zota:RedirectUrl","Zota:CallbackUrl","Zota:CheckoutUrl","Zota:CustomerEmail","Zota:orderCurrency"
+            });
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SaveZota([FromForm] Dictionary<string, string?> form)
+        {
+            var allowed = new[]
+            {
+                "Zota:EndpointID","Zota:MerchantSecretKey","Zota:RedirectUrl","Zota:CallbackUrl","Zota:CheckoutUrl","Zota:CustomerEmail","Zota:orderCurrency"
+            };
+            SaveAllowed(form, allowed);
+            TempData["Saved"] = true;
+            return RedirectToAction(nameof(Zota));
+        }
+
         private IDictionary<string, string?> Prefill(IEnumerable<string> keys)
         {
             var dict = new Dictionary<string, string?>();

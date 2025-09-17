@@ -22,6 +22,9 @@ builder.Services.AddControllersWithViews(options =>
     }
 });
 builder.Services.AddAntiforgery();
+builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<WebCashier.Services.ZotaService>();
+builder.Services.AddScoped<WebCashier.Services.IZotaService, WebCashier.Services.ZotaService>();
 // Persistent runtime config (JSON file). For Render ephemeral FS, consider mounting a persistent disk.
 builder.Services.AddSingleton<IRuntimeConfigStore>(_ =>
 {

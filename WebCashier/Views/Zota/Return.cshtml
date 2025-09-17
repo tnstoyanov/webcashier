@@ -1,0 +1,62 @@
+@model WebCashier.Controllers.ZotaReturnViewModel
+@{
+    ViewData["Title"] = "Zota Return";
+    string status = Model.Status ?? string.Empty;
+    string statusClass = string.Equals(status, "APPROVED", System.StringComparison.OrdinalIgnoreCase) ? "status-approved" :
+                         string.Equals(status, "PROCESSING", System.StringComparison.OrdinalIgnoreCase) ? "status-processing" : "status-declined";
+}
+<style>
+.return-hero { position:relative; padding:2.5rem 2rem; border-radius:1.25rem; background:linear-gradient(135deg,#0C0B42, #2B2A74); color:#fff; overflow:hidden; box-shadow:0 12px 28px -10px rgba(0,0,0,.35); }
+.return-hero h1{ margin:0 0 .25rem; font-weight:700; font-size:1.75rem; }
+.status-pill { display:inline-block; padding:.35rem .8rem; border-radius:999px; font-size:.75rem; font-weight:700; letter-spacing:.6px; backdrop-filter: blur(2px); background:rgba(255,255,255,.16); }
+.status-approved{ color:#18d36e; }
+.status-processing{ color:#3ea7ff; }
+.status-declined{ color:#ff4d4f; }
+.summary-card{ background:#fff; border-radius:1rem; margin-top:-1.5rem; padding:1.5rem; box-shadow:0 10px 24px -12px rgba(0,0,0,.2); }
+.row-item{ display:flex; gap:1rem; padding:.6rem 0; border-bottom:1px dashed #e8e8ef; }
+.row-item:last-child{ border-bottom:none; }
+.row-item .label{ width:220px; font-weight:600; color:#555; text-transform:uppercase; letter-spacing:.5px; font-size:.8rem; }
+.row-item .value{ flex:1; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color:#222; }
+.value .strong{ font-weight:700; }
+.value .danger{ color:#ff4d4f; font-weight:700; }
+.actions{ margin-top:1rem; display:flex; gap:.75rem; }
+</style>
+<div class="container py-5">
+  <div class="return-hero">
+    <span class="status-pill @statusClass">@(!string.IsNullOrEmpty(Model.Status) ? Model.Status : "STATUS UNKNOWN")</span>
+    <h1>Zota MG Result</h1>
+    <p class="m-0">We received a response from Zota. Details below.</p>
+  </div>
+  <div class="summary-card">
+    <div class="row-item">
+      <div class="label">errorMessage</div>
+      <div class="value">@{ if (!string.IsNullOrEmpty(Model.ErrorMessage)) { <span class="danger">@Model.ErrorMessage</span>; } else { <span>-</span>; } }</div>
+    </div>
+    <div class="row-item">
+      <div class="label">merchantOrderID</div>
+      <div class="value"><span class="strong">@(!string.IsNullOrEmpty(Model.MerchantOrderID) ? Model.MerchantOrderID : "-")</span></div>
+    </div>
+    <div class="row-item">
+      <div class="label">orderID</div>
+      <div class="value"><span class="strong">@(!string.IsNullOrEmpty(Model.OrderID) ? Model.OrderID : "-")</span></div>
+    </div>
+    <div class="row-item">
+      <div class="label">status</div>
+      <div class="value">
+        @if (string.Equals(Model.Status, "APPROVED", System.StringComparison.OrdinalIgnoreCase)) {
+            <span class="strong status-approved">@Model.Status</span>
+        } else if (string.Equals(Model.Status, "PROCESSING", System.StringComparison.OrdinalIgnoreCase)) {
+            <span class="strong status-processing">@Model.Status</span>
+        } else if (!string.IsNullOrEmpty(Model.Status)) {
+            <span class="strong status-declined">@Model.Status</span>
+        } else {
+            <span>-</span>
+        }
+      </div>
+    </div>
+    <div class="actions">
+      <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Home</a>
+      <a asp-controller="Payment" asp-action="Index" class="btn btn-primary">Make Another Payment</a>
+    </div>
+  </div>
+</div>
