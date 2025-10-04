@@ -143,10 +143,10 @@ body {
   flex: 1;
   min-width: 0;
   touch-action: pan-y; /* Allow vertical scrolling but handle horizontal gestures */
-  user-select: none; /* Prevent text selection during swipes */
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+  user-select: none; /* Prevent text selection during swipes */
 }
 
 .carousel-track {

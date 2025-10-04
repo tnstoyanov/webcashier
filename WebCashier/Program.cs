@@ -171,8 +171,42 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
     handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
     handler.CheckCertificateRevocationList = false;
     handler.UseCookies = false;
+    try
+    {
+        // Load client certificate for mTLS (PEM + private key)
+        var contentRoot = builder.Environment.ContentRootPath;
+        var certDir = Path.Combine(contentRoot, "..", "cert");
+        // Try repo root /cert first, then app contentRoot/cert
+        string pemPath = Path.Combine(certDir, "certificate.pem");
+        string keyPath = Path.Combine(certDir, "private.key");
+        if (!File.Exists(pemPath) || !File.Exists(keyPath))
+        {
+            certDir = Path.Combine(contentRoot, "cert");
+            pemPath = Path.Combine(certDir, "certificate.pem");
+            keyPath = Path.Combine(certDir, "private.key");
+        }
+        if (File.Exists(pemPath) && File.Exists(keyPath))
+        {
+            var pem = File.ReadAllText(pemPath);
+            var key = File.ReadAllText(keyPath);
+            var cert = System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPem(pem, key);
+            // Ensure private key is exportable for some handlers
+            cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(cert.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs12));
+            handler.ClientCertificates.Add(cert);
+            Console.WriteLine($"[SwiftGoldPay] Loaded client certificate from: {pemPath}");
+        }
+        else
+        {
+            Console.WriteLine("[SwiftGoldPay] Client certificate not found. Place certificate.pem and private.key under /cert");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("[SwiftGoldPay] Failed to load client certificate: " + ex.Message);
+    }
     if (builder.Environment.IsDevelopment())
     {
+        // Trust any server cert in dev only; does not affect presenting our client cert
         handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
     }
     return handler;

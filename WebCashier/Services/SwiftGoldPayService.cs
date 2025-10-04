@@ -59,7 +59,45 @@ public class SwiftGoldPayService : ISwiftGoldPayService
         var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
         // Signature rule: not specified in full; infer pattern: SHA256(client_id+client_secret+client_ref_id+x-apigw-api-id+x-timestamp+method+path)
         // We'll use method and path only as per examples; if spec differs, adjust easily.
-        var path = req.RequestUri!.PathAndQuery;
+        // Handle relative URIs safely (PathAndQuery throws for relative URIs)
+        Uri? fullUri = null;
+        if (req.RequestUri != null)
+        {
+            if (req.RequestUri.IsAbsoluteUri)
+            {
+                fullUri = req.RequestUri;
+            }
+            else if (_http.BaseAddress != null)
+            {
+                fullUri = new Uri(_http.BaseAddress, req.RequestUri.ToString());
+            }
+        }
+            string path; 
+            if (req.RequestUri is null)
+            {
+                path = "/";
+            }
+            else if (req.RequestUri.IsAbsoluteUri)
+            {
+                path = req.RequestUri.PathAndQuery;
+            }
+            else
+            {
+                var s = req.RequestUri.OriginalString;
+                if (!s.StartsWith("/")) s = "/" + s;
+                path = s;
+            }
+        if (fullUri != null && fullUri.IsAbsoluteUri)
+        {
+            // Use AbsolutePath + Query to avoid PathAndQuery on any potential relative URI
+            path = fullUri.AbsolutePath + fullUri.Query;
+        }
+        else
+        {
+            var raw = req.RequestUri?.ToString() ?? string.Empty;
+            // Ensure it starts with '/'
+            path = string.IsNullOrEmpty(raw) ? "/" : (raw.StartsWith('/') ? raw : "/" + raw);
+        }
         var method = req.Method.Method.ToUpperInvariant();
         var sigPayload = string.Concat(clientId, clientSecret, clientRefId, apiId, ts, method, path);
         var signature = ComputeSha256Hex(sigPayload);
