@@ -67,3 +67,15 @@ button.accept-policy {
   white-space: pre; /* keep spaces as-is */
   overflow-x: auto;
 }
+
+/* SwiftGoldPay styles */
+.swiftgoldpay-icon img {
+  width: 60px;
+  height: 30px;
+  object-fit: contain;
+}
+.swiftgoldpay-logo-large img {
+  width: 150px;
+  height: auto;
+  object-fit: contain;
+}

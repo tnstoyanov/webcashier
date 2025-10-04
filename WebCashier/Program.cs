@@ -159,6 +159,25 @@ builder.Services.AddHttpClient<ISmilepayzService, SmilepayzService>(client =>
 builder.Services.AddSingleton<INuveiService, NuveiService>();
 builder.Services.AddHttpContextAccessor();
 
+// SwiftGoldPay service
+builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(40);
+    client.DefaultRequestHeaders.Add("User-Agent", "WebCashier/1.0");
+})
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    var handler = new HttpClientHandler();
+    handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+    handler.CheckCertificateRevocationList = false;
+    handler.UseCookies = false;
+    if (builder.Environment.IsDevelopment())
+    {
+        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+    }
+    return handler;
+});
+
 // Configure Kestrel differently for development vs production
 if (builder.Environment.IsDevelopment())
 {
