@@ -195,9 +195,11 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
             try
             {
                 var pwd = Environment.GetEnvironmentVariable("CERT_PFX_PASSWORD");
+                #pragma warning disable SYSLIB0057
                 X509Certificate2 cert = string.IsNullOrEmpty(pwd)
-                    ? System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12FromFile(pfxPath)
-                    : System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12FromFile(pfxPath, pwd);
+                    ? new X509Certificate2(pfxPath)
+                    : new X509Certificate2(pfxPath, pwd, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                #pragma warning restore SYSLIB0057
                 handler.ClientCertificates.Add(cert);
                 handler.ClientCertificateOptions = ClientCertificateOption.Manual;
                 Console.WriteLine($"[SwiftGoldPay] Loaded client PFX certificate from: {pfxPath}");
@@ -224,7 +226,9 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                     // Load from PEM files and re-wrap as PKCS#12 for compatibility
                     var cert = X509Certificate2.CreateFromPemFile(pemPathTry, keyPathTry);
                     var pfxBytes = cert.Export(X509ContentType.Pkcs12);
-                    cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(pfxBytes);
+                    #pragma warning disable SYSLIB0057
+                    cert = new X509Certificate2(pfxBytes, (string?)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                    #pragma warning restore SYSLIB0057
                     handler.ClientCertificates.Add(cert);
                     handler.ClientCertificateOptions = ClientCertificateOption.Manual;
                     Console.WriteLine($"[SwiftGoldPay] Loaded client certificate from: {pemPathTry}");
@@ -256,9 +260,25 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
             {
                 try
                 {
-                    // Try PEM first, then DER/CER
-                    try { pinned = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadCertificateFromPemFile(pinnedPath); }
-                    catch { pinned = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadCerFromFile(pinnedPath); }
+                    // Try DER/CER first, then PEM text content
+                    try
+                    {
+                        #pragma warning disable SYSLIB0057
+                        pinned = new X509Certificate2(pinnedPath);
+                        #pragma warning restore SYSLIB0057
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            var pemText = File.ReadAllText(pinnedPath);
+                            pinned = X509Certificate2.CreateFromPem(pemText);
+                        }
+                        catch
+                        {
+                            pinned = null;
+                        }
+                    }
                     Console.WriteLine($"[SwiftGoldPay] Loaded pinned server certificate from: {pinnedPath}");
                 }
                 catch (Exception ex)
@@ -482,7 +502,9 @@ app.MapGet("/diag/sgp-cert", () =>
         }
     var cert = X509Certificate2.CreateFromPemFile(pemPath, keyPath);
     var pfx = cert.Export(X509ContentType.Pkcs12);
-    cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(pfx);
+    #pragma warning disable SYSLIB0057
+    cert = new X509Certificate2(pfx, (string?)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+    #pragma warning restore SYSLIB0057
         var info = new
         {
             found = true,
