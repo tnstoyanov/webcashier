@@ -118,11 +118,8 @@ public class SwiftGoldPayService : ISwiftGoldPayService
         req.Headers.Remove("x-timestamp");
         req.Headers.Remove("x-signature");
         req.Headers.Add("client_id", clientId);
-        // Only send client_secret for the token call; omit when bearer is present
-        if (string.IsNullOrEmpty(bearer))
-        {
-            req.Headers.Add("client_secret", clientSecret);
-        }
+        // Include client_secret on all calls (token and subsequent endpoints)
+        req.Headers.Add("client_secret", clientSecret);
         req.Headers.Add("client_ref_id", clientRefId);
         req.Headers.Add("x-apigw-api-id", apiId);
         req.Headers.Add("x-timestamp", ts);
@@ -194,7 +191,14 @@ public class SwiftGoldPayService : ISwiftGoldPayService
         var path = $"/api/opay/v1.0/partner/bank?country={Uri.EscapeDataString(country)}";
         var req = new HttpRequestMessage(HttpMethod.Get, path);
         ApplyDefaultHeaders(req, bearerToken);
-        await _log.LogAsync("SwiftGoldPay.Banks.Request", new { url = req.RequestUri!.ToString() });
+        // Ensure Content-Type header like Postman; attach a zero-length body to avoid proxies stripping headers
+        var empty = new ByteArrayContent(Array.Empty<byte>());
+        empty.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        req.Content = empty;
+        // Debug log timestamp and signature
+        var ts = req.Headers.TryGetValues("x-timestamp", out var tsVals) ? tsVals.FirstOrDefault() : null;
+        var sig = req.Headers.TryGetValues("x-signature", out var sigVals) ? sigVals.FirstOrDefault() : null;
+        await _log.LogAsync("SwiftGoldPay.Banks.Request", new { url = req.RequestUri!.ToString(), timestamp = ts, signature = sig });
         using var resp = await _http.SendAsync(req, ct);
         var text = await resp.Content.ReadAsStringAsync(ct);
         await _log.LogAsync("SwiftGoldPay.Banks.Response", new { status = (int)resp.StatusCode, text });
