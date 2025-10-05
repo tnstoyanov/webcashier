@@ -53,6 +53,15 @@ public class SwiftGoldPayService : ISwiftGoldPayService
         return sb.ToString();
     }
 
+    private static string ComputeHmacSha256Hex(string message, string secret)
+    {
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var sig = hmac.ComputeHash(Encoding.UTF8.GetBytes(message));
+        var sb = new StringBuilder(sig.Length * 2);
+        foreach (var b in sig) sb.Append(b.ToString("x2"));
+        return sb.ToString();
+    }
+
     private void ApplyDefaultHeaders(HttpRequestMessage req, string? bearer = null)
     {
         var (apiId, clientId, clientSecret, clientRefId) = GetCreds();
@@ -109,7 +118,11 @@ public class SwiftGoldPayService : ISwiftGoldPayService
         req.Headers.Remove("x-timestamp");
         req.Headers.Remove("x-signature");
         req.Headers.Add("client_id", clientId);
-        req.Headers.Add("client_secret", clientSecret);
+        // Only send client_secret for the token call; omit when bearer is present
+        if (string.IsNullOrEmpty(bearer))
+        {
+            req.Headers.Add("client_secret", clientSecret);
+        }
         req.Headers.Add("client_ref_id", clientRefId);
         req.Headers.Add("x-apigw-api-id", apiId);
         req.Headers.Add("x-timestamp", ts);
@@ -120,12 +133,44 @@ public class SwiftGoldPayService : ISwiftGoldPayService
         }
     }
 
+    // Token endpoint signature per Postman script:
+    // x-signature = HMAC_SHA256(client_id + timestamp + JSON.stringify({}), client_secret)
+    private void ApplyTokenHeaders(HttpRequestMessage req)
+    {
+        var (apiId, clientId, clientSecret, clientRefId) = GetCreds();
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        const string bodyForSigning = "{}"; // per spec, request body used for signing is an empty JSON object
+        var dataToSign = string.Concat(clientId, ts, bodyForSigning);
+        var signature = ComputeHmacSha256Hex(dataToSign, clientSecret);
+
+        req.Headers.Remove("client_id");
+        req.Headers.Remove("client_secret");
+        req.Headers.Remove("client_ref_id");
+        req.Headers.Remove("x-apigw-api-id");
+        req.Headers.Remove("x-timestamp");
+        req.Headers.Remove("x-signature");
+
+        req.Headers.Add("client_id", clientId);
+        req.Headers.Add("client_secret", clientSecret);
+        req.Headers.Add("client_ref_id", clientRefId);
+        req.Headers.Add("x-apigw-api-id", apiId);
+        req.Headers.Add("x-timestamp", ts);
+        req.Headers.Add("x-signature", signature);
+        // Content-Type is set on the HttpContent below
+    }
+
     public async Task<(bool ok, string? token, string? error, object? raw)> GetTokenAsync(CancellationToken ct = default)
     {
         var req = new HttpRequestMessage(HttpMethod.Post, "/api/oauth/v1.0/partner/token");
-        ApplyDefaultHeaders(req);
-        req.Content = new StringContent("", Encoding.UTF8, "application/json");
-    await _log.LogAsync("SwiftGoldPay.Token.Request", new { url = req.RequestUri!.ToString(), method = req.Method.Method });
+        ApplyTokenHeaders(req);
+        // Intentionally send a zero-length body with Content-Type: application/json (no charset)
+        var empty = new ByteArrayContent(Array.Empty<byte>());
+        empty.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        req.Content = empty;
+        // For troubleshooting, surface timestamp and signature (no secrets)
+        var ts = req.Headers.TryGetValues("x-timestamp", out var tsVals) ? tsVals.FirstOrDefault() : null;
+        var sig = req.Headers.TryGetValues("x-signature", out var sigVals) ? sigVals.FirstOrDefault() : null;
+        await _log.LogAsync("SwiftGoldPay.Token.Request", new { url = req.RequestUri!.ToString(), method = req.Method.Method, timestamp = ts, signature = sig });
         using var resp = await _http.SendAsync(req, ct);
         var text = await resp.Content.ReadAsStringAsync(ct);
         await _log.LogAsync("SwiftGoldPay.Token.Response", new { status = (int)resp.StatusCode, text });
