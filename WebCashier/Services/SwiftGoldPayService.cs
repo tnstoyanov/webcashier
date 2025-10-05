@@ -62,14 +62,15 @@ public class SwiftGoldPayService : ISwiftGoldPayService
         return sb.ToString();
     }
 
-    private void ApplyDefaultHeaders(HttpRequestMessage req, string? bearer = null)
+    private void ApplyDefaultHeaders(HttpRequestMessage req, string? bearer = null, string? bodyForSigning = null)
     {
         var (apiId, clientId, clientSecret, clientRefId) = GetCreds();
         var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        // Per Postman script for non-OAuth calls (including GET bank),
-        // x-signature = HMAC_SHA256(client_id + timestamp + JSON.stringify({}), client_secret)
-        const string bodyForSigning = "{}";
-        var sigPayload = string.Concat(clientId, ts, bodyForSigning);
+        // Per Postman script for non-OAuth calls,
+        // x-signature = HMAC_SHA256(client_id + timestamp + BODY, client_secret)
+        // BODY rules: GET/HEAD -> '{}'; JSON POST -> minified JSON body
+        var bodySigned = bodyForSigning ?? "{}";
+        var sigPayload = string.Concat(clientId, ts, bodySigned);
         var signature = ComputeHmacSha256Hex(sigPayload, clientSecret);
 
         req.Headers.Remove("client_id");
@@ -151,7 +152,7 @@ public class SwiftGoldPayService : ISwiftGoldPayService
     {
         var path = $"/api/opay/v1.0/partner/bank?country={Uri.EscapeDataString(country)}";
         var req = new HttpRequestMessage(HttpMethod.Get, path);
-        ApplyDefaultHeaders(req, bearerToken);
+        ApplyDefaultHeaders(req, bearerToken, "{}");
         // Ensure Content-Type header like Postman; attach a zero-length body to avoid proxies stripping headers
         var empty = new ByteArrayContent(Array.Empty<byte>());
         empty.Headers.ContentType = new MediaTypeHeaderValue("application/json");
@@ -193,7 +194,6 @@ public class SwiftGoldPayService : ISwiftGoldPayService
     {
         var path = "/api/opay/v1.0/partner/customers";
         var req = new HttpRequestMessage(HttpMethod.Post, path);
-        ApplyDefaultHeaders(req, bearerToken);
         var body = new
         {
             currency,
@@ -206,9 +206,14 @@ public class SwiftGoldPayService : ISwiftGoldPayService
             bank_account_number = bankAccountNumber,
             customer_ref = customerRef
         };
-        var jsonBody = JsonSerializer.Serialize(body, _jsonOpts);
+        var jsonBody = JsonSerializer.Serialize(body, _jsonOpts); // minified JSON
+        // Sign with minified JSON body
+        ApplyDefaultHeaders(req, bearerToken, jsonBody);
         req.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-        await _log.LogAsync("SwiftGoldPay.Customer.Request", new { url = req.RequestUri!.ToString(), body });
+        // Debug ts/sig
+        var ts = req.Headers.TryGetValues("x-timestamp", out var tsVals) ? tsVals.FirstOrDefault() : null;
+        var sig = req.Headers.TryGetValues("x-signature", out var sigVals) ? sigVals.FirstOrDefault() : null;
+        await _log.LogAsync("SwiftGoldPay.Customer.Request", new { url = req.RequestUri!.ToString(), body, timestamp = ts, signature = sig });
         using var resp = await _http.SendAsync(req, ct);
         var text = await resp.Content.ReadAsStringAsync(ct);
         await _log.LogAsync("SwiftGoldPay.Customer.Response", new { status = (int)resp.StatusCode, text });
@@ -236,11 +241,14 @@ public class SwiftGoldPayService : ISwiftGoldPayService
     {
         var path = "/api/opay/v1.0/partner/deposits";
         var req = new HttpRequestMessage(HttpMethod.Post, path);
-        ApplyDefaultHeaders(req, bearerToken);
         var body = new { customer_id = customerId, amount, ref_no = refNo };
-        var jsonBody = JsonSerializer.Serialize(body, _jsonOpts);
+        var jsonBody = JsonSerializer.Serialize(body, _jsonOpts); // minified JSON
+        // Sign with minified JSON body
+        ApplyDefaultHeaders(req, bearerToken, jsonBody);
         req.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-        await _log.LogAsync("SwiftGoldPay.Deposit.Request", new { url = req.RequestUri!.ToString(), body });
+        var ts = req.Headers.TryGetValues("x-timestamp", out var tsVals) ? tsVals.FirstOrDefault() : null;
+        var sig = req.Headers.TryGetValues("x-signature", out var sigVals) ? sigVals.FirstOrDefault() : null;
+        await _log.LogAsync("SwiftGoldPay.Deposit.Request", new { url = req.RequestUri!.ToString(), body, timestamp = ts, signature = sig });
         using var resp = await _http.SendAsync(req, ct);
         var text = await resp.Content.ReadAsStringAsync(ct);
         await _log.LogAsync("SwiftGoldPay.Deposit.Response", new { status = (int)resp.StatusCode, text });
