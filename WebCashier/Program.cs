@@ -22,6 +22,21 @@ builder.Services.AddControllersWithViews(options =>
     }
 });
 builder.Services.AddAntiforgery();
+// Persist DataProtection keys so antiforgery tokens can be decrypted across restarts/instances
+try
+{
+    var dataDir = Environment.GetEnvironmentVariable("DATA_DIR") ?? AppContext.BaseDirectory;
+    var keysPath = Path.Combine(dataDir, "data-protection-keys");
+    if (!Directory.Exists(keysPath)) Directory.CreateDirectory(keysPath);
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
+        .SetApplicationName("WebCashier");
+    Console.WriteLine($"[Startup] DataProtection keys path: {keysPath}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[Startup] Failed to configure DataProtection persistence: {ex.Message}");
+}
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<WebCashier.Services.ZotaService>();
 builder.Services.AddScoped<WebCashier.Services.IZotaService, WebCashier.Services.ZotaService>();

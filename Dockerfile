@@ -20,8 +20,11 @@ RUN dotnet publish "WebCashier.csproj" -c Release -o /app/publish /p:UseAppHost=
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+## Include certificates in container at /cert (client and optional pinned server cert)
+COPY cert /cert
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:8080
 RUN adduser --disabled-password --home /app --gecos '' appuser && chown -R appuser /app
+RUN chown -R appuser /cert || true
 USER appuser
 ENTRYPOINT ["dotnet", "WebCashier.dll"]
