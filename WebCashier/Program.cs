@@ -155,11 +155,7 @@ builder.Services.AddHttpClient<ISmilepayzService, SmilepayzService>(client =>
     return handler;
 });
 
-// Nuvei service (no outbound HTTP needed yet; form generation only)
-builder.Services.AddSingleton<INuveiService, NuveiService>();
-builder.Services.AddHttpContextAccessor();
-
-// SwiftGoldPay service
+// SwiftGoldPay service with mTLS and optional pinning
 builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(40);
@@ -171,44 +167,155 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
     handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
     handler.CheckCertificateRevocationList = false;
     handler.UseCookies = false;
+
     try
     {
-        // Load client certificate for mTLS (PEM + private key)
-        var contentRoot = builder.Environment.ContentRootPath;
-        var certDir = Path.Combine(contentRoot, "..", "cert");
-        // Try repo root /cert first, then app contentRoot/cert
-        string pemPath = Path.Combine(certDir, "certificate.pem");
-        string keyPath = Path.Combine(certDir, "private.key");
-        if (!File.Exists(pemPath) || !File.Exists(keyPath))
+        var searchDirs = new List<string?>
         {
-            certDir = Path.Combine(contentRoot, "cert");
-            pemPath = Path.Combine(certDir, "certificate.pem");
-            keyPath = Path.Combine(certDir, "private.key");
+            Environment.GetEnvironmentVariable("CERT_DIR"),
+            Path.Combine(builder.Environment.ContentRootPath, "cert"),
+            Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "cert")),
+            "/cert"
+        };
+        string? foundDir = null;
+
+        // Prefer PFX if provided (more portable)
+        string? pfxPath = Environment.GetEnvironmentVariable("CERT_PFX_PATH");
+        if (string.IsNullOrWhiteSpace(pfxPath))
+        {
+            foreach (var dir in searchDirs)
+            {
+                if (string.IsNullOrWhiteSpace(dir)) continue;
+                var pfxTry = Path.Combine(dir, "client.pfx");
+                if (File.Exists(pfxTry)) { pfxPath = pfxTry; foundDir = dir; break; }
+            }
         }
-        if (File.Exists(pemPath) && File.Exists(keyPath))
+        if (!string.IsNullOrWhiteSpace(pfxPath) && File.Exists(pfxPath))
         {
-            var pem = File.ReadAllText(pemPath);
-            var key = File.ReadAllText(keyPath);
-            var cert = System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPem(pem, key);
-            // Ensure private key is exportable for some handlers
-            cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(cert.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs12));
-            handler.ClientCertificates.Add(cert);
-            Console.WriteLine($"[SwiftGoldPay] Loaded client certificate from: {pemPath}");
+            try
+            {
+                var pwd = Environment.GetEnvironmentVariable("CERT_PFX_PASSWORD");
+                X509Certificate2 cert = string.IsNullOrEmpty(pwd)
+                    ? System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12FromFile(pfxPath)
+                    : System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12FromFile(pfxPath, pwd);
+                handler.ClientCertificates.Add(cert);
+                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                Console.WriteLine($"[SwiftGoldPay] Loaded client PFX certificate from: {pfxPath}");
+                Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
+                Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
+                foundDir ??= Path.GetDirectoryName(pfxPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SwiftGoldPay] Failed to load PFX: {ex.Message}. Falling back to PEM if available.");
+            }
         }
-        else
+
+        // Fallback: PEM + private key
+        if (handler.ClientCertificates.Count == 0)
         {
-            Console.WriteLine("[SwiftGoldPay] Client certificate not found. Place certificate.pem and private.key under /cert");
+            foreach (var dir in searchDirs)
+            {
+                if (string.IsNullOrWhiteSpace(dir)) continue;
+                var pemPathTry = Path.Combine(dir, "certificate.pem");
+                var keyPathTry = Path.Combine(dir, "private.key");
+                if (File.Exists(pemPathTry) && File.Exists(keyPathTry))
+                {
+                    // Load from PEM files and re-wrap as PKCS#12 for compatibility
+                    var cert = X509Certificate2.CreateFromPemFile(pemPathTry, keyPathTry);
+                    var pfxBytes = cert.Export(X509ContentType.Pkcs12);
+                    cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(pfxBytes);
+                    handler.ClientCertificates.Add(cert);
+                    handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                    Console.WriteLine($"[SwiftGoldPay] Loaded client certificate from: {pemPathTry}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
+                    foundDir = dir;
+                    break;
+                }
+            }
+        }
+        if (foundDir == null)
+        {
+            Console.WriteLine("[SwiftGoldPay] Client certificate not found. Place certificate.pem and private.key under /cert or set CERT_DIR.");
+        }
+
+        if (!builder.Environment.IsDevelopment())
+        {
+            var insecure = string.Equals(Environment.GetEnvironmentVariable("SGP_INSECURE_SKIP_VERIFY"), "true", StringComparison.OrdinalIgnoreCase);
+            // Optional server cert pinning to work around UntrustedRoot in sandbox
+            string? pinnedPath = null;
+            foreach (var dir in searchDirs)
+            {
+                if (string.IsNullOrWhiteSpace(dir)) continue;
+                var p = Path.Combine(dir, "server.crt");
+                if (File.Exists(p)) { pinnedPath = p; break; }
+            }
+            X509Certificate2? pinned = null;
+            if (!string.IsNullOrEmpty(pinnedPath))
+            {
+                try
+                {
+                    // Try PEM first, then DER/CER
+                    try { pinned = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadCertificateFromPemFile(pinnedPath); }
+                    catch { pinned = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadCerFromFile(pinnedPath); }
+                    Console.WriteLine($"[SwiftGoldPay] Loaded pinned server certificate from: {pinnedPath}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SwiftGoldPay] Failed to load pinned server certificate: {ex.Message}");
+                }
+            }
+
+            handler.ServerCertificateCustomValidationCallback = (req, cert, chain, errors) =>
+            {
+                try
+                {
+                    var host = req?.RequestUri?.Host ?? string.Empty;
+                    if (host.Equals("sandbox-partner.swiftgoldpay.com", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (errors == SslPolicyErrors.None)
+                        {
+                            return true;
+                        }
+                        if (insecure)
+                        {
+                            Console.WriteLine("[SwiftGoldPay] Insecure: bypassing server certificate validation for sandbox-partner.swiftgoldpay.com due to SGP_INSECURE_SKIP_VERIFY=true");
+                            return true;
+                        }
+                        if (pinned != null && cert != null)
+                        {
+                            var presented = cert.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256).Replace(":", string.Empty, StringComparison.OrdinalIgnoreCase);
+                            var expected = pinned.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256).Replace(":", string.Empty, StringComparison.OrdinalIgnoreCase);
+                            if (string.Equals(presented, expected, StringComparison.OrdinalIgnoreCase))
+                            {
+                                Console.WriteLine("[SwiftGoldPay] Accepted server certificate via pinning (SHA256 thumbprint match).");
+                                return true;
+                            }
+                        }
+                        Console.WriteLine($"[SwiftGoldPay] Server certificate validation failed for {host}: {errors}");
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SwiftGoldPay] Server cert validation exception: {ex.Message}");
+                }
+                return errors == SslPolicyErrors.None;
+            };
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine("[SwiftGoldPay] Failed to load client certificate: " + ex.Message);
+        Console.WriteLine("[SwiftGoldPay] Error configuring HttpClient handler: " + ex.Message);
     }
+
     if (builder.Environment.IsDevelopment())
     {
         // Trust any server cert in dev only; does not affect presenting our client cert
         handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
     }
+
     return handler;
 });
 
@@ -339,6 +446,62 @@ app.MapGet("/diag/env", () =>
         dict[k] = Environment.GetEnvironmentVariable(k);
     }
     return Results.Ok(new { vars = dict, time = DateTime.UtcNow });
+});
+
+// SwiftGoldPay client certificate diagnostics (no secrets). Returns cert metadata if found.
+app.MapGet("/diag/sgp-cert", () =>
+{
+    try
+    {
+        var searchDirs = new List<string?>
+        {
+            Environment.GetEnvironmentVariable("CERT_DIR"),
+            Path.Combine(app.Environment.ContentRootPath, "cert"),
+            Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "cert")),
+            "/cert"
+        };
+        string? dirFound = null;
+        string? pemPath = null;
+        string? keyPath = null;
+        foreach (var dir in searchDirs)
+        {
+            if (string.IsNullOrWhiteSpace(dir)) continue;
+            var pemTry = Path.Combine(dir, "certificate.pem");
+            var keyTry = Path.Combine(dir, "private.key");
+            if (File.Exists(pemTry) && File.Exists(keyTry))
+            {
+                dirFound = dir;
+                pemPath = pemTry;
+                keyPath = keyTry;
+                break;
+            }
+        }
+        if (pemPath == null || keyPath == null)
+        {
+            return Results.Ok(new { found = false, message = "certificate.pem/private.key not found in search paths", searchDirs });
+        }
+    var cert = X509Certificate2.CreateFromPemFile(pemPath, keyPath);
+    var pfx = cert.Export(X509ContentType.Pkcs12);
+    cert = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(pfx);
+        var info = new
+        {
+            found = true,
+            dir = dirFound,
+            subject = cert.Subject,
+            issuer = cert.Issuer,
+            notBefore = cert.NotBefore,
+            notAfter = cert.NotAfter,
+            serialNumber = cert.SerialNumber,
+            thumbprintSHA1 = cert.Thumbprint,
+            thumbprintSHA256 = cert.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256),
+            hasPrivateKey = cert.HasPrivateKey
+        };
+        return Results.Ok(info);
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { found = false, error = ex.Message });
+    }
 });
 
 app.Run();
