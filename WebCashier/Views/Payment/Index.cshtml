@@ -450,6 +450,36 @@
                                     <label for="SwiftGoldPayBankAccount" class="form-label">Bank Account Number</label>
                                     <input id="SwiftGoldPayBankAccount" class="form-control" placeholder="Enter your bank account number" />
                                 </div>
+
+                                <!-- SwiftGoldPay Result (QR + Status) -->
+                                <div id="SwiftGoldPayResult" class="payment-info-card" style="display:none; margin-top: 16px;">
+                                    <p class="sgp-instruction" style="margin-bottom:8px; font-weight:600;">Please scan this code to finish your deposit.</p>
+                                    <div style="display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                                        <img id="SwiftGoldPayQr" alt="SwiftGoldPay QR" style="width:220px; height:220px; object-fit:contain; border:1px solid #e5e7eb; border-radius:8px; background:#fff;" />
+                                        <div style="flex:1; min-width:260px;">
+                                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                                                <button id="SwiftGoldPayCheckStatusBtn" type="button" class="deposit-btn" style="padding:10px 14px; height:auto;">Check Deposit Status</button>
+                                                <span id="SwiftGoldPayRef" style="font-size:12px; color:#6b7280;">Ref: <span id="SwiftGoldPayRefValue">-</span></span>
+                                            </div>
+                                            <div id="SwiftGoldPayStatusError" class="text-danger" style="display:none; font-weight:700;"></div>
+                                            <div id="SwiftGoldPayStatusTableWrap" style="display:none; overflow:auto; max-height:260px; border:1px solid #e5e7eb; border-radius:8px;">
+                                                <table id="SwiftGoldPayStatusTable" class="table" style="width:100%; margin:0;">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>UID</th>
+                                                            <th>Ref No</th>
+                                                            <th>Amount</th>
+                                                            <th>Currency</th>
+                                                            <th>Process</th>
+                                                            <th>Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="form-right">
@@ -1513,7 +1543,7 @@
             }
             if (selectedPaymentMethod === 'swiftgoldpay') {
                 e.preventDefault();
-                handleSwiftGoldPayFlow(e.target);
+                async function handleSwiftGoldPayFlow(form) {
                 return;
             }
             if (selectedPaymentMethod === 'zmg') {
@@ -1527,64 +1557,143 @@
             const isValid = form.checkValidity();
             
             if (isValid) {
-                // Show loading overlay
-                const loadingOverlay = document.getElementById('loading-overlay');
-                if (loadingOverlay) {
-                    loadingOverlay.style.display = 'flex';
-                }
-                
-                // Disable submit button to prevent double submission
-                const submitBtn = form.querySelector('.deposit-btn');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'PROCESSING...';
-                }
-            }
-        });
 
-        // Handle Luxtak payment with AJAX
-        async function handleLuxtakPayment(form) {
-            const luxtakAmountInput = document.querySelector('[name="LuxtakAmount"]');
-            const luxtakCurrencySelect = document.querySelector('[name="LuxtakCurrency"]');
-            
-            if (!luxtakAmountInput?.value || !luxtakCurrencySelect?.value) {
-                alert('Please fill in amount and currency for Luxtak payment');
-                return;
-            }
+                        showSwiftGoldPayModal(async () => {
+                            const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                            const depositBtn = document.getElementById('deposit-btn');
+                            if (depositBtn) { depositBtn.disabled = true; depositBtn.textContent = 'PROCESSING...'; }
+                            try {
+                                // Ensure token still valid
+                                if (!window._sgpToken) await ensureSwiftGoldPayInitialized();
 
-            // Show loading
-            const loadingOverlay = document.getElementById('loading-overlay');
-            if (loadingOverlay) {
-                loadingOverlay.style.display = 'flex';
-            }
+                                // 1) Create/Retrieve customer
+                                const resp1 = await fetch('/SwiftGoldPay/CreateCustomer', {
+                                    method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(antiForgery? { 'RequestVerificationToken': antiForgery } : {}) },
+                                    body: JSON.stringify({ token: window._sgpToken, bankCode: bankSel.value, bankAccountNumber: bankAcc.value })
+                                });
+                                const data1 = await resp1.json();
+                                if (!data1.success) {
+                                    const err = document.getElementById('SwiftGoldPayBanksError');
+                                    if (err) { err.style.display = 'block'; err.textContent = data1.error || 'Failed to create or retrieve the customer!'; }
+                                    return;
+                                }
+                                const customerId = data1.customerId;
 
-            try {
-                const formData = new FormData();
-                formData.append('PaymentMethod', 'luxtak');
-                formData.append('Amount', luxtakAmountInput.value);
-                formData.append('Currency', luxtakCurrencySelect.value);
-                
-                // Include anti-forgery token
-                const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]');
-                if (antiForgeryToken) {
-                    formData.append('__RequestVerificationToken', antiForgeryToken.value);
-                }
+                                // 2) Create deposit
+                                const resp2 = await fetch('/SwiftGoldPay/CreateDeposit', {
+                                    method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(antiForgery? { 'RequestVerificationToken': antiForgery } : {}) },
+                                    body: JSON.stringify({ token: window._sgpToken, customerId, amount: parseFloat(amountInput.value) })
+                                });
+                                const data2 = await resp2.json();
+                                if (!data2.success) {
+                                    const err = document.getElementById('SwiftGoldPayBanksError');
+                                    if (err) { err.style.display = 'block'; err.textContent = data2.error || 'Deposit failed!'; }
+                                    return;
+                                }
+                                // Render QR and controls on the page
+                                renderSwiftGoldPayDepositResult(data2);
+                            } catch (e) {
+                                const err = document.getElementById('SwiftGoldPayBanksError');
+                                if (err) { err.style.display = 'block'; err.textContent = 'Unexpected error: ' + (e.message||''); }
+                            } finally {
+                                if (depositBtn) { depositBtn.disabled = false; depositBtn.textContent = 'DEPOSIT'; }
+                            }
+                        });
 
-                console.log('Sending Luxtak payment request...', {
-                    method: 'POST',
-                    amount: luxtakAmountInput.value,
-                    currency: luxtakCurrencySelect.value
-                });
 
-                const response = await fetch('/Payment', {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin',
-                    body: formData
-                });
+                    function renderSwiftGoldPayDepositResult(apiResponse) {
+                        try {
+                            // apiResponse structure: { success: true, data: { status: {...}, data: {...} } }
+                            const payload = apiResponse?.data?.data || apiResponse?.data || {};
+                            const b64 = payload.base64 || payload.qr_base64 || payload.qrImageBase64 || '';
+                            const refNo = payload.ref_no || payload.refNo || '';
+                            const resultWrap = document.getElementById('SwiftGoldPayResult');
+                            const img = document.getElementById('SwiftGoldPayQr');
+                            const refSpan = document.getElementById('SwiftGoldPayRefValue');
+                            const errEl = document.getElementById('SwiftGoldPayStatusError');
+                            const tableWrap = document.getElementById('SwiftGoldPayStatusTableWrap');
+                            if (!resultWrap || !img) return;
+                            if (b64) {
+                                img.src = 'data:image/png;base64,' + b64;
+                            } else {
+                                img.removeAttribute('src');
+                            }
+                            if (refSpan) refSpan.textContent = refNo || '-';
+                            resultWrap.style.display = 'block';
+                            // cache last values for status check
+                            window._sgpLastRefNo = refNo;
+                            window._sgpLastCurrency = (document.querySelector('[name="SwiftGoldPayCurrency"]')?.value) || 'THB';
+                            if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+                            if (tableWrap) { tableWrap.style.display = 'none'; const tbody = document.querySelector('#SwiftGoldPayStatusTable tbody'); if (tbody) tbody.innerHTML = ''; }
+                            const btn = document.getElementById('SwiftGoldPayCheckStatusBtn');
+                            if (btn && !btn._sgpBound) {
+                                btn.addEventListener('click', checkSwiftGoldPayStatus);
+                                btn._sgpBound = true;
+                            }
+                        } catch (e) {
+                            const err = document.getElementById('SwiftGoldPayStatusError');
+                            if (err) { err.style.display = 'block'; err.textContent = 'Failed to render deposit result: ' + (e.message||''); }
+                        }
+                    }
 
+                    async function checkSwiftGoldPayStatus() {
+                        const errEl = document.getElementById('SwiftGoldPayStatusError');
+                        const tableWrap = document.getElementById('SwiftGoldPayStatusTableWrap');
+                        const tbody = document.querySelector('#SwiftGoldPayStatusTable tbody');
+                        try {
+                            const token = window._sgpToken;
+                            const refNo = window._sgpLastRefNo;
+                            const currency = window._sgpLastCurrency || 'THB';
+                            if (!token || !refNo) {
+                                if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Missing token or reference number.'; }
+                                return;
+                            }
+                            if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+                            const url = `/SwiftGoldPay/TxStatus?token=${encodeURIComponent(token)}&refNo=${encodeURIComponent(refNo)}&currency=${encodeURIComponent(currency)}`;
+                            const resp = await fetch(url, { method: 'GET', credentials: 'same-origin' });
+                            const data = await resp.json();
+                            if (!data.success) {
+                                if (errEl) { errEl.style.display = 'block'; errEl.textContent = data.error || 'Failed to get the deposit status!'; }
+                                if (tableWrap) tableWrap.style.display = 'none';
+                                return;
+                            }
+                            const items = data.items || [];
+                            renderSwiftGoldPayStatusTable(items);
+                        } catch (e) {
+                            if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Failed to get the deposit status! ' + (e.message||''); }
+                            if (tableWrap) tableWrap.style.display = 'none';
+                        }
+                    }
+
+                    function renderSwiftGoldPayStatusTable(items) {
+                        const tableWrap = document.getElementById('SwiftGoldPayStatusTableWrap');
+                        const tbody = document.querySelector('#SwiftGoldPayStatusTable tbody');
+                        if (!tbody || !tableWrap) return;
+                        tbody.innerHTML = '';
+                        try {
+                            items.forEach(it => {
+                                const tr = document.createElement('tr');
+                                const uid = (it?.uid ?? '').toString();
+                                const ref_no = (it?.ref_no ?? it?.refNo ?? '').toString();
+                                const amount = (it?.amount ?? '').toString();
+                                const currency = (it?.currency ?? '').toString();
+                                const process_type = (it?.process_type ?? it?.processType ?? '').toString();
+                                const status = (it?.status ?? '').toString();
+                                tr.innerHTML = `<td>${escapeHtml(uid)}</td>`+
+                                               `<td>${escapeHtml(ref_no)}</td>`+
+                                               `<td>${escapeHtml(amount)}</td>`+
+                                               `<td>${escapeHtml(currency)}</td>`+
+                                               `<td>${escapeHtml(process_type)}</td>`+
+                                               `<td>${escapeHtml(status)}</td>`;
+                                tbody.appendChild(tr);
+                            });
+                            tableWrap.style.display = items.length ? 'block' : 'none';
+                        } catch (e) {
+                            const err = document.getElementById('SwiftGoldPayStatusError');
+                            if (err) { err.style.display = 'block'; err.textContent = 'Failed to render status table: ' + (e.message||''); }
+                            tableWrap.style.display = 'none';
+                        }
+                    }
                 console.log('Response status:', response.status);
                 console.log('Response headers:', response.headers);
 

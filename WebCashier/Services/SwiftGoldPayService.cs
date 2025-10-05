@@ -275,4 +275,37 @@ public class SwiftGoldPayService : ISwiftGoldPayService
             return (false, null, text, null, "Invalid JSON from deposits endpoint");
         }
     }
+
+    public async Task<(bool ok, JsonArray? items, string? error, object? raw)> GetTransactionStatusAsync(
+        string refNo,
+        string currency,
+        string bearerToken,
+        CancellationToken ct = default)
+    {
+        var path = $"/api/opay/v1.0/partner/transactions?ref_no={Uri.EscapeDataString(refNo)}&currency={Uri.EscapeDataString(currency)}";
+        var req = new HttpRequestMessage(HttpMethod.Get, path);
+        ApplyDefaultHeaders(req, bearerToken, "{}");
+        var empty = new ByteArrayContent(Array.Empty<byte>());
+        empty.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        req.Content = empty;
+        var ts = req.Headers.TryGetValues("x-timestamp", out var tsVals) ? tsVals.FirstOrDefault() : null;
+        var sig = req.Headers.TryGetValues("x-signature", out var sigVals) ? sigVals.FirstOrDefault() : null;
+        await _log.LogAsync("SwiftGoldPay.TxStatus.Request", new { url = req.RequestUri!.ToString(), timestamp = ts, signature = sig });
+        using var resp = await _http.SendAsync(req, ct);
+        var text = await resp.Content.ReadAsStringAsync(ct);
+        await _log.LogAsync("SwiftGoldPay.TxStatus.Response", new { status = (int)resp.StatusCode, text });
+        try
+        {
+            var json = JsonNode.Parse(text) as JsonObject;
+            var statusCode = json?["status"]?["code"]?.GetValue<string>();
+            var msg = json?["status"]?["message"]?.GetValue<string>();
+            var data = json?["data"] as JsonArray;
+            var ok = resp.IsSuccessStatusCode && statusCode == "S-2000" && data != null;
+            return (ok, data, ok ? null : $"{statusCode} {msg}", json);
+        }
+        catch
+        {
+            return (false, null, "Invalid JSON from transactions endpoint", text);
+        }
+    }
 }

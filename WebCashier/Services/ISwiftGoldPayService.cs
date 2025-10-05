@@ -24,4 +24,10 @@ public interface ISwiftGoldPayService
         string refNo,
         string bearerToken,
         CancellationToken ct = default);
+
+    Task<(bool ok, JsonArray? items, string? error, object? raw)> GetTransactionStatusAsync(
+        string refNo,
+        string currency,
+        string bearerToken,
+        CancellationToken ct = default);
 }

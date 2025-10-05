@@ -92,4 +92,19 @@ public class SwiftGoldPayController : Controller
         // Response includes instructions; the user expects new tab to continue flow - here we just return raw data
         return Json(new { success = true, data = res.raw });
     }
+
+    [HttpGet("TxStatus")]
+    public async Task<IActionResult> TxStatus([FromQuery] string token, [FromQuery] string refNo, [FromQuery] string currency = "THB")
+    {
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(refNo) || string.IsNullOrWhiteSpace(currency))
+        {
+            return BadRequest(new { success = false, error = "Missing required fields" });
+        }
+        var res = await _svc.GetTransactionStatusAsync(refNo, currency, token, HttpContext.RequestAborted);
+        if (!res.ok)
+        {
+            return Json(new { success = false, error = $"Failed to get the deposit status! {res.error}" });
+        }
+        return Json(new { success = true, items = res.items });
+    }
 }
