@@ -188,11 +188,54 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
         var searchDirs = new List<string?>
         {
             Environment.GetEnvironmentVariable("CERT_DIR"),
-            Path.Combine(builder.Environment.ContentRootPath, "cert"),
+            Path.Combine(builder.Environment.ContentRootPath, "cert"), // repo-root/cert (Render native runtime)
             Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "cert")),
+            Path.Combine(AppContext.BaseDirectory ?? string.Empty, "cert"), // publish/cert (where the dll lives)
             "/cert"
         };
         string? foundDir = null;
+
+        // Option A: Client certificate from environment (PEM or Base64 PFX)
+        try
+        {
+            var envCertPem = Environment.GetEnvironmentVariable("SGP_CLIENT_CERT_PEM");
+            var envKeyPem  = Environment.GetEnvironmentVariable("SGP_CLIENT_KEY_PEM");
+            if (handler.ClientCertificates.Count == 0 &&
+                !string.IsNullOrWhiteSpace(envCertPem) && !string.IsNullOrWhiteSpace(envKeyPem))
+            {
+                var cert = X509Certificate2.CreateFromPem(envCertPem, envKeyPem);
+                var pfxBytesEnv = cert.Export(X509ContentType.Pkcs12);
+                #pragma warning disable SYSLIB0057
+                cert = new X509Certificate2(pfxBytesEnv, (string?)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                #pragma warning restore SYSLIB0057
+                handler.ClientCertificates.Add(cert);
+                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                Console.WriteLine("[SwiftGoldPay] Loaded client certificate from env (SGP_CLIENT_CERT_PEM/SGP_CLIENT_KEY_PEM)");
+                Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
+                Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
+            }
+
+            var pfxB64 = Environment.GetEnvironmentVariable("SGP_CLIENT_PFX_BASE64");
+            if (handler.ClientCertificates.Count == 0 && !string.IsNullOrWhiteSpace(pfxB64))
+            {
+                var pfxBytes = Convert.FromBase64String(pfxB64);
+                var pwd = Environment.GetEnvironmentVariable("SGP_CLIENT_PFX_PASSWORD");
+                #pragma warning disable SYSLIB0057
+                var cert = string.IsNullOrEmpty(pwd)
+                    ? new X509Certificate2(pfxBytes)
+                    : new X509Certificate2(pfxBytes, pwd, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                #pragma warning restore SYSLIB0057
+                handler.ClientCertificates.Add(cert);
+                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                Console.WriteLine("[SwiftGoldPay] Loaded client PFX from env (SGP_CLIENT_PFX_BASE64)");
+                Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
+                Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SwiftGoldPay] Failed loading client cert from environment: {ex.Message}");
+        }
 
         // Prefer PFX if provided (more portable)
         string? pfxPath = Environment.GetEnvironmentVariable("CERT_PFX_PATH");
@@ -263,6 +306,22 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
         {
             var insecure = string.Equals(Environment.GetEnvironmentVariable("SGP_INSECURE_SKIP_VERIFY"), "true", StringComparison.OrdinalIgnoreCase);
             // Optional server cert pinning to work around UntrustedRoot in sandbox
+            // First, allow pinned server cert via environment variable (PEM)
+            X509Certificate2? pinned = null;
+            var serverPem = Environment.GetEnvironmentVariable("SGP_SERVER_CERT_PEM");
+            if (!string.IsNullOrWhiteSpace(serverPem))
+            {
+                try
+                {
+                    pinned = X509Certificate2.CreateFromPem(serverPem);
+                    Console.WriteLine("[SwiftGoldPay] Loaded pinned server certificate from env SGP_SERVER_CERT_PEM");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SwiftGoldPay] Failed to load pinned server certificate from env: {ex.Message}");
+                }
+            }
+
             string? pinnedPath = null;
             foreach (var dir in searchDirs)
             {
@@ -270,7 +329,6 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                 var p = Path.Combine(dir, "server.crt");
                 if (File.Exists(p)) { pinnedPath = p; break; }
             }
-            X509Certificate2? pinned = null;
             if (!string.IsNullOrEmpty(pinnedPath))
             {
                 try
@@ -279,7 +337,7 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                     try
                     {
                         #pragma warning disable SYSLIB0057
-                        pinned = new X509Certificate2(pinnedPath);
+                        pinned = pinned ?? new X509Certificate2(pinnedPath);
                         #pragma warning restore SYSLIB0057
                     }
                     catch
@@ -287,11 +345,11 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                         try
                         {
                             var pemText = File.ReadAllText(pinnedPath);
-                            pinned = X509Certificate2.CreateFromPem(pemText);
+                            pinned = pinned ?? X509Certificate2.CreateFromPem(pemText);
                         }
                         catch
                         {
-                            pinned = null;
+                            pinned = pinned ?? null;
                         }
                     }
                     Console.WriteLine($"[SwiftGoldPay] Loaded pinned server certificate from: {pinnedPath}");

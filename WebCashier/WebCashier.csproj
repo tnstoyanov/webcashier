@@ -9,9 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Copy cert files to output and publish directories -->
-    <None Include="../cert/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
-    <None Include="cert/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
+    <!-- Copy cert files to output/publish under cert/ subfolder for consistent runtime paths -->
+    <None Include="../cert/**">
+      <Link>cert/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
+    <None Include="cert/**">
+      <Link>cert/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
