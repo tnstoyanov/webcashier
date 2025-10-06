@@ -229,7 +229,8 @@ public class SwiftGoldPayService : ISwiftGoldPayService
             var statusCode = json?["status"]?["code"]?.GetValue<string>();
             var msg = json?["status"]?["message"]?.GetValue<string>();
             var customerId = json?["data"]?["customer_id"]?.GetValue<string>();
-            var ok = resp.IsSuccessStatusCode && (statusCode == "S-2000" || statusCode == "S-4004");
+            // Accept S-2000 (new customer), S-4004 or P-4004 (customer already exists)
+            var ok = resp.IsSuccessStatusCode && (statusCode == "S-2000" || statusCode == "S-4004" || statusCode == "P-4004");
             return (ok, customerId, statusCode, msg, json);
         }
         catch
