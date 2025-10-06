@@ -1843,7 +1843,7 @@
                     doc.head.appendChild(style);
                     
                     // Build the HTML
-                    doc.body.innerHTML = \`
+                    doc.body.innerHTML = `
                         <div class="container">
                             <h3>
                                 <img src="https://swiftgoldpay.com/static/media/logo.1e15471715130144e5d8.png" alt="SwiftGoldPay" width="90" style="object-fit:contain;"/>
@@ -1851,7 +1851,7 @@
                             </h3>
                             <p class="instruction">Please scan this code to finish your deposit.</p>
                             <div class="qr-wrapper">
-                                <img class="qr-image" id="sgp-qr" src="\${b64 || ''}" alt="QR Code" />
+                                <img class="qr-image" id="sgp-qr" src="${b64 || ''}" alt="QR Code" />
                             </div>
                             <div class="button-wrapper">
                                 <button class="check-btn" id="check-status-btn">Check Deposit Status</button>
@@ -1873,7 +1873,7 @@
                                 </table>
                             </div>
                         </div>
-                    \`;
+                    `;
                     
                     // Store data for status check
                     popup._sgpToken = window._sgpToken;
