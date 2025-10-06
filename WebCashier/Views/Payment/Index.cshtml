@@ -1704,36 +1704,158 @@
                     }
                     // Render QR code in the popup tab
                     const payload = data2?.data?.data || data2?.data || {};
-                    const b64 = payload.base64 || '';
+                    let b64 = payload.base64 || '';
+                    // If base64 doesn't start with data:image, add the prefix
+                    if (b64 && !b64.startsWith('data:')) {
+                        b64 = 'data:image/png;base64,' + b64;
+                    }
                     const refNo = payload.ref_no || '';
                     const doc = popup.document;
                     
                     // Add CSS styling
                     const style = doc.createElement('style');
                     style.textContent = `
-                        body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f5f5f5; }
-                        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                        h3 { color: #333; margin-bottom: 20px; }
-                        .instruction { font-size: 18px; color: #555; margin-bottom: 30px; font-weight: 500; }
-                        .qr-image { width: 220px; height: 220px; margin: 0 auto 30px; display: block; border: 2px solid #ddd; border-radius: 8px; }
-                        .check-btn { background: #4CAF50; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-bottom: 20px; transition: background 0.3s; }
-                        .check-btn:hover { background: #45a049; }
-                        .error { color: #d32f2f; font-weight: bold; margin: 20px 0; padding: 15px; background: #ffebee; border-radius: 5px; display: none; }
-                        .table-wrap { margin-top: 30px; display: none; }
-                        table { width: 100%; border-collapse: collapse; }
-                        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-                        th { background: #f5f5f5; font-weight: 600; color: #333; }
-                        tr:hover { background: #f9f9f9; }
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                            padding: 40px 20px; 
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            min-height: 100vh;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        .container { 
+                            max-width: 700px; 
+                            width: 100%;
+                            margin: 0 auto; 
+                            background: white; 
+                            padding: 40px; 
+                            border-radius: 16px; 
+                            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                        }
+                        h3 { 
+                            color: #2d3748; 
+                            margin-bottom: 10px; 
+                            font-size: 28px;
+                            text-align: center;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 12px;
+                        }
+                        .instruction { 
+                            font-size: 18px; 
+                            color: #4a5568; 
+                            margin: 25px 0 35px; 
+                            font-weight: 500;
+                            text-align: center;
+                        }
+                        .qr-wrapper {
+                            text-align: center;
+                            margin-bottom: 30px;
+                        }
+                        .qr-image { 
+                            width: 240px; 
+                            height: 240px; 
+                            margin: 0 auto; 
+                            display: inline-block; 
+                            border: 3px solid #e2e8f0; 
+                            border-radius: 12px;
+                            padding: 10px;
+                            background: white;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                        }
+                        .button-wrapper {
+                            text-align: center;
+                            margin-bottom: 20px;
+                        }
+                        .check-btn { 
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white; 
+                            border: none; 
+                            padding: 14px 40px; 
+                            font-size: 16px; 
+                            font-weight: 600;
+                            border-radius: 8px; 
+                            cursor: pointer; 
+                            transition: all 0.3s ease;
+                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                        }
+                        .check-btn:hover { 
+                            transform: translateY(-2px);
+                            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+                        }
+                        .check-btn:active {
+                            transform: translateY(0);
+                        }
+                        .error { 
+                            color: #e53e3e; 
+                            font-weight: bold; 
+                            margin: 20px 0; 
+                            padding: 16px; 
+                            background: #fff5f5; 
+                            border-radius: 8px; 
+                            border-left: 4px solid #e53e3e;
+                            display: none; 
+                        }
+                        .table-wrap { 
+                            margin-top: 30px; 
+                            display: none;
+                            overflow-x: auto;
+                        }
+                        table { 
+                            width: 100%; 
+                            border-collapse: separate;
+                            border-spacing: 0;
+                            background: white;
+                            border-radius: 8px;
+                            overflow: hidden;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        }
+                        th, td { 
+                            padding: 16px; 
+                            text-align: left;
+                        }
+                        th { 
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            font-weight: 600; 
+                            color: white;
+                            font-size: 14px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        td {
+                            color: #4a5568;
+                            border-bottom: 1px solid #e2e8f0;
+                            font-size: 14px;
+                        }
+                        tbody tr:last-child td {
+                            border-bottom: none;
+                        }
+                        tbody tr { 
+                            transition: background 0.2s ease;
+                        }
+                        tbody tr:hover { 
+                            background: #f7fafc;
+                        }
                     `;
                     doc.head.appendChild(style);
                     
                     // Build the HTML
-                    doc.body.innerHTML = `
+                    doc.body.innerHTML = \`
                         <div class="container">
-                            <h3><img src="https://swiftgoldpay.com/static/media/logo.1e15471715130144e5d8.png" alt="SwiftGoldPay" width="90" style="vertical-align:middle;margin-right:10px;object-fit:contain;"/>Deposit Created</h3>
+                            <h3>
+                                <img src="https://swiftgoldpay.com/static/media/logo.1e15471715130144e5d8.png" alt="SwiftGoldPay" width="90" style="object-fit:contain;"/>
+                                Deposit Created
+                            </h3>
                             <p class="instruction">Please scan this code to finish your deposit.</p>
-                            <img class="qr-image" id="sgp-qr" src="${b64 ? 'data:image/png;base64,' + b64 : ''}" alt="QR Code" />
-                            <button class="check-btn" id="check-status-btn">Check Deposit Status</button>
+                            <div class="qr-wrapper">
+                                <img class="qr-image" id="sgp-qr" src="\${b64 || ''}" alt="QR Code" />
+                            </div>
+                            <div class="button-wrapper">
+                                <button class="check-btn" id="check-status-btn">Check Deposit Status</button>
+                            </div>
                             <div class="error" id="status-error"></div>
                             <div class="table-wrap" id="table-wrap">
                                 <table>
@@ -1751,7 +1873,7 @@
                                 </table>
                             </div>
                         </div>
-                    `;
+                    \`;
                     
                     // Store data for status check
                     popup._sgpToken = window._sgpToken;
