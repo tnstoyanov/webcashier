@@ -70,11 +70,32 @@
                                 </div>
 
                                 <div class="carousel-item">
+                                    <input type="radio" id="luxtak" name="PaymentMethod" value="luxtak" />
+                                    <label for="luxtak" class="method-option">
+                                        <div class="luxtak-icon">
+                                            <img src="~/images/luxtak-logo.svg" alt="Luxtak" width="60" height="30" style="margin-bottom: 3px; margin-top: 8px; object-fit: contain;" />
+                                        </div>
+                                        <span class="payment-brand">Luxtak</span>
+                                    </label>
+                                </div>
+
+                                <div class="carousel-item">
+                                    <input type="radio" id="smilepayz-th" name="PaymentMethod" value="smilepayz-th" />
+                                    <label for="smilepayz-th" class="method-option">
+                                        <div class="smilepayz-icon">
+                                            <img src="https://smilepayz.com/images/logos/logo.png" alt="Smilepayz" width="60" height="30" style="margin-bottom: 3px; margin-top: 8px; object-fit: contain; background-color: #000; padding: 3px;" />
+                                        </div>
+                                        <span class="payment-brand">Smilepayz TH</span>
+                                    </label>
+                                </div>
+
+                                <div class="carousel-item">
                                     <input type="radio" id="skrill" name="PaymentMethod" value="skrill" />
                                     <label for="skrill" class="method-option">
                                         <div class="skrill-icon">
                                             <img src="https://www.skrill.com/typo3conf/ext/sitepackage/Resources/Public/images/Skrill-Logo.svg" alt="Skrill" width="60" height="15" style="margin-bottom: 5px; margin-top: 10px;" />
                                         </div>
+                                        <span class="payment-brand">Skrill</span>
                                     </label>
                                 </div>
 
@@ -2091,6 +2112,40 @@
         }
 
         // Smilepayz handler (AJAX similar to Luxtak)
+        async function handleLuxtakPayment(form) {
+            const amountInput = document.querySelector('[name="LuxtakAmount"]');
+            const currencySelect = document.querySelector('[name="LuxtakCurrency"]');
+            if (!amountInput?.value || !currencySelect?.value) {
+                alert('Please fill in amount and currency for Luxtak payment');
+                return;
+            }
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+            try {
+                const formData = new FormData();
+                formData.append('PaymentMethod', 'luxtak');
+                formData.append('Amount', amountInput.value);
+                formData.append('Currency', currencySelect.value);
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (token) formData.append('__RequestVerificationToken', token.value);
+                const resp = await fetch('/Payment', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin', body: formData });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const text = await resp.text();
+                let data; try { data = JSON.parse(text); } catch { throw new Error('Invalid JSON from server'); }
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                if (data.success && data.paymentUrl) {
+                    // Show confirmation modal with redirect to Luxtak
+                    showLuxtakModal(data.paymentUrl, true);
+                } else {
+                    showLuxtakModal(data.error || 'Luxtak payment failed', false);
+                }
+            } catch (err) {
+                console.error('Luxtak payment error', err);
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                showLuxtakModal('Network error during Luxtak payment. Please try again.', false);
+            }
+        }
+
         async function handleSmilepayzPayment(form) {
             const amountInput = document.querySelector('[name="SmilepayzAmount"]');
             const currencySelect = document.querySelector('[name="SmilepayzCurrency"]');
@@ -2157,6 +2212,7 @@
         }
         // Expose globally for inline onclick handlers
         window.movePaymentCarousel = movePaymentCarousel;
+        window.handleLuxtakPayment = handleLuxtakPayment;
         window.handleSmilepayzPayment = handleSmilepayzPayment;
         window.showLuxtakModal = showLuxtakModal;
         window.initializeCarousel = initializeCarousel;
