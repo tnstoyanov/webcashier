@@ -1702,9 +1702,130 @@
                         if (errDiv) errDiv.innerHTML = '<div class="err">'+escapeHtml(data2.error||'Deposit failed')+'</div>';
                         return;
                     }
-                    // Close popup and render QR code in the main page
-                    popup.close();
-                    renderSwiftGoldPayDepositResult(data2);
+                    // Render QR code in the popup tab
+                    const payload = data2?.data?.data || data2?.data || {};
+                    const b64 = payload.base64 || '';
+                    const refNo = payload.ref_no || '';
+                    const doc = popup.document;
+                    
+                    // Add CSS styling
+                    const style = doc.createElement('style');
+                    style.textContent = `
+                        body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f5f5f5; }
+                        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        h3 { color: #333; margin-bottom: 20px; }
+                        .instruction { font-size: 18px; color: #555; margin-bottom: 30px; font-weight: 500; }
+                        .qr-image { width: 220px; height: 220px; margin: 0 auto 30px; display: block; border: 2px solid #ddd; border-radius: 8px; }
+                        .check-btn { background: #4CAF50; color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-bottom: 20px; transition: background 0.3s; }
+                        .check-btn:hover { background: #45a049; }
+                        .error { color: #d32f2f; font-weight: bold; margin: 20px 0; padding: 15px; background: #ffebee; border-radius: 5px; display: none; }
+                        .table-wrap { margin-top: 30px; display: none; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+                        th { background: #f5f5f5; font-weight: 600; color: #333; }
+                        tr:hover { background: #f9f9f9; }
+                    `;
+                    doc.head.appendChild(style);
+                    
+                    // Build the HTML
+                    doc.body.innerHTML = `
+                        <div class="container">
+                            <h3><img src="https://swiftgoldpay.com/static/media/logo.1e15471715130144e5d8.png" alt="SwiftGoldPay" width="90" style="vertical-align:middle;margin-right:10px;object-fit:contain;"/>Deposit Created</h3>
+                            <p class="instruction">Please scan this code to finish your deposit.</p>
+                            <img class="qr-image" id="sgp-qr" src="${b64 ? 'data:image/png;base64,' + b64 : ''}" alt="QR Code" />
+                            <button class="check-btn" id="check-status-btn">Check Deposit Status</button>
+                            <div class="error" id="status-error"></div>
+                            <div class="table-wrap" id="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>UID</th>
+                                            <th>Ref No</th>
+                                            <th>Amount</th>
+                                            <th>Currency</th>
+                                            <th>Process Type</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="status-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Store data for status check
+                    popup._sgpToken = window._sgpToken;
+                    popup._sgpRefNo = refNo;
+                    popup._sgpCurrency = (document.querySelector('[name="SwiftGoldPayCurrency"]')?.value) || 'THB';
+                    
+                    // Wire up the status check button
+                    const checkBtn = doc.getElementById('check-status-btn');
+                    if (checkBtn) {
+                        checkBtn.addEventListener('click', async function() {
+                            const errEl = doc.getElementById('status-error');
+                            const tableWrap = doc.getElementById('table-wrap');
+                            const tbody = doc.getElementById('status-tbody');
+                            
+                            try {
+                                const token = popup._sgpToken;
+                                const refNo = popup._sgpRefNo;
+                                const currency = popup._sgpCurrency;
+                                
+                                if (!token || !refNo) {
+                                    if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Missing token or reference number.'; }
+                                    return;
+                                }
+                                
+                                if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+                                if (tableWrap) tableWrap.style.display = 'none';
+                                
+                                const url = window.location.origin + `/SwiftGoldPay/TxStatus?token=${encodeURIComponent(token)}&refNo=${encodeURIComponent(refNo)}&currency=${encodeURIComponent(currency)}`;
+                                const resp = await fetch(url, { method: 'GET', credentials: 'same-origin' });
+                                const data = await resp.json();
+                                
+                                if (!data.success) {
+                                    if (errEl) { 
+                                        errEl.style.display = 'block'; 
+                                        errEl.textContent = data.error || 'Failed to get the deposit status!'; 
+                                    }
+                                    return;
+                                }
+                                
+                                const items = data.items || [];
+                                if (tbody) tbody.innerHTML = '';
+                                
+                                items.forEach(it => {
+                                    const tr = doc.createElement('tr');
+                                    const uid = (it?.uid ?? '').toString();
+                                    const ref_no = (it?.ref_no ?? it?.refNo ?? '').toString();
+                                    const amount = (it?.amount ?? '').toString();
+                                    const currency = (it?.currency ?? '').toString();
+                                    const process_type = (it?.process_type ?? it?.processType ?? '').toString();
+                                    const status = (it?.status ?? '').toString();
+                                    
+                                    const escapeHtml = (text) => {
+                                        const map = {'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#039;'};
+                                        return text.replace(/[&<>"']/g, m => map[m]);
+                                    };
+                                    
+                                    tr.innerHTML = `<td>${escapeHtml(uid)}</td>` +
+                                                   `<td>${escapeHtml(ref_no)}</td>` +
+                                                   `<td>${escapeHtml(amount)}</td>` +
+                                                   `<td>${escapeHtml(currency)}</td>` +
+                                                   `<td>${escapeHtml(process_type)}</td>` +
+                                                   `<td>${escapeHtml(status)}</td>`;
+                                    tbody.appendChild(tr);
+                                });
+                                
+                                if (tableWrap) tableWrap.style.display = 'block';
+                            } catch (e) {
+                                if (errEl) { 
+                                    errEl.style.display = 'block'; 
+                                    errEl.textContent = 'Failed to get the deposit status! ' + (e.message || ''); 
+                                }
+                            }
+                        });
+                    }
                 } catch (e) {
                     const err = document.getElementById('SwiftGoldPayBanksError');
                     if (err) { err.style.display = 'block'; err.textContent = 'Unexpected error: ' + (e.message||''); }
