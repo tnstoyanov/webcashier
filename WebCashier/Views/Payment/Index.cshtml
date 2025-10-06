@@ -1702,11 +1702,9 @@
                         if (errDiv) errDiv.innerHTML = '<div class="err">'+escapeHtml(data2.error||'Deposit failed')+'</div>';
                         return;
                     }
-                    // Show raw JSON in the opened tab for now; later wire redirect/QR
-                    const doc = popup.document;
-                    doc.body.innerHTML = '<h3><img src="https://swiftgoldpay.com/static/media/logo.1e15471715130144e5d8.png" alt="SwiftGoldPay" width="90" style="vertical-align:middle;margin-right:10px;object-fit:contain;"/>Deposit created</h3><p class="ok">Success. Raw response below.</p><code id="sgp-json"></code>';
-                    const code = doc.getElementById('sgp-json');
-                    if (code) code.textContent = JSON.stringify(data2.data, null, 2);
+                    // Close popup and render QR code in the main page
+                    popup.close();
+                    renderSwiftGoldPayDepositResult(data2);
                 } catch (e) {
                     const err = document.getElementById('SwiftGoldPayBanksError');
                     if (err) { err.style.display = 'block'; err.textContent = 'Unexpected error: ' + (e.message||''); }
