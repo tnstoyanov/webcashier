@@ -2080,7 +2080,7 @@
 
         // ==== Missing Functions Implemented ====
         // Show Luxtak modal (success: auto-redirect to webUrl, error: display message)
-    function showLuxtakModal(content, isSuccess) {
+    function showLuxtakModal(content, isSuccess, providerName = 'Luxtak') {
             const modal = document.getElementById('luxtak-modal');
             if (!modal) { console.warn('Luxtak modal element not found'); if(isSuccess){ window.location.href = content; } return; }
             const titleEl = document.getElementById('luxtak-modal-title');
@@ -2090,9 +2090,9 @@
             if (!titleEl || !msgEl || !okBtn || !cancelBtn) { if(isSuccess){ window.location.href = content; } return; }
 
             if (isSuccess) {
-                titleEl.textContent = 'Luxtak Payment';
+                titleEl.textContent = `${providerName} Payment`;
         const webUrl = content; // Payment destination
-        msgEl.innerHTML = 'Ready to redirect to Luxtak payment page.<br><small>Click OK to continue in this tab or Cancel to abort.</small>';
+        msgEl.innerHTML = `Ready to redirect to the ${providerName} payment page.<br><small>Click OK to continue in this tab or Cancel to abort.</small>`;
         okBtn.style.display = 'inline-block';
         okBtn.textContent = 'OK';
         okBtn.onclick = () => { modal.style.display = 'none'; window.location.href = webUrl; };
@@ -2100,7 +2100,7 @@
         cancelBtn.onclick = () => { modal.style.display = 'none'; };
         modal.style.display = 'flex';
             } else {
-                titleEl.textContent = 'Luxtak Payment Error';
+                titleEl.textContent = `${providerName} Payment Error`;
                 msgEl.textContent = content || 'Payment failed';
                 okBtn.style.display = 'inline-block';
                 okBtn.textContent = 'OK';
@@ -2169,14 +2169,14 @@
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
                 if (data.success && data.paymentUrl) {
                     // Show confirmation modal (reuse Luxtak modal styling)
-                    showLuxtakModal(data.paymentUrl, true);
+                    showLuxtakModal(data.paymentUrl, true, 'Smilepayz');
                 } else {
-                    showLuxtakModal(data.error || 'Smilepayz payment failed', false);
+                    showLuxtakModal(data.error || 'Smilepayz payment failed', false, 'Smilepayz');
                 }
             } catch (err) {
                 console.error('Smilepayz payment error', err);
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
-                showLuxtakModal('Network error during Smilepayz payment. Please try again.', false);
+                showLuxtakModal('Network error during Smilepayz payment. Please try again.', false, 'Smilepayz');
             }
         }
 
