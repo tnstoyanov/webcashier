@@ -52,7 +52,7 @@ namespace WebCashier.Controllers
                         
                         return Json(new { 
                             success = true, 
-                            webUrl = response.WebUrl,
+                            paymentUrl = response.WebUrl,
                             tradeNo = response.TradeNo 
                         });
                     }
