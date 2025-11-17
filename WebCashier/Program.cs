@@ -23,14 +23,13 @@ builder.Services.AddControllersWithViews(options =>
     }
 });
 
-// Configure antiforgery with better error handling
+// Configure antiforgery for Render.com (reverse proxy environment)
 builder.Services.AddAntiforgery(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
-        ? CookieSecurePolicy.SameAsRequest 
-        : CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.Strict;
+    // Use SameAsRequest for production since Render.com forwards HTTP internally
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SameSite = SameSiteMode.Lax; // More permissive for payment redirects
     options.SuppressXFrameOptionsHeader = false;
 });
 
