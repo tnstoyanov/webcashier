@@ -295,12 +295,8 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                 var keyPathTry = Path.Combine(dir, "private.key");
                 if (File.Exists(pemPathTry) && File.Exists(keyPathTry))
                 {
-                    // Load from PEM files and re-wrap as PKCS#12 for compatibility
+                    // Load from PEM files directly without re-wrapping to match Postman behavior
                     var cert = X509Certificate2.CreateFromPemFile(pemPathTry, keyPathTry);
-                    var pfxBytes = cert.Export(X509ContentType.Pkcs12);
-                    #pragma warning disable SYSLIB0057
-                    cert = new X509Certificate2(pfxBytes, (string?)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                    #pragma warning restore SYSLIB0057
                     handler.ClientCertificates.Add(cert);
                     handler.ClientCertificateOptions = ClientCertificateOption.Manual;
                     Console.WriteLine($"[SwiftGoldPay] Loaded client certificate from: {pemPathTry}");
