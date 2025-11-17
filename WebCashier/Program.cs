@@ -22,22 +22,36 @@ builder.Services.AddControllersWithViews(options =>
         });
     }
 });
-builder.Services.AddAntiforgery();
-// Persist DataProtection keys so antiforgery tokens can be decrypted across restarts/instances
+
+// Configure antiforgery with better error handling
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+        ? CookieSecurePolicy.SameAsRequest 
+        : CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.SuppressXFrameOptionsHeader = false;
+});
+
+// Consolidated DataProtection configuration
 try
 {
-    var dataDir = Environment.GetEnvironmentVariable("DATA_DIR") ?? AppContext.BaseDirectory;
+    var dataDir = Environment.GetEnvironmentVariable("DATA_DIR") ?? "/app";
     var keysPath = Path.Combine(dataDir, "data-protection-keys");
     if (!Directory.Exists(keysPath)) Directory.CreateDirectory(keysPath);
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
-        .SetApplicationName("WebCashier");
+        .SetApplicationName("WebCashier")
+        .SetDefaultKeyLifetime(TimeSpan.FromDays(30)); // Longer lifetime to reduce key rotation issues
     Console.WriteLine($"[Startup] DataProtection keys path: {keysPath}");
 }
 catch (Exception ex)
 {
     Console.WriteLine($"[Startup] Failed to configure DataProtection persistence: {ex.Message}");
 }
+
+// Remove the old data protection configuration below
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<WebCashier.Services.ZotaService>();
 builder.Services.AddScoped<WebCashier.Services.IZotaService, WebCashier.Services.ZotaService>();
