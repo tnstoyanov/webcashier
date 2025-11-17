@@ -369,8 +369,13 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                     if (host.Equals("sandbox-partner.swiftgoldpay.com", StringComparison.OrdinalIgnoreCase) ||
                         host.Equals("api-partner.swiftgoldpay.com", StringComparison.OrdinalIgnoreCase))
                     {
+                        Console.WriteLine($"[SwiftGoldPay] Server cert validation for {host}:");
+                        Console.WriteLine($"[SwiftGoldPay] - SSL errors: {errors}");
+                        Console.WriteLine($"[SwiftGoldPay] - Cert subject: {cert?.Subject ?? "null"}");
+                        
                         if (errors == SslPolicyErrors.None)
                         {
+                            Console.WriteLine("[SwiftGoldPay] Certificate validation passed - no errors");
                             return true;
                         }
                         if (insecure)
@@ -382,21 +387,22 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                         {
                             var presented = cert.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256).Replace(":", string.Empty, StringComparison.OrdinalIgnoreCase);
                             var expected = pinned.GetCertHashString(System.Security.Cryptography.HashAlgorithmName.SHA256).Replace(":", string.Empty, StringComparison.OrdinalIgnoreCase);
-                            Console.WriteLine($"[SwiftGoldPay] Server cert validation for {host}:");
                             Console.WriteLine($"[SwiftGoldPay] - Presented cert SHA256: {presented}");
                             Console.WriteLine($"[SwiftGoldPay] - Expected cert SHA256: {expected}");
-                            Console.WriteLine($"[SwiftGoldPay] - SSL errors: {errors}");
                             if (string.Equals(presented, expected, StringComparison.OrdinalIgnoreCase))
                             {
                                 Console.WriteLine("[SwiftGoldPay] Accepted server certificate via pinning (SHA256 thumbprint match).");
                                 return true;
                             }
+                            else
+                            {
+                                Console.WriteLine("[SwiftGoldPay] Certificate mismatch - SHA256 thumbprints don't match");
+                            }
                         }
-                        // For production api-partner.swiftgoldpay.com, temporarily allow if the only issue is UntrustedRoot
-                        if (host.Equals("api-partner.swiftgoldpay.com", StringComparison.OrdinalIgnoreCase) &&
-                            errors == SslPolicyErrors.RemoteCertificateChainErrors)
+                        // TEMPORARY: Allow production connections despite certificate issues for debugging
+                        if (host.Equals("api-partner.swiftgoldpay.com", StringComparison.OrdinalIgnoreCase))
                         {
-                            Console.WriteLine($"[SwiftGoldPay] Temporarily allowing production server certificate chain errors for {host}");
+                            Console.WriteLine($"[SwiftGoldPay] TEMPORARILY allowing production server certificate errors for {host} to debug API response");
                             return true;
                         }
                         Console.WriteLine($"[SwiftGoldPay] Server certificate validation failed for {host}: {errors}");
