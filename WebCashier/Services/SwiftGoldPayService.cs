@@ -104,6 +104,14 @@ public class SwiftGoldPayService : ISwiftGoldPayService
         var dataToSign = string.Concat(clientId, ts, bodyForSigning);
         var signature = ComputeHmacSha256Hex(dataToSign, clientSecret);
 
+        // Debug logging for signature calculation
+        Console.WriteLine($"[SwiftGoldPay] Token signature calculation:");
+        Console.WriteLine($"[SwiftGoldPay] - client_id: {clientId}");
+        Console.WriteLine($"[SwiftGoldPay] - timestamp: {ts}");
+        Console.WriteLine($"[SwiftGoldPay] - body_for_signing: '{bodyForSigning}'");
+        Console.WriteLine($"[SwiftGoldPay] - data_to_sign: '{dataToSign}'");
+        Console.WriteLine($"[SwiftGoldPay] - signature: {signature}");
+
         req.Headers.Remove("client_id");
         req.Headers.Remove("client_secret");
         req.Headers.Remove("client_ref_id");
@@ -124,7 +132,7 @@ public class SwiftGoldPayService : ISwiftGoldPayService
     {
         var req = new HttpRequestMessage(HttpMethod.Post, "/api/oauth/v1.0/partner/token");
         ApplyTokenHeaders(req);
-        // Intentionally send a zero-length body with Content-Type: application/json (no charset)
+        // Send empty body with Content-Type: application/json (like Postman)
         var empty = new ByteArrayContent(Array.Empty<byte>());
         empty.Headers.ContentType = new MediaTypeHeaderValue("application/json");
         req.Content = empty;

@@ -292,7 +292,11 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                     handler.ClientCertificateOptions = ClientCertificateOption.Manual;
                     Console.WriteLine($"[SwiftGoldPay] Loaded client certificate from: {pemPathTry}");
                     Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert issuer: {cert.Issuer}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert serial: {cert.SerialNumber}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert thumbprint: {cert.Thumbprint}");
                     Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert has private key: {cert.HasPrivateKey}");
                     foundDir = dir;
                     break;
                 }
