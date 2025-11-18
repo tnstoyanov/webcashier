@@ -36,8 +36,14 @@ builder.Services.AddAntiforgery(options =>
 // Consolidated DataProtection configuration
 try
 {
-    var dataDir = Environment.GetEnvironmentVariable("DATA_DIR") ?? "/app";
-    var keysPath = Path.Combine(dataDir, "data-protection-keys");
+    // Prefer explicit key ring directory if provided
+    var keysRoot = Environment.GetEnvironmentVariable("DATA_PROTECTION_KEYS_DIRECTORY");
+    if (string.IsNullOrWhiteSpace(keysRoot))
+    {
+        var dataDir = Environment.GetEnvironmentVariable("DATA_DIR") ?? "/app";
+        keysRoot = Path.Combine(dataDir, "data-protection-keys");
+    }
+    var keysPath = keysRoot;
     if (!Directory.Exists(keysPath)) Directory.CreateDirectory(keysPath);
     builder.Services.AddDataProtection()
         .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
@@ -89,6 +95,80 @@ builder.Services.AddSingleton<IRuntimeConfigStore>(_ =>
         return new RuntimeConfigStore();
     }
 });
+
+// Helper: attach client certificate chain (intermediates) if present
+static void TryAttachClientChain(HttpClientHandler handler, X509Certificate2 primary, string foundDir, List<string?> searchDirs)
+{
+    try
+    {
+        var candidates = new[] { "client-chain.pem", "client_chain.pem", "chain.pem", "ca-chain.pem", "ca_bundle.pem", "ca-bundle.crt", "client_chain.crt" };
+        string? chainPath = null;
+        foreach (var name in candidates)
+        {
+            var p = Path.Combine(foundDir, name);
+            if (File.Exists(p)) { chainPath = p; break; }
+        }
+        if (chainPath == null)
+        {
+            foreach (var dir in searchDirs)
+            {
+                if (string.IsNullOrWhiteSpace(dir)) continue;
+                foreach (var name in candidates)
+                {
+                    var p = Path.Combine(dir, name);
+                    if (File.Exists(p)) { chainPath = p; break; }
+                }
+                if (chainPath != null) break;
+            }
+        }
+        if (chainPath == null)
+        {
+            Console.WriteLine("[SwiftGoldPay] No client certificate chain file found (checked common names). Skipping chain attachment.");
+            return;
+        }
+        var pemText = File.ReadAllText(chainPath);
+        var added = 0;
+        foreach (var block in ExtractPemCertificates(pemText))
+        {
+            try
+            {
+                var x = X509Certificate2.CreateFromPem(block);
+                if (!string.Equals(x.Thumbprint, primary.Thumbprint, StringComparison.OrdinalIgnoreCase))
+                {
+                    handler.ClientCertificates.Add(x);
+                    added++;
+                }
+            }
+            catch { /* ignore individual block errors */ }
+        }
+        Console.WriteLine($"[SwiftGoldPay] Attached {added} intermediate certificate(s) from: {chainPath}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SwiftGoldPay] Failed attaching client chain: {ex.Message}");
+    }
+}
+
+// Helper: extract all certificate PEM blocks from concatenated text
+static IEnumerable<string> ExtractPemCertificates(string pemText)
+{
+    const string begin = "-----BEGIN CERTIFICATE-----";
+    const string end = "-----END CERTIFICATE-----";
+    var list = new List<string>();
+    int start = 0;
+    while (true)
+    {
+        var i = pemText.IndexOf(begin, start, StringComparison.Ordinal);
+        if (i < 0) break;
+        var j = pemText.IndexOf(end, i, StringComparison.Ordinal);
+        if (j < 0) break;
+        j += end.Length;
+        var block = pemText.Substring(i, j - i);
+        list.Add(block);
+        start = j;
+    }
+    return list;
+}
 
 // Configure Praxis settings
 builder.Services.Configure<PraxisConfig>(builder.Configuration.GetSection("Praxis"));
@@ -278,6 +358,9 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                 Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
                 Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
                 foundDir ??= Path.GetDirectoryName(pfxPath);
+
+                // Optionally attach intermediate chain if present alongside PFX
+                TryAttachClientChain(handler, cert, foundDir!, searchDirs);
             }
             catch (Exception ex)
             {
@@ -321,6 +404,9 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                     Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
                     Console.WriteLine($"[SwiftGoldPay] Client cert has private key: {cert.HasPrivateKey}");
                     foundDir = dir;
+
+                    // Optionally attach intermediate chain if present
+                    TryAttachClientChain(handler, cert, foundDir!, searchDirs);
                     break;
                 }
             }
@@ -644,5 +730,23 @@ app.MapGet("/diag/sgp-cert", () =>
         return Results.Ok(new { found = false, error = ex.Message });
     }
 });
+
+    // Observe outbound public IP (useful for provider IP whitelist checks)
+    app.MapGet("/diag/outbound-ip", async (IHttpClientFactory factory) =>
+    {
+        try
+        {
+            var client = factory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(5);
+            var ip = await client.GetStringAsync("https://api.ipify.org");
+            return Results.Ok(new { ip = ip.Trim(), time = DateTime.UtcNow });
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(title: "Failed to fetch outbound IP", detail: ex.Message);
+        }
+    });
+
+    // (moved helper functions earlier)
 
 app.Run();
