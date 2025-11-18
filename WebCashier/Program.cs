@@ -5,6 +5,7 @@ using System.Security.Authentication;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.DataProtection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -97,51 +98,82 @@ builder.Services.AddSingleton<IRuntimeConfigStore>(_ =>
 });
 
 // Helper: attach client certificate chain (intermediates) if present
-static void TryAttachClientChain(HttpClientHandler handler, X509Certificate2 primary, string foundDir, List<string?> searchDirs)
+static void TryAttachClientChain(HttpClientHandler handler, X509Certificate2 primary, string? foundDir, List<string?> searchDirs, string? overridePath, string? overridePem)
 {
     try
     {
-        var candidates = new[] { "client-chain.pem", "client_chain.pem", "chain.pem", "ca-chain.pem", "ca_bundle.pem", "ca-bundle.crt", "client_chain.crt" };
-        string? chainPath = null;
-        foreach (var name in candidates)
+        IEnumerable<string> LoadPemBlocks(string pem)
         {
-            var p = Path.Combine(foundDir, name);
-            if (File.Exists(p)) { chainPath = p; break; }
-        }
-        if (chainPath == null)
-        {
-            foreach (var dir in searchDirs)
+            foreach (var block in ExtractPemCertificates(pem))
             {
-                if (string.IsNullOrWhiteSpace(dir)) continue;
-                foreach (var name in candidates)
-                {
-                    var p = Path.Combine(dir, name);
-                    if (File.Exists(p)) { chainPath = p; break; }
-                }
-                if (chainPath != null) break;
+                yield return block;
             }
         }
-        if (chainPath == null)
+
+        bool AttachBlocks(IEnumerable<string> blocks, string source)
         {
-            Console.WriteLine("[SwiftGoldPay] No client certificate chain file found (checked common names). Skipping chain attachment.");
+            var addedLocal = 0;
+            foreach (var block in blocks)
+            {
+                try
+                {
+                    var x = X509Certificate2.CreateFromPem(block);
+                    if (!string.Equals(x.Thumbprint, primary.Thumbprint, StringComparison.OrdinalIgnoreCase))
+                    {
+                        handler.ClientCertificates.Add(x);
+                        addedLocal++;
+                    }
+                }
+                catch { /* ignore individual block errors */ }
+            }
+            if (addedLocal > 0)
+            {
+                Console.WriteLine($"[SwiftGoldPay] Attached {addedLocal} intermediate certificate(s) from: {source}");
+                return true;
+            }
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(overridePem) && AttachBlocks(LoadPemBlocks(overridePem), "SGP_CLIENT_CHAIN_PEM/BASE64"))
+        {
             return;
         }
-        var pemText = File.ReadAllText(chainPath);
-        var added = 0;
-        foreach (var block in ExtractPemCertificates(pemText))
+
+        if (!string.IsNullOrWhiteSpace(overridePath) && File.Exists(overridePath))
         {
-            try
+            var pemText = File.ReadAllText(overridePath);
+            if (AttachBlocks(LoadPemBlocks(pemText), overridePath)) return;
+        }
+
+        var candidates = new[] { "client-chain.pem", "client_chain.pem", "chain.pem", "ca-chain.pem", "ca_bundle.pem", "ca-bundle.crt", "client_chain.crt" };
+        if (!string.IsNullOrWhiteSpace(foundDir))
+        {
+            foreach (var name in candidates)
             {
-                var x = X509Certificate2.CreateFromPem(block);
-                if (!string.Equals(x.Thumbprint, primary.Thumbprint, StringComparison.OrdinalIgnoreCase))
+                var path = Path.Combine(foundDir, name);
+                if (File.Exists(path))
                 {
-                    handler.ClientCertificates.Add(x);
-                    added++;
+                    var pemText = File.ReadAllText(path);
+                    if (AttachBlocks(LoadPemBlocks(pemText), path)) return;
                 }
             }
-            catch { /* ignore individual block errors */ }
         }
-        Console.WriteLine($"[SwiftGoldPay] Attached {added} intermediate certificate(s) from: {chainPath}");
+
+        foreach (var dir in searchDirs)
+        {
+            if (string.IsNullOrWhiteSpace(dir)) continue;
+            foreach (var name in candidates)
+            {
+                var path = Path.Combine(dir, name);
+                if (File.Exists(path))
+                {
+                    var pemText = File.ReadAllText(path);
+                    if (AttachBlocks(LoadPemBlocks(pemText), path)) return;
+                }
+            }
+        }
+
+        Console.WriteLine("[SwiftGoldPay] No client certificate chain file found (checked env vars and common filenames). Skipping chain attachment.");
     }
     catch (Exception ex)
     {
@@ -288,6 +320,31 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
             "/cert"
         };
         string? foundDir = null;
+        var chainOverridePath = Environment.GetEnvironmentVariable("SGP_CLIENT_CHAIN_PATH");
+        string? chainOverridePem = null;
+        var chainPem = Environment.GetEnvironmentVariable("SGP_CLIENT_CHAIN_PEM");
+        if (!string.IsNullOrWhiteSpace(chainPem))
+        {
+            chainOverridePem = chainPem;
+            Console.WriteLine("[SwiftGoldPay] Using client chain from SGP_CLIENT_CHAIN_PEM env var");
+        }
+        else
+        {
+            var chainB64 = Environment.GetEnvironmentVariable("SGP_CLIENT_CHAIN_BASE64");
+            if (!string.IsNullOrWhiteSpace(chainB64))
+            {
+                try
+                {
+                    var bytes = Convert.FromBase64String(chainB64);
+                    chainOverridePem = Encoding.UTF8.GetString(bytes);
+                    Console.WriteLine("[SwiftGoldPay] Loaded client chain from SGP_CLIENT_CHAIN_BASE64 env var");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SwiftGoldPay] Failed decoding SGP_CLIENT_CHAIN_BASE64: {ex.Message}");
+                }
+            }
+        }
 
         // Option A: Client certificate from environment (PEM or Base64 PFX)
         try
@@ -360,7 +417,7 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                 foundDir ??= Path.GetDirectoryName(pfxPath);
 
                 // Optionally attach intermediate chain if present alongside PFX
-                TryAttachClientChain(handler, cert, foundDir!, searchDirs);
+                TryAttachClientChain(handler, cert, foundDir, searchDirs, chainOverridePath, chainOverridePem);
             }
             catch (Exception ex)
             {
@@ -406,7 +463,7 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                     foundDir = dir;
 
                     // Optionally attach intermediate chain if present
-                    TryAttachClientChain(handler, cert, foundDir!, searchDirs);
+                    TryAttachClientChain(handler, cert, foundDir, searchDirs, chainOverridePath, chainOverridePem);
                     break;
                 }
             }
