@@ -262,7 +262,7 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                 if (File.Exists(pfxTry)) { pfxPath = pfxTry; foundDir = dir; break; }
             }
         }
-        if (!string.IsNullOrWhiteSpace(pfxPath) && File.Exists(pfxPath))
+        if (!string.IsNullOrWhiteSpace(pfxPath) && File.Exists(pfxPath) && handler.ClientCertificates.Count == 0)
         {
             try
             {
@@ -295,8 +295,22 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                 var keyPathTry = Path.Combine(dir, "private.key");
                 if (File.Exists(pemPathTry) && File.Exists(keyPathTry))
                 {
-                    // Load from PEM files directly without re-wrapping to match Postman behavior
-                    var cert = X509Certificate2.CreateFromPemFile(pemPathTry, keyPathTry);
+                    // Load from PEM files - use different approach based on platform
+                    X509Certificate2 cert;
+                    if (OperatingSystem.IsLinux())
+                    {
+                        // On Linux, we need to use PFX for proper key association
+                        var tempCert = X509Certificate2.CreateFromPemFile(pemPathTry, keyPathTry);
+                        var pfxBytes = tempCert.Export(X509ContentType.Pkcs12);
+                        #pragma warning disable SYSLIB0057
+                        cert = new X509Certificate2(pfxBytes, (string?)null, X509KeyStorageFlags.Exportable);
+                        #pragma warning restore SYSLIB0057
+                    }
+                    else
+                    {
+                        // On macOS/Windows, direct PEM loading works fine
+                        cert = X509Certificate2.CreateFromPemFile(pemPathTry, keyPathTry);
+                    }
                     handler.ClientCertificates.Add(cert);
                     handler.ClientCertificateOptions = ClientCertificateOption.Manual;
                     Console.WriteLine($"[SwiftGoldPay] Loaded client certificate from: {pemPathTry}");
