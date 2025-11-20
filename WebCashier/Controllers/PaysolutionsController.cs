@@ -44,17 +44,26 @@ namespace WebCashier.Controllers
 
                 if (response.Status == "success" && response.Data != null)
                 {
-                    // Store QR data in TempData for ShowQR action
-                    TempData["PaysolutionsQRData"] = System.Text.Json.JsonSerializer.Serialize(response.Data);
-                    
                     // Check if this is an AJAX request
                     if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                     {
-                        var redirectUrl = Url.Action("ShowQR", "Paysolutions");
-                        return Json(new { success = true, redirectUrl });
+                        // Return the QR data directly in JSON for AJAX requests
+                        return Json(new { 
+                            success = true, 
+                            data = new {
+                                image = response.Data.Image,
+                                orderNo = response.Data.OrderNo,
+                                referenceNo = response.Data.ReferenceNo,
+                                total = response.Data.Total,
+                                orderdatetime = response.Data.Orderdatetime,
+                                expiredate = response.Data.Expiredate
+                            }
+                        });
                     }
                     else
                     {
+                        // For non-AJAX requests, store in TempData and redirect
+                        TempData["PaysolutionsQRData"] = System.Text.Json.JsonSerializer.Serialize(response.Data);
                         return RedirectToAction("ShowQR");
                     }
                 }
