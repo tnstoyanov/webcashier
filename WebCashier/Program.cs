@@ -296,6 +296,27 @@ builder.Services.AddHttpClient<ISmilepayzService, SmilepayzService>(client =>
     return handler;
 });
 
+// Paysolutions service (PromptPay QR)
+builder.Services.Configure<WebCashier.Models.Paysolutions.PaysolutionsConfig>(builder.Configuration.GetSection("Paysolutions"));
+builder.Services.AddHttpClient<WebCashier.Services.IPaysolutionsService, WebCashier.Services.PaysolutionsService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "WebCashier/1.0");
+})
+.AddHttpMessageHandler<LoggingHandler>()
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    var handler = new HttpClientHandler();
+    handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+    handler.CheckCertificateRevocationList = false;
+    handler.UseCookies = false;
+    if (builder.Environment.IsDevelopment())
+    {
+        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+    }
+    return handler;
+});
+
 // SwiftGoldPay service with mTLS and optional pinning
 builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client =>
 {

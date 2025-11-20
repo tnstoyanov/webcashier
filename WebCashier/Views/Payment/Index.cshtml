@@ -90,6 +90,16 @@
                                 </div>
 
                                 <div class="carousel-item">
+                                    <input type="radio" id="paysolutions-th" name="PaymentMethod" value="paysolutions-th" />
+                                    <label for="paysolutions-th" class="method-option">
+                                        <div class="paysolutions-icon">
+                                            <img src="https://paysolutions.asia/assets/images-webp/logo-paysolutions@2x.webp" alt="Paysolutions" width="60" height="30" style="margin-bottom: 3px; margin-top: 8px; object-fit: contain;" />
+                                        </div>
+                                        <span class="payment-brand">Paysolutions TH</span>
+                                    </label>
+                                </div>
+
+                                <div class="carousel-item">
                                     <input type="radio" id="skrill" name="PaymentMethod" value="skrill" />
                                     <label for="skrill" class="method-option">
                                         <div class="skrill-icon">
@@ -589,6 +599,41 @@
                             </div>
                         </div>
                     </div>
+
+                    <div id="paysolutions-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="500">฿500</button>
+                                    <button type="button" class="amount-btn" data-amount="1000">฿1000</button>
+                                    <button type="button" class="amount-btn" data-amount="2000">฿2000</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="PaysolutionsAmount" type="number" step="1" class="form-control" placeholder="Amount (THB)" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="PaysolutionsCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="THB" selected>THB</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>Paysolutions TH Payment</h3>
+                                    <p>Secure Thailand THB QR e-banking via Paysolutions.</p>
+                                    <div class="paysolutions-logo-large">
+                                        <img src="https://paysolutions.asia/assets/images-webp/logo-paysolutions@2x.webp" alt="Paysolutions" width="150" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <p class="currency-note">Please note that you might be charged in a different currency</p>
@@ -655,6 +700,22 @@
         <div class="luxtak-modal-footer">
             <button id="luxtak-ok-btn" class="btn-ok" style="display: none;">OK</button>
             <button id="luxtak-cancel-btn" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Paysolutions Modal -->
+<div id="paysolutions-modal" class="luxtak-modal" style="display: none;">
+    <div class="luxtak-modal-content">
+        <div class="luxtak-modal-header">
+            <h3 id="paysolutions-modal-title">Paysolutions Payment</h3>
+        </div>
+        <div class="luxtak-modal-body">
+            <p id="paysolutions-modal-message">Paysolutions will open in a new tab.</p>
+        </div>
+        <div class="luxtak-modal-footer">
+            <button id="paysolutions-ok-btn" class="btn-ok">OK</button>
+            <button id="paysolutions-cancel-btn" class="btn-cancel">Cancel</button>
         </div>
     </div>
 </div>
@@ -931,6 +992,9 @@
                     case 'smilepayz-th':
                         targetFormId = 'smilepayz-details';
                         break;
+                    case 'paysolutions-th':
+                        targetFormId = 'paysolutions-details';
+                        break;
                     default:
                         targetFormId = 'card-details'; // fallback to card
                 }
@@ -981,6 +1045,11 @@
                     if (spAmountInput) {
                         spAmountInput.value = amount;
                     }
+                } else if (selectedPaymentMethod === 'paysolutions-th') {
+                    const psAmountInput = document.querySelector('[name="PaysolutionsAmount"]');
+                    if (psAmountInput) {
+                        psAmountInput.value = amount;
+                    }
                 } else if (selectedPaymentMethod === 'swiftgoldpay') {
                     const sgpAmountInput = document.querySelector('[name="SwiftGoldPayAmount"]');
                     if (sgpAmountInput) sgpAmountInput.value = amount;
@@ -1015,6 +1084,8 @@
                 amountInput = document.querySelector('[name="LuxtakAmount"]') || document.querySelector('[name="Amount"]');
             } else if (selectedPaymentMethod === 'smilepayz-th') {
                 amountInput = document.querySelector('[name="SmilepayzAmount"]') || document.querySelector('[name="Amount"]');
+            } else if (selectedPaymentMethod === 'paysolutions-th') {
+                amountInput = document.querySelector('[name="PaysolutionsAmount"]') || document.querySelector('[name="Amount"]');
             } else if (selectedPaymentMethod === 'swiftgoldpay') {
                 amountInput = document.querySelector('[name="SwiftGoldPayAmount"]') || document.querySelector('[name="Amount"]');
             } else {
@@ -1047,6 +1118,8 @@
                 currencySelect = document.querySelector('[name="LuxtakCurrency"]') || document.querySelector('[name="Currency"]');
             } else if (selectedPaymentMethod === 'smilepayz-th') {
                 currencySelect = document.querySelector('[name="SmilepayzCurrency"]') || document.querySelector('[name="Currency"]');
+            } else if (selectedPaymentMethod === 'paysolutions-th') {
+                currencySelect = document.querySelector('[name="PaysolutionsCurrency"]') || document.querySelector('[name="Currency"]');
             } else if (selectedPaymentMethod === 'swiftgoldpay') {
                 currencySelect = document.querySelector('[name="SwiftGoldPayCurrency"]') || document.querySelector('[name="Currency"]');
             } else {
@@ -1554,6 +1627,12 @@
             if (selectedPaymentMethod === 'smilepayz-th') {
                 e.preventDefault();
                 handleSmilepayzPayment(e.target);
+                return;
+            }
+            // For Paysolutions TH payment, handle with AJAX
+            if (selectedPaymentMethod === 'paysolutions-th') {
+                e.preventDefault();
+                handlePaysolutionsPayment(e.target);
                 return;
             }
             // For GPay Nuvei payment, intercept and show modal first
@@ -2180,6 +2259,87 @@
             }
         }
 
+        // Paysolutions payment handler with modal confirmation
+        async function handlePaysolutionsPayment(form) {
+            const amountInput = document.querySelector('[name="PaysolutionsAmount"]');
+            const currencySelect = document.querySelector('[name="PaysolutionsCurrency"]');
+            
+            if (!amountInput?.value || !currencySelect?.value) {
+                alert('Please fill in amount and currency for Paysolutions payment');
+                return;
+            }
+
+            // Show confirmation modal
+            const modal = document.getElementById('paysolutions-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                
+                // Setup modal button handlers
+                const okBtn = document.getElementById('paysolutions-ok-btn');
+                const cancelBtn = document.getElementById('paysolutions-cancel-btn');
+                
+                // Remove existing listeners to avoid duplicates
+                const newOkBtn = okBtn.cloneNode(true);
+                okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+                const newCancelBtn = cancelBtn.cloneNode(true);
+                cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+                
+                // Cancel handler
+                newCancelBtn.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
+                
+                // OK handler - proceed with payment
+                newOkBtn.addEventListener('click', async () => {
+                    modal.style.display = 'none';
+                    
+                    const loadingOverlay = document.getElementById('loading-overlay');
+                    if (loadingOverlay) loadingOverlay.style.display = 'flex';
+                    
+                    try {
+                        const formData = new FormData();
+                        formData.append('Amount', amountInput.value);
+                        formData.append('CustomerName', document.querySelector('[name="CustomerName"]')?.value || '');
+                        formData.append('CustomerEmail', document.querySelector('[name="CustomerEmail"]')?.value || '');
+                        
+                        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                        if (token) formData.append('__RequestVerificationToken', token.value);
+                        
+                        const resp = await fetch('/Paysolutions/CreateDeposit', {
+                            method: 'POST',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                            credentials: 'same-origin',
+                            body: formData
+                        });
+                        
+                        if (loadingOverlay) loadingOverlay.style.display = 'none';
+                        
+                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                        
+                        const text = await resp.text();
+                        let data;
+                        try { 
+                            data = JSON.parse(text); 
+                        } catch { 
+                            throw new Error('Invalid JSON from server'); 
+                        }
+                        
+                        if (data.success && data.redirectUrl) {
+                            // Open QR display in new tab
+                            window.open(data.redirectUrl, '_blank');
+                        } else {
+                            alert(data.error || 'Paysolutions payment failed. Please try again.');
+                        }
+                        
+                    } catch (err) {
+                        console.error('Paysolutions payment error', err);
+                        if (loadingOverlay) loadingOverlay.style.display = 'none';
+                        alert('Network error during Paysolutions payment. Please try again.');
+                    }
+                });
+            }
+        }
+
         // Carousel logic
         let paymentCarouselOffset = 0;
         let paymentCarouselItemWidth = 0;
@@ -2214,6 +2374,7 @@
         window.movePaymentCarousel = movePaymentCarousel;
         window.handleLuxtakPayment = handleLuxtakPayment;
         window.handleSmilepayzPayment = handleSmilepayzPayment;
+        window.handlePaysolutionsPayment = handlePaysolutionsPayment;
         window.showLuxtakModal = showLuxtakModal;
         window.initializeCarousel = initializeCarousel;
         
