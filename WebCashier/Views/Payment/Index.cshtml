@@ -706,41 +706,41 @@
 
 <!-- Paysolutions Modal -->
 <div id="paysolutions-modal" class="luxtak-modal" style="display: none;">
-    <div class="luxtak-modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
-        <div class="luxtak-modal-header">
-            <h3 id="paysolutions-modal-title">Paysolutions Payment</h3>
+    <div class="luxtak-modal-content" style="max-width: 600px; max-height: 100vh; overflow-y: auto; padding: 20px 24px;">
+        <div class="luxtak-modal-header" style="padding-bottom: 12px; border-bottom: 1px solid #e6e8ec; margin-bottom: 12px;">
+            <h3 id="paysolutions-modal-title" style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a;">Scan QR Code to Deposit</h3>
         </div>
-        <div class="luxtak-modal-body">
+        <div class="luxtak-modal-body" style="padding-bottom: 8px;">
             <div id="paysolutions-data-container" style="display: none;">
-                <div id="paysolutions-qr-image" style="text-align: center; margin: 20px 0;">
-                    <img id="paysolutions-image" src="" alt="QR Code" style="max-width: 300px; height: auto; border-radius: 8px;" />
+                <div id="paysolutions-qr-image" style="text-align: center; margin: 12px 0 16px 0;">
+                    <img id="paysolutions-image" src="" alt="QR Code" style="max-width: 320px; width: 100%; height: auto; border-radius: 10px; box-shadow: 0 8px 18px rgba(0,0,0,0.08);" />
                 </div>
-                <div id="paysolutions-details" style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin: 15px 0;">
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
-                        <span style="font-weight: 500; color: #6c757d;">Order Number:</span>
-                        <span id="paysolutions-orderNo" style="font-weight: bold;"></span>
+                <div id="paysolutions-details" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin: 12px 0 4px 0;">
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; line-height: 20px;">
+                        <span style="font-weight: 600; color: #475569;">Order Number</span>
+                        <span id="paysolutions-orderNo" style="font-weight: 700; color: #0f172a;"></span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
-                        <span style="font-weight: 500; color: #6c757d;">Reference Number:</span>
-                        <span id="paysolutions-referenceNo" style="font-weight: bold;"></span>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; line-height: 20px;">
+                        <span style="font-weight: 600; color: #475569;">Reference Number</span>
+                        <span id="paysolutions-referenceNo" style="font-weight: 700; color: #0f172a;"></span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
-                        <span style="font-weight: 500; color: #6c757d;">Total:</span>
-                        <span id="paysolutions-total" style="font-weight: bold;"></span>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; line-height: 20px;">
+                        <span style="font-weight: 600; color: #475569;">Total</span>
+                        <span id="paysolutions-total" style="font-weight: 700; color: #0f172a;"></span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
-                        <span style="font-weight: 500; color: #6c757d;">Order Date & Time:</span>
-                        <span id="paysolutions-orderdatetime" style="font-weight: bold;"></span>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; line-height: 20px;">
+                        <span style="font-weight: 600; color: #475569;">Order Date & Time</span>
+                        <span id="paysolutions-orderdatetime" style="font-weight: 700; color: #0f172a;"></span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding: 8px 0;">
-                        <span style="font-weight: 500; color: #6c757d;">Expiry Date:</span>
-                        <span id="paysolutions-expiredate" style="font-weight: bold;"></span>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; line-height: 20px;">
+                        <span style="font-weight: 600; color: #475569;">Expiry Date</span>
+                        <span id="paysolutions-expiredate" style="font-weight: 700; color: #b91c1c;"></span>
                     </div>
                 </div>
             </div>
-            <p id="paysolutions-modal-message" style="display: none;">Generating Paysolutions QR... Please wait.</p>
+            <p id="paysolutions-modal-message" style="display: none; margin: 12px 0 0 0; text-align: center; color: #475569; font-size: 14px;">Generating Paysolutions QR... Please wait.</p>
         </div>
-        <div class="luxtak-modal-footer">
+        <div class="luxtak-modal-footer" style="padding-top: 10px; margin-top: 4px; border-top: 1px solid #e6e8ec;">
             <button id="paysolutions-ok-btn" class="btn-ok">OK</button>
             <button id="paysolutions-cancel-btn" class="btn-cancel">Cancel</button>
         </div>
