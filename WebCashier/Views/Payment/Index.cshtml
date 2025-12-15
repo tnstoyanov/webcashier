@@ -738,7 +738,7 @@
                     </div>
                 </div>
             </div>
-            <p id="paysolutions-modal-message" style="display: none;">Paysolutions will open in a new tab.</p>
+            <p id="paysolutions-modal-message" style="display: none;">Generating Paysolutions QR... Please wait.</p>
         </div>
         <div class="luxtak-modal-footer">
             <button id="paysolutions-ok-btn" class="btn-ok">OK</button>
@@ -2286,108 +2286,115 @@
             }
         }
 
-        // Paysolutions payment handler with modal confirmation
+        // Paysolutions payment handler: open modal immediately, fetch, then show QR
         async function handlePaysolutionsPayment(form) {
             const amountInput = document.querySelector('[name="PaysolutionsAmount"]');
             const currencySelect = document.querySelector('[name="PaysolutionsCurrency"]');
-            
+
             if (!amountInput?.value || !currencySelect?.value) {
                 alert('Please fill in amount and currency for Paysolutions payment');
                 return;
             }
 
-            // Show confirmation modal
             const modal = document.getElementById('paysolutions-modal');
-            if (modal) {
-                modal.style.display = 'flex';
-                
-                // Setup modal button handlers
-                const okBtn = document.getElementById('paysolutions-ok-btn');
-                const cancelBtn = document.getElementById('paysolutions-cancel-btn');
-                
-                // Remove existing listeners to avoid duplicates
-                const newOkBtn = okBtn.cloneNode(true);
-                okBtn.parentNode.replaceChild(newOkBtn, okBtn);
-                const newCancelBtn = cancelBtn.cloneNode(true);
-                cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-                
-                // Cancel handler
-                newCancelBtn.addEventListener('click', () => {
-                    modal.style.display = 'none';
+            if (!modal) return;
+
+            // Setup modal UI to loading state
+            const okBtn = document.getElementById('paysolutions-ok-btn');
+            const cancelBtn = document.getElementById('paysolutions-cancel-btn');
+            const dataContainer = document.getElementById('paysolutions-data-container');
+            const messageContainer = document.getElementById('paysolutions-modal-message');
+
+            // Reset listeners to avoid duplicates
+            const newOkBtn = okBtn.cloneNode(true);
+            okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+            // Show modal right away in loading state
+            if (messageContainer) {
+                messageContainer.textContent = 'Generating Paysolutions QR... Please wait.';
+                messageContainer.style.display = 'block';
+            }
+            if (dataContainer) dataContainer.style.display = 'none';
+            newOkBtn.disabled = true;
+            modal.style.display = 'flex';
+
+            // Cancel closes modal (regardless of state)
+            newCancelBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+
+            // Fetch deposit/QR data immediately
+            try {
+                const formData = new FormData();
+                formData.append('Amount', amountInput.value);
+                formData.append('CustomerName', document.querySelector('[name="CustomerName"]')?.value || '');
+                formData.append('CustomerEmail', document.querySelector('[name="CustomerEmail"]')?.value || '');
+
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (token) formData.append('__RequestVerificationToken', token.value);
+
+                const resp = await fetch('/Paysolutions/CreateDeposit', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                    body: formData
                 });
-                
-                // OK handler - proceed with payment
-                newOkBtn.addEventListener('click', async () => {
-                    const loadingOverlay = document.getElementById('loading-overlay');
-                    if (loadingOverlay) loadingOverlay.style.display = 'flex';
-                    
-                    try {
-                        const formData = new FormData();
-                        formData.append('Amount', amountInput.value);
-                        formData.append('CustomerName', document.querySelector('[name="CustomerName"]')?.value || '');
-                        formData.append('CustomerEmail', document.querySelector('[name="CustomerEmail"]')?.value || '');
-                        
-                        const token = document.querySelector('input[name="__RequestVerificationToken"]');
-                        if (token) formData.append('__RequestVerificationToken', token.value);
-                        
-                        const resp = await fetch('/Paysolutions/CreateDeposit', {
-                            method: 'POST',
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                            credentials: 'same-origin',
-                            body: formData
-                        });
-                        
-                        if (loadingOverlay) loadingOverlay.style.display = 'none';
-                        
-                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                        
-                        const text = await resp.text();
-                        let data;
-                        try { 
-                            data = JSON.parse(text); 
-                        } catch { 
-                            throw new Error('Invalid JSON from server'); 
-                        }
-                        
-                        if (data.success && data.data) {
-                            // Display QR data on the modal itself
-                            const dataContainer = document.getElementById('paysolutions-data-container');
-                            const messageContainer = document.getElementById('paysolutions-modal-message');
-                            
-                            if (dataContainer && messageContainer) {
-                                // Hide the message and show the data container
-                                messageContainer.style.display = 'none';
-                                dataContainer.style.display = 'block';
-                                
-                                // Populate the modal with payment data
-                                document.getElementById('paysolutions-image').src = data.data.image;
-                                document.getElementById('paysolutions-orderNo').textContent = data.data.orderNo;
-                                document.getElementById('paysolutions-referenceNo').textContent = data.data.referenceNo;
-                                document.getElementById('paysolutions-total').textContent = data.data.total;
-                                document.getElementById('paysolutions-orderdatetime').textContent = data.data.orderdatetime;
-                                document.getElementById('paysolutions-expiredate').textContent = data.data.expiredate;
-                                
-                                // Update OK button text and handler to return to main view
-                                newOkBtn.textContent = 'OK';
-                                newOkBtn.onclick = () => {
-                                    modal.style.display = 'none';
-                                    // Reset modal for next use
-                                    dataContainer.style.display = 'none';
-                                    messageContainer.style.display = 'block';
-                                };
-                            }
-                        } else {
-                            alert(data.error || 'Paysolutions payment failed. Please try again.');
-                            modal.style.display = 'none';
-                        }
-                        
-                    } catch (err) {
-                        console.error('Paysolutions payment error', err);
-                        if (loadingOverlay) loadingOverlay.style.display = 'none';
-                        alert('Network error during Paysolutions payment. Please try again.');
+
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+                const text = await resp.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    throw new Error('Invalid JSON from server');
+                }
+
+                if (data.success && data.data) {
+                    // Populate and show data in modal
+                    document.getElementById('paysolutions-image').src = data.data.image;
+                    document.getElementById('paysolutions-orderNo').textContent = data.data.orderNo;
+                    document.getElementById('paysolutions-referenceNo').textContent = data.data.referenceNo;
+                    document.getElementById('paysolutions-total').textContent = data.data.total;
+                    document.getElementById('paysolutions-orderdatetime').textContent = data.data.orderdatetime;
+                    document.getElementById('paysolutions-expiredate').textContent = data.data.expiredate;
+
+                    if (messageContainer) messageContainer.style.display = 'none';
+                    if (dataContainer) dataContainer.style.display = 'block';
+
+                    // Enable OK to close and return to main view
+                    newOkBtn.disabled = false;
+                    newOkBtn.textContent = 'OK';
+                    newOkBtn.onclick = () => {
                         modal.style.display = 'none';
+                        // Reset for next time
+                        if (dataContainer) dataContainer.style.display = 'none';
+                        if (messageContainer) {
+                            messageContainer.textContent = 'Generating Paysolutions QR... Please wait.';
+                            messageContainer.style.display = 'none';
+                        }
+                    };
+                } else {
+                    // Show error in the modal
+                    if (messageContainer) {
+                        messageContainer.textContent = data.error || 'Paysolutions payment failed. Please try again.';
+                        messageContainer.style.display = 'block';
                     }
-                });
+                    newOkBtn.disabled = false;
+                    newOkBtn.textContent = 'Close';
+                    newOkBtn.onclick = () => { modal.style.display = 'none'; };
+                }
+            } catch (err) {
+                console.error('Paysolutions payment error', err);
+                if (messageContainer) {
+                    messageContainer.textContent = 'Network error during Paysolutions payment. Please try again.';
+                    messageContainer.style.display = 'block';
+                }
+                newOkBtn.disabled = false;
+                newOkBtn.textContent = 'Close';
+                newOkBtn.onclick = () => { modal.style.display = 'none'; };
             }
         }
 
