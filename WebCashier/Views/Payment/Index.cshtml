@@ -706,12 +706,39 @@
 
 <!-- Paysolutions Modal -->
 <div id="paysolutions-modal" class="luxtak-modal" style="display: none;">
-    <div class="luxtak-modal-content">
+    <div class="luxtak-modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
         <div class="luxtak-modal-header">
             <h3 id="paysolutions-modal-title">Paysolutions Payment</h3>
         </div>
         <div class="luxtak-modal-body">
-            <p id="paysolutions-modal-message">Paysolutions will open in a new tab.</p>
+            <div id="paysolutions-data-container" style="display: none;">
+                <div id="paysolutions-qr-image" style="text-align: center; margin: 20px 0;">
+                    <img id="paysolutions-image" src="" alt="QR Code" style="max-width: 300px; height: auto; border-radius: 8px;" />
+                </div>
+                <div id="paysolutions-details" style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+                        <span style="font-weight: 500; color: #6c757d;">Order Number:</span>
+                        <span id="paysolutions-orderNo" style="font-weight: bold;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+                        <span style="font-weight: 500; color: #6c757d;">Reference Number:</span>
+                        <span id="paysolutions-referenceNo" style="font-weight: bold;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+                        <span style="font-weight: 500; color: #6c757d;">Total:</span>
+                        <span id="paysolutions-total" style="font-weight: bold;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+                        <span style="font-weight: 500; color: #6c757d;">Order Date & Time:</span>
+                        <span id="paysolutions-orderdatetime" style="font-weight: bold;"></span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                        <span style="font-weight: 500; color: #6c757d;">Expiry Date:</span>
+                        <span id="paysolutions-expiredate" style="font-weight: bold;"></span>
+                    </div>
+                </div>
+            </div>
+            <p id="paysolutions-modal-message" style="display: none;">Paysolutions will open in a new tab.</p>
         </div>
         <div class="luxtak-modal-footer">
             <button id="paysolutions-ok-btn" class="btn-ok">OK</button>
@@ -2291,8 +2318,6 @@
                 
                 // OK handler - proceed with payment
                 newOkBtn.addEventListener('click', async () => {
-                    modal.style.display = 'none';
-                    
                     const loadingOverlay = document.getElementById('loading-overlay');
                     if (loadingOverlay) loadingOverlay.style.display = 'flex';
                     
@@ -2325,118 +2350,42 @@
                         }
                         
                         if (data.success && data.data) {
-                            // Create HTML for QR display in new window
-                            const qrWindow = window.open('', '_blank');
-                            if (qrWindow) {
-                                qrWindow.document.write(`
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Paysolutions QR Code</title>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 100vh; 
-            margin: 0; 
-            background-color: #f5f5f5; 
-        }
-        .container { 
-            background: white; 
-            padding: 2rem; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-            text-align: center; 
-            max-width: 500px; 
-        }
-        .qr-image { 
-            max-width: 100%; 
-            height: auto; 
-            margin: 1rem 0; 
-        }
-        .details { 
-            margin: 1rem 0; 
-            text-align: left; 
-        }
-        .detail-row { 
-            margin: 0.5rem 0; 
-            display: flex; 
-            justify-content: space-between; 
-        }
-        .detail-label { 
-            font-weight: bold; 
-        }
-        .warning { 
-            color: #d32f2f; 
-            margin: 1rem 0; 
-            font-weight: bold; 
-        }
-        .close-btn { 
-            background-color: #4CAF50; 
-            color: white; 
-            padding: 10px 20px; 
-            border: none; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            font-size: 16px; 
-            margin-top: 1rem; 
-        }
-        .close-btn:hover { 
-            background-color: #45a049; 
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Scan QR Code to Pay</h2>
-        <img src="${data.data.image}" alt="QR Code" class="qr-image" />
-        <div class="details">
-            <div class="detail-row">
-                <span class="detail-label">Order No:</span>
-                <span>${data.data.orderNo}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Reference No:</span>
-                <span>${data.data.referenceNo}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Amount:</span>
-                <span>฿${data.data.total}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Order Date:</span>
-                <span>${data.data.orderdatetime}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Expires:</span>
-                <span>${data.data.expiredate}</span>
-            </div>
-        </div>
-        <div class="warning">
-            ⚠️ This QR code will expire soon. Please scan and complete payment immediately.
-        </div>
-        <button class="close-btn" onclick="window.close()">Close</button>
-    </div>
-</body>
-</html>
-                                `);
-                                qrWindow.document.close();
-                            } else {
-                                alert('Please allow pop-ups to view the QR code.');
+                            // Display QR data on the modal itself
+                            const dataContainer = document.getElementById('paysolutions-data-container');
+                            const messageContainer = document.getElementById('paysolutions-modal-message');
+                            
+                            if (dataContainer && messageContainer) {
+                                // Hide the message and show the data container
+                                messageContainer.style.display = 'none';
+                                dataContainer.style.display = 'block';
+                                
+                                // Populate the modal with payment data
+                                document.getElementById('paysolutions-image').src = data.data.image;
+                                document.getElementById('paysolutions-orderNo').textContent = data.data.orderNo;
+                                document.getElementById('paysolutions-referenceNo').textContent = data.data.referenceNo;
+                                document.getElementById('paysolutions-total').textContent = data.data.total;
+                                document.getElementById('paysolutions-orderdatetime').textContent = data.data.orderdatetime;
+                                document.getElementById('paysolutions-expiredate').textContent = data.data.expiredate;
+                                
+                                // Update OK button text and handler to return to main view
+                                newOkBtn.textContent = 'OK';
+                                newOkBtn.onclick = () => {
+                                    modal.style.display = 'none';
+                                    // Reset modal for next use
+                                    dataContainer.style.display = 'none';
+                                    messageContainer.style.display = 'block';
+                                };
                             }
                         } else {
                             alert(data.error || 'Paysolutions payment failed. Please try again.');
+                            modal.style.display = 'none';
                         }
                         
                     } catch (err) {
                         console.error('Paysolutions payment error', err);
                         if (loadingOverlay) loadingOverlay.style.display = 'none';
                         alert('Network error during Paysolutions payment. Please try again.');
+                        modal.style.display = 'none';
                     }
                 });
             }
