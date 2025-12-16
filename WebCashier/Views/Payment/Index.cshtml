@@ -741,8 +741,7 @@
             <p id="paysolutions-modal-message" style="display: none; margin: 12px 0 0 0; text-align: center; color: #475569; font-size: 14px;">Generating Paysolutions QR... Please wait.</p>
         </div>
         <div class="luxtak-modal-footer" style="padding-top: 10px; margin-top: 4px; border-top: 1px solid #e6e8ec;">
-            <button id="paysolutions-ok-btn" class="btn-ok">OK</button>
-            <button id="paysolutions-cancel-btn" class="btn-cancel">Cancel</button>
+            <button id="paysolutions-ok-btn" class="btn-ok" style="width: 100%;">Done</button>
         </div>
     </div>
 </div>
@@ -2301,15 +2300,12 @@
 
             // Setup modal UI to loading state
             const okBtn = document.getElementById('paysolutions-ok-btn');
-            const cancelBtn = document.getElementById('paysolutions-cancel-btn');
             const dataContainer = document.getElementById('paysolutions-data-container');
             const messageContainer = document.getElementById('paysolutions-modal-message');
 
             // Reset listeners to avoid duplicates
             const newOkBtn = okBtn.cloneNode(true);
             okBtn.parentNode.replaceChild(newOkBtn, okBtn);
-            const newCancelBtn = cancelBtn.cloneNode(true);
-            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
 
             // Show modal right away in loading state
             if (messageContainer) {
@@ -2318,12 +2314,8 @@
             }
             if (dataContainer) dataContainer.style.display = 'none';
             newOkBtn.disabled = true;
+            newOkBtn.textContent = 'Please wait...';
             modal.style.display = 'flex';
-
-            // Cancel closes modal (regardless of state)
-            newCancelBtn.addEventListener('click', () => {
-                modal.style.display = 'none';
-            });
 
             // Fetch deposit/QR data immediately
             try {
@@ -2366,7 +2358,7 @@
 
                     // Enable OK to close and return to main view
                     newOkBtn.disabled = false;
-                    newOkBtn.textContent = 'OK';
+                    newOkBtn.textContent = 'Done';
                     newOkBtn.onclick = () => {
                         modal.style.display = 'none';
                         // Reset for next time
@@ -2383,7 +2375,7 @@
                         messageContainer.style.display = 'block';
                     }
                     newOkBtn.disabled = false;
-                    newOkBtn.textContent = 'Close';
+                    newOkBtn.textContent = 'Done';
                     newOkBtn.onclick = () => { modal.style.display = 'none'; };
                 }
             } catch (err) {
@@ -2393,7 +2385,7 @@
                     messageContainer.style.display = 'block';
                 }
                 newOkBtn.disabled = false;
-                newOkBtn.textContent = 'Close';
+                newOkBtn.textContent = 'Done';
                 newOkBtn.onclick = () => { modal.style.display = 'none'; };
             }
         }
