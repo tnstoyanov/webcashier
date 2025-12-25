@@ -277,22 +277,7 @@ builder.Services.AddHttpClient("comm-logs")
     });
 
 // Register PayPal service
-builder.Services.AddHttpClient<IPayPalService, PayPalService>(client =>
-{
-    client.Timeout = TimeSpan.FromSeconds(30);
-    client.DefaultRequestHeaders.Add("User-Agent", "WebCashier/1.0");
-})
-.ConfigurePrimaryHttpMessageHandler(() =>
-{
-    var handler = new HttpClientHandler();
-    handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-    handler.CheckCertificateRevocationList = false;
-    if (builder.Environment.IsDevelopment())
-    {
-        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
-    }
-    return handler;
-});
+builder.Services.AddScoped<IPayPalService, PayPalService>();
 
 // Register HttpClient and SmilepayzService
 builder.Services.AddHttpClient<ISmilepayzService, SmilepayzService>(client =>
