@@ -106,17 +106,22 @@ namespace WebCashier.Controllers
 
                     if (paypalOrder?.Id != null)
                     {
+                        _logger.LogInformation("PayPal order object received - Id: {OrderId}, Status: {Status}, LinksCount: {LinksCount}", 
+                            paypalOrder.Id, paypalOrder.Status, paypalOrder.Links?.Count ?? 0);
+                        
                         var approvalLink = paypalOrder.Links?.FirstOrDefault(l => l.Rel == "approve")?.Href;
 
                         if (!string.IsNullOrWhiteSpace(approvalLink))
                         {
+                            _logger.LogInformation("PayPal approval link found: {ApprovalLink}", approvalLink);
                             _logger.LogInformation("PayPal order created successfully: {OrderId}", paypalOrder.Id);
                             await _commLog.LogAsync("payment-paypal-order-created", new
                             {
                                 orderId = paypalOrder.Id,
                                 amount,
                                 currency,
-                                referenceId
+                                referenceId,
+                                approvalLink
                             }, "payment-flow");
 
                             return Json(new
@@ -127,6 +132,15 @@ namespace WebCashier.Controllers
                                 status = paypalOrder.Status
                             });
                         }
+                        else
+                        {
+                            _logger.LogError("PayPal approval link is null/empty. Order: {OrderId}, Status: {Status}, Links: {@Links}", 
+                                paypalOrder.Id, paypalOrder.Status, paypalOrder.Links);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError("PayPal order is null or missing Id. Order: {@PayPalOrder}", paypalOrder);
                     }
 
                     _logger.LogError("PayPal payment failed - unable to create order or get approval URL");
