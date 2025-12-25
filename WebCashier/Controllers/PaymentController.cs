@@ -95,6 +95,54 @@ namespace WebCashier.Controllers
                         return Json(new { success = false, error = response?.Message ?? "Payment initialization failed" });
                     }
                 }
+                else if (paymentMethod?.ToLower() == "paypal")
+                {
+                    _logger.LogInformation("Processing PayPal payment via AJAX");
+
+                    var referenceId = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + Random.Shared.Next(10000, 99999);
+                    var description = $"Payment {referenceId}";
+
+                    var paypalOrder = await _paypalService.CreateOrderAsync(amount, currency, description, referenceId);
+
+                    if (paypalOrder?.Id != null)
+                    {
+                        var approvalLink = paypalOrder.Links?.FirstOrDefault(l => l.Rel == "approve")?.Href;
+
+                        if (!string.IsNullOrWhiteSpace(approvalLink))
+                        {
+                            _logger.LogInformation("PayPal order created successfully: {OrderId}", paypalOrder.Id);
+                            await _commLog.LogAsync("payment-paypal-order-created", new
+                            {
+                                orderId = paypalOrder.Id,
+                                amount,
+                                currency,
+                                referenceId
+                            }, "payment-flow");
+
+                            return Json(new
+                            {
+                                success = true,
+                                paymentUrl = approvalLink,
+                                orderId = paypalOrder.Id,
+                                status = paypalOrder.Status
+                            });
+                        }
+                    }
+
+                    _logger.LogError("PayPal payment failed - unable to create order or get approval URL");
+                    await _commLog.LogAsync("payment-paypal-error", new
+                    {
+                        amount,
+                        currency,
+                        error = "Order creation failed"
+                    }, "payment-flow");
+
+                    return Json(new
+                    {
+                        success = false,
+                        error = "Failed to initialize PayPal payment. Please try again."
+                    });
+                }
                 else
                 {
                     _logger.LogWarning("Unsupported payment method: {PaymentMethod}", paymentMethod);
@@ -108,6 +156,7 @@ namespace WebCashier.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing AJAX payment request");
+                await _commLog.LogAsync("payment-paypal-exception", new { error = ex.Message }, "payment-flow");
                 
                 return Json(new { 
                     success = false, 
@@ -159,10 +208,6 @@ namespace WebCashier.Controllers
                         _logger.LogInformation("Routing to Luxtak payment processing");
                         return await ProcessLuxtakPayment(model, orderId);
                     
-                    case "paypal":
-                        _logger.LogInformation("Routing to PayPal payment processing");
-                        return await ProcessPayPalPayment(model, orderId);
-                    
                     case "card":
                     default:
                         _logger.LogInformation("Routing to Praxis (card) payment processing");
@@ -205,79 +250,6 @@ namespace WebCashier.Controllers
             // Always redirect to processing page to wait for callback
             ViewBag.OrderId = orderId;
             return View("Processing", model);
-        }
-
-        private async Task<IActionResult> ProcessPayPalPayment(PaymentModel model, string orderId)
-        {
-            _logger.LogInformation("=== PROCESSING PAYPAL PAYMENT START ===");
-            _logger.LogInformation("Processing PayPal payment for OrderId: {OrderId}, Amount: {Amount}, Currency: {Currency}", 
-                orderId, model.Amount, model.Currency);
-
-            await _commLog.LogAsync("payment-paypal-initiate", new
-            {
-                orderId,
-                amount = model.Amount,
-                currency = model.Currency ?? "USD"
-            }, "payment-flow");
-
-            var currency = model.Currency ?? "USD";
-            var description = $"Payment {orderId}";
-
-            // Create PayPal order
-            _logger.LogInformation("Creating PayPal order...");
-            var paypalOrder = await _paypalService.CreateOrderAsync(model.Amount, currency, description, orderId);
-
-            if (paypalOrder?.Id == null)
-            {
-                _logger.LogError("PayPal order creation failed");
-                await _commLog.LogAsync("payment-paypal-error", new
-                {
-                    orderId,
-                    error = "Order creation failed"
-                }, "payment-flow");
-
-                return View("PaymentFailure", new PaymentResult
-                {
-                    Success = false,
-                    Message = "Failed to initialize PayPal payment. Please try again.",
-                    TransactionId = ""
-                });
-            }
-
-            _logger.LogInformation("PayPal order created: {PayPalOrderId}", paypalOrder.Id);
-            
-            // Store order ID for later capture
-            _paymentStateService.SetPaymentPending(orderId, paypalOrder.Id);
-
-            // Find approval link
-            var approvalLink = paypalOrder.Links?.FirstOrDefault(l => l.Rel == "approve")?.Href;
-            
-            if (string.IsNullOrWhiteSpace(approvalLink))
-            {
-                _logger.LogError("No approval link in PayPal response");
-                await _commLog.LogAsync("payment-paypal-error", new
-                {
-                    orderId,
-                    paypalOrderId = paypalOrder.Id,
-                    error = "No approval link in response"
-                }, "payment-flow");
-
-                return View("PaymentFailure", new PaymentResult
-                {
-                    Success = false,
-                    Message = "Failed to get PayPal approval URL. Please try again.",
-                    TransactionId = ""
-                });
-            }
-
-            _logger.LogInformation("Redirecting to PayPal approval: {ApprovalUrl}", approvalLink);
-            await _commLog.LogAsync("payment-paypal-redirect", new
-            {
-                orderId,
-                paypalOrderId = paypalOrder.Id
-            }, "payment-flow");
-
-            return Redirect(approvalLink);
         }
 
         private async Task<IActionResult> ProcessLuxtakPayment(PaymentModel model, string orderId)
