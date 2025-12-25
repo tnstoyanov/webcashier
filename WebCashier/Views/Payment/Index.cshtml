@@ -2203,10 +2203,19 @@
             if (isSuccess) {
                 titleEl.textContent = `${providerName} Payment`;
         const webUrl = content; // Payment destination
-        msgEl.innerHTML = `Ready to redirect to the ${providerName} payment page.<br><small>Click OK to continue in this tab or Cancel to abort.</small>`;
+        // PayPal opens in new tab, others open in same tab for redirect flow
+        const openInNewTab = providerName === 'PayPal';
+        msgEl.innerHTML = `Ready to redirect to the ${providerName} payment page.<br><small>Click OK to continue${openInNewTab ? ' in a new tab' : ' in this tab'} or Cancel to abort.</small>`;
         okBtn.style.display = 'inline-block';
         okBtn.textContent = 'OK';
-        okBtn.onclick = () => { modal.style.display = 'none'; window.location.href = webUrl; };
+        okBtn.onclick = () => { 
+            modal.style.display = 'none'; 
+            if (openInNewTab) {
+                window.open(webUrl, '_blank', 'noopener,noreferrer');
+            } else {
+                window.location.href = webUrl;
+            }
+        };
         cancelBtn.textContent = 'Cancel';
         cancelBtn.onclick = () => { modal.style.display = 'none'; };
         modal.style.display = 'flex';
