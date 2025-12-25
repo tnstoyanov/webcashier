@@ -195,15 +195,27 @@ namespace WebCashier.Services
                 }
 
                 var responseContent = await response.Content.ReadAsStringAsync();
+                _logger.LogInformation("[PayPal] Order response: {Response}", responseContent);
+                
                 var orderResponse = JsonSerializer.Deserialize<PayPalOrderResponse>(responseContent);
 
                 if (orderResponse?.Id != null)
                 {
                     _logger.LogInformation("[PayPal] Order created successfully: {OrderId}", orderResponse.Id);
+                    _logger.LogInformation("[PayPal] Order links count: {LinksCount}", orderResponse.Links?.Count ?? 0);
+                    if (orderResponse.Links != null)
+                    {
+                        foreach (var link in orderResponse.Links)
+                        {
+                            _logger.LogInformation("[PayPal] Link: rel={Rel}, href={Href}", link.Rel, link.Href);
+                        }
+                    }
+                    
                     await _commLog.LogAsync("paypal-order-created", new
                     {
                         orderId = orderResponse.Id,
                         status = orderResponse.Status,
+                        linksCount = orderResponse.Links?.Count ?? 0,
                         referenceId
                     }, "paypal");
                 }

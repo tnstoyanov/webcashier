@@ -36,7 +36,7 @@ namespace WebCashier.Controllers
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
+        [IgnoreAntiforgeryToken] // AJAX requests use X-Requested-With header which is CSRF-safe
         public async Task<IActionResult> Index(string paymentMethod, decimal amount, string currency)
         {
             _logger.LogInformation("=== AJAX PAYMENT REQUEST START ===");
