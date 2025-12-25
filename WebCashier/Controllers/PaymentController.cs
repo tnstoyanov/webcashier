@@ -109,7 +109,9 @@ namespace WebCashier.Controllers
                         _logger.LogInformation("PayPal order object received - Id: {OrderId}, Status: {Status}, LinksCount: {LinksCount}", 
                             paypalOrder.Id, paypalOrder.Status, paypalOrder.Links?.Count ?? 0);
                         
-                        var approvalLink = paypalOrder.Links?.FirstOrDefault(l => l.Rel == "approve")?.Href;
+                        // PayPal uses "payer-action" rel, not "approve"
+                        var approvalLink = paypalOrder.Links?.FirstOrDefault(l => l.Rel == "payer-action")?.Href 
+                                        ?? paypalOrder.Links?.FirstOrDefault(l => l.Rel == "approve")?.Href;
 
                         if (!string.IsNullOrWhiteSpace(approvalLink))
                         {
