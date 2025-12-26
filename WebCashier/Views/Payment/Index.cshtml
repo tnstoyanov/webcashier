@@ -2267,8 +2267,8 @@
         }
 
         async function handlePayPalPayment(form) {
-            const amountInput = document.querySelector('[name="Amount"]');
-            const currencySelect = document.querySelector('[name="Currency"]');
+            const amountInput = document.querySelector('[name="PayPalAmount"]');
+            const currencySelect = document.querySelector('[name="PayPalCurrency"]');
             if (!amountInput?.value || !currencySelect?.value) {
                 alert('Please fill in amount and currency for PayPal payment');
                 return;
