@@ -738,6 +738,41 @@ namespace WebCashier.Controllers
             return View();
         }
 
+        [HttpGet]
+        public IActionResult PaymentSuccess(string provider, string orderId)
+        {
+            _logger.LogInformation("PaymentSuccess called: provider={Provider}, orderId={OrderId}", provider, orderId);
+            
+            var model = new PaymentReturnModel
+            {
+                TransactionId = orderId,
+                OrderId = orderId,
+                PaymentMethod = provider ?? "Unknown",
+                PaymentProcessor = provider ?? "Unknown",
+                TransactionStatus = "SUCCESS",
+                IsSuccess = true,
+                StatusDetails = $"Payment completed successfully via {provider}"
+            };
+
+            // Try to get additional details from session if available
+            if (!string.IsNullOrWhiteSpace(provider) && provider.Equals("PayPal", StringComparison.OrdinalIgnoreCase))
+            {
+                var sessionStatus = HttpContext.Session.GetString("PayPalOrderStatus");
+                var sessionOrderId = HttpContext.Session.GetString("PayPalOrderId");
+                
+                if (!string.IsNullOrWhiteSpace(sessionStatus))
+                {
+                    model.TransactionStatus = sessionStatus;
+                }
+                if (!string.IsNullOrWhiteSpace(sessionOrderId))
+                {
+                    model.TransactionId = sessionOrderId;
+                }
+            }
+
+            return View("PaymentSuccess", model);
+        }
+
         private string GetClientIpAddress()
         {
             // Try to get the real IP address from various headers

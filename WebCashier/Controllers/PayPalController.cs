@@ -145,12 +145,48 @@ namespace WebCashier.Controllers
 
                 _logger.LogInformation("[PayPal] Return callback: OrderId={OrderId}, Status={Status}", order.Id, order.Status);
 
+                // Check if order is approved before attempting capture
+                if (order.Status != "APPROVED")
+                {
+                    _logger.LogError("[PayPal] Order {OrderId} is not in APPROVED state: {Status}", order.Id, order.Status);
+                    await _commLog.LogAsync("paypal-return-not-approved", new
+                    {
+                        orderId = order.Id,
+                        status = order.Status
+                    }, "paypal");
+                    return RedirectToAction("PaymentFailure", "Payment");
+                }
+
+                // Capture the order
+                _logger.LogInformation("[PayPal] Attempting to capture order {OrderId}", order.Id);
+                var capturedOrder = await _paypalService.CaptureOrderAsync(order.Id);
+
+                if (capturedOrder?.Id == null || capturedOrder.Status != "COMPLETED")
+                {
+                    _logger.LogError("[PayPal] Failed to capture order {OrderId}. Response status: {Status}", 
+                        order.Id, capturedOrder?.Status ?? "null");
+                    await _commLog.LogAsync("paypal-capture-failed", new
+                    {
+                        orderId = order.Id,
+                        capturedStatus = capturedOrder?.Status ?? "null"
+                    }, "paypal");
+                    return RedirectToAction("PaymentFailure", "Payment");
+                }
+
+                _logger.LogInformation("[PayPal] Order captured successfully: {OrderId}", capturedOrder.Id);
+                
                 // Store order details in session for display
-                HttpContext.Session.SetString("PayPalOrderId", order.Id);
-                HttpContext.Session.SetString("PayPalOrderStatus", order.Status ?? "unknown");
+                HttpContext.Session.SetString("PayPalOrderId", capturedOrder.Id);
+                HttpContext.Session.SetString("PayPalOrderStatus", capturedOrder.Status ?? "unknown");
+
+                await _commLog.LogAsync("paypal-capture-completed", new
+                {
+                    orderId = capturedOrder.Id,
+                    status = capturedOrder.Status
+                }, "paypal");
 
                 // Redirect to success page
-                return RedirectToAction("PaymentSuccess", "Payment", new { provider = "PayPal", orderId = order.Id });
+                return RedirectToAction("PaymentSuccess", "Payment", new { provider = "PayPal", orderId = capturedOrder.Id });
             }
             catch (Exception ex)
             {
