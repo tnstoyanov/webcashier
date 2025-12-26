@@ -29,6 +29,13 @@
                     <span class="detail-value">@Model.OrderId</span>
                 </div>
             }
+            @if (!string.IsNullOrEmpty(Model.AuthorizationCode))
+            {
+                <div class="detail-row">
+                    <span class="detail-label">Transaction ID:</span>
+                    <span class="detail-value">@Model.AuthorizationCode</span>
+                </div>
+            }
             <div class="detail-row">
                 <span class="detail-label">Payment Method:</span>
                 <span class="detail-value">@Model.PaymentMethod</span>

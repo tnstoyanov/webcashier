@@ -793,6 +793,14 @@ namespace WebCashier.Controllers
                                 model.Currency = purchaseUnit.Amount.CurrencyCode;
                             }
 
+                            // Extract transaction ID from capture
+                            var capture = purchaseUnit?.Payments?.Captures?.FirstOrDefault();
+                            if (capture != null && !string.IsNullOrWhiteSpace(capture.Id))
+                            {
+                                model.AuthorizationCode = capture.Id;
+                                _logger.LogInformation("[PayPal] Transaction ID extracted from capture: {TransactionId}", capture.Id);
+                            }
+
                             _logger.LogInformation("[PayPal] Order details retrieved: Status={Status}, Amount={Amount} {Currency}", 
                                 model.TransactionStatus, model.Amount, model.Currency);
                         }
