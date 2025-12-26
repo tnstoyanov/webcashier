@@ -40,6 +40,10 @@
                     <span class="detail-value">@Model.PaymentProcessor</span>
                 </div>
             }
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value status-approved">@Model.TransactionStatus</span>
+            </div>
             @if (!string.IsNullOrEmpty(Model.Currency))
             {
                 <div class="detail-row">
@@ -82,10 +86,6 @@
                     <span class="detail-value">@Model.Reference</span>
                 </div>
             }
-            <div class="detail-row">
-                <span class="detail-label">Status:</span>
-                <span class="detail-value status-approved">@Model.TransactionStatus</span>
-            </div>
             @if (!string.IsNullOrEmpty(Model.StatusCode))
             {
                 <div class="detail-row">

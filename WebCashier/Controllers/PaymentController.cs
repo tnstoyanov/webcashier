@@ -739,7 +739,7 @@ namespace WebCashier.Controllers
         }
 
         [HttpGet]
-        public IActionResult PaymentSuccess(string provider, string orderId)
+        public async Task<IActionResult> PaymentSuccess(string provider, string orderId)
         {
             _logger.LogInformation("PaymentSuccess called: provider={Provider}, orderId={OrderId}", provider, orderId);
             
@@ -754,7 +754,7 @@ namespace WebCashier.Controllers
                 StatusDetails = $"Payment completed successfully via {provider}"
             };
 
-            // Try to get additional details from session if available
+            // Try to get additional details from session and PayPal API if available
             if (!string.IsNullOrWhiteSpace(provider) && provider.Equals("PayPal", StringComparison.OrdinalIgnoreCase))
             {
                 var sessionStatus = HttpContext.Session.GetString("PayPalOrderStatus");
@@ -767,6 +767,41 @@ namespace WebCashier.Controllers
                 if (!string.IsNullOrWhiteSpace(sessionOrderId))
                 {
                     model.TransactionId = sessionOrderId;
+                    orderId = sessionOrderId;
+                }
+
+                // Fetch latest order details from PayPal API
+                if (!string.IsNullOrWhiteSpace(orderId))
+                {
+                    try
+                    {
+                        var orderDetails = await _paypalService.GetOrderAsync(orderId);
+                        
+                        if (orderDetails != null)
+                        {
+                            // Extract status
+                            if (!string.IsNullOrWhiteSpace(orderDetails.Status))
+                            {
+                                model.TransactionStatus = orderDetails.Status;
+                            }
+
+                            // Extract amount and currency from purchase units
+                            var purchaseUnit = orderDetails.PurchaseUnits?.FirstOrDefault();
+                            if (purchaseUnit?.Amount != null)
+                            {
+                                model.Amount = purchaseUnit.Amount.Value;
+                                model.Currency = purchaseUnit.Amount.CurrencyCode;
+                            }
+
+                            _logger.LogInformation("[PayPal] Order details retrieved: Status={Status}, Amount={Amount} {Currency}", 
+                                model.TransactionStatus, model.Amount, model.Currency);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "[PayPal] Failed to fetch additional order details from API");
+                        // Continue with what we have in the session
+                    }
                 }
             }
 
