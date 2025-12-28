@@ -436,25 +436,108 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
         {
             try
             {
-                var pwd = Environment.GetEnvironmentVariable("CERT_PFX_PASSWORD");
-                #pragma warning disable SYSLIB0057
-                X509Certificate2 cert = string.IsNullOrEmpty(pwd)
-                    ? new X509Certificate2(pfxPath)
-                    : new X509Certificate2(pfxPath, pwd, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                #pragma warning restore SYSLIB0057
-                handler.ClientCertificates.Add(cert);
-                handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                Console.WriteLine($"[SwiftGoldPay] Loaded client PFX certificate from: {pfxPath}");
-                Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
-                Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
-                foundDir ??= Path.GetDirectoryName(pfxPath);
-
-                // Optionally attach intermediate chain if present alongside PFX
-                TryAttachClientChain(handler, cert, foundDir, searchDirs, chainOverridePath, chainOverridePem);
+                Console.WriteLine($"[SwiftGoldPay] Attempting to load client PFX from: {pfxPath}");
+                var pwd = Environment.GetEnvironmentVariable("CERT_PFX_PASSWORD") ?? string.Empty;
+                
+                // Read PFX file bytes
+                var pfxBytes = File.ReadAllBytes(pfxPath);
+                Console.WriteLine($"[SwiftGoldPay] PFX file size: {pfxBytes.Length} bytes");
+                
+                X509Certificate2? cert = null;
+                
+                // Try different loading strategies for maximum compatibility
+                Exception? lastEx = null;
+                
+                // Strategy 1: Load with password (even if empty) and EphemeralKeySet for Linux
+                try
+                {
+                    #pragma warning disable SYSLIB0057
+                    cert = new X509Certificate2(pfxBytes, pwd, 
+                        X509KeyStorageFlags.Exportable | 
+                        X509KeyStorageFlags.EphemeralKeySet);
+                    #pragma warning restore SYSLIB0057
+                    Console.WriteLine("[SwiftGoldPay] Successfully loaded PFX with EphemeralKeySet");
+                }
+                catch (Exception ex1)
+                {
+                    lastEx = ex1;
+                    Console.WriteLine($"[SwiftGoldPay] Strategy 1 (EphemeralKeySet) failed: {ex1.Message}");
+                }
+                
+                // Strategy 2: Load with MachineKeySet if Strategy 1 failed
+                if (cert == null || !cert.HasPrivateKey)
+                {
+                    try
+                    {
+                        #pragma warning disable SYSLIB0057
+                        cert = new X509Certificate2(pfxBytes, pwd,
+                            X509KeyStorageFlags.Exportable | 
+                            X509KeyStorageFlags.MachineKeySet | 
+                            X509KeyStorageFlags.PersistKeySet);
+                        #pragma warning restore SYSLIB0057
+                        Console.WriteLine("[SwiftGoldPay] Successfully loaded PFX with MachineKeySet + PersistKeySet");
+                    }
+                    catch (Exception ex2)
+                    {
+                        lastEx = ex2;
+                        Console.WriteLine($"[SwiftGoldPay] Strategy 2 (MachineKeySet) failed: {ex2.Message}");
+                    }
+                }
+                
+                // Strategy 3: Load with default flags
+                if (cert == null || !cert.HasPrivateKey)
+                {
+                    try
+                    {
+                        #pragma warning disable SYSLIB0057
+                        cert = new X509Certificate2(pfxBytes, pwd, X509KeyStorageFlags.DefaultKeySet);
+                        #pragma warning restore SYSLIB0057
+                        Console.WriteLine("[SwiftGoldPay] Successfully loaded PFX with DefaultKeySet");
+                    }
+                    catch (Exception ex3)
+                    {
+                        lastEx = ex3;
+                        Console.WriteLine($"[SwiftGoldPay] Strategy 3 (DefaultKeySet) failed: {ex3.Message}");
+                    }
+                }
+                
+                if (cert != null && cert.HasPrivateKey)
+                {
+                    handler.ClientCertificates.Add(cert);
+                    handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                    Console.WriteLine($"[SwiftGoldPay] Successfully loaded client PFX certificate");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert issuer: {cert.Issuer}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert serial: {cert.SerialNumber}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert thumbprint: {cert.Thumbprint}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert has private key: {cert.HasPrivateKey}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert valid from (UTC): {cert.NotBefore.ToUniversalTime():u}");
+                    Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
+                    
+                    // Check if certificate is expired
+                    var now = DateTime.UtcNow;
+                    if (now < cert.NotBefore || now > cert.NotAfter)
+                    {
+                        Console.WriteLine($"[SwiftGoldPay] WARNING: Certificate is expired or not yet valid! Current time: {now:u}");
+                    }
+                    
+                    foundDir ??= Path.GetDirectoryName(pfxPath);
+                    
+                    // Optionally attach intermediate chain if present alongside PFX
+                    TryAttachClientChain(handler, cert, foundDir, searchDirs, chainOverridePath, chainOverridePem);
+                }
+                else
+                {
+                    var errMsg = cert == null ? "Could not load certificate" : "Certificate loaded but has no private key";
+                    Console.WriteLine($"[SwiftGoldPay] Failed to load PFX: {errMsg}. Last error: {lastEx?.Message}");
+                    Console.WriteLine($"[SwiftGoldPay] Falling back to PEM files if available.");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[SwiftGoldPay] Failed to load PFX: {ex.Message}. Falling back to PEM if available.");
+                Console.WriteLine($"[SwiftGoldPay] Unexpected error loading PFX: {ex.GetType().Name}: {ex.Message}");
+                Console.WriteLine($"[SwiftGoldPay] Stack trace: {ex.StackTrace}");
+                Console.WriteLine($"[SwiftGoldPay] Falling back to PEM files if available.");
             }
         }
 
@@ -468,42 +551,99 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                 var keyPathTry = Path.Combine(dir, "private.key");
                 if (File.Exists(pemPathTry) && File.Exists(keyPathTry))
                 {
-                    // Load from PEM files - use different approach based on platform
-                    X509Certificate2 cert;
-                    if (OperatingSystem.IsLinux())
+                    try
                     {
-                        // On Linux, we need to use PFX for proper key association
-                        var tempCert = X509Certificate2.CreateFromPemFile(pemPathTry, keyPathTry);
+                        Console.WriteLine($"[SwiftGoldPay] Attempting to load certificate from PEM files:");
+                        Console.WriteLine($"[SwiftGoldPay] - Certificate: {pemPathTry}");
+                        Console.WriteLine($"[SwiftGoldPay] - Private key: {keyPathTry}");
+                        
+                        // Read the PEM files
+                        var certPem = File.ReadAllText(pemPathTry);
+                        var keyPem = File.ReadAllText(keyPathTry);
+                        
+                        // Create certificate from PEM
+                        var tempCert = X509Certificate2.CreateFromPem(certPem, keyPem);
+                        Console.WriteLine($"[SwiftGoldPay] Created temp certificate from PEM - has private key: {tempCert.HasPrivateKey}");
+                        
+                        // Export to PFX and re-import for proper handling across platforms
+                        // This ensures the private key is properly associated with the certificate
                         var pfxBytes = tempCert.Export(X509ContentType.Pkcs12);
+                        Console.WriteLine($"[SwiftGoldPay] Exported to PFX format ({pfxBytes.Length} bytes)");
+                        
+                        X509Certificate2 cert;
                         #pragma warning disable SYSLIB0057
-                        cert = new X509Certificate2(pfxBytes, (string?)null, X509KeyStorageFlags.Exportable);
+                        if (OperatingSystem.IsLinux())
+                        {
+                            // On Linux (Render.com), use EphemeralKeySet to avoid keystore issues
+                            cert = new X509Certificate2(pfxBytes, (string?)null, 
+                                X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+                            Console.WriteLine("[SwiftGoldPay] Loaded certificate with EphemeralKeySet (Linux)");
+                        }
+                        else
+                        {
+                            // On macOS/Windows, standard flags work fine
+                            cert = new X509Certificate2(pfxBytes, (string?)null, 
+                                X509KeyStorageFlags.Exportable);
+                            Console.WriteLine("[SwiftGoldPay] Loaded certificate with Exportable flag (macOS/Windows)");
+                        }
                         #pragma warning restore SYSLIB0057
+                        
+                        handler.ClientCertificates.Add(cert);
+                        handler.ClientCertificateOptions = ClientCertificateOption.Manual;
+                        Console.WriteLine($"[SwiftGoldPay] Successfully loaded client certificate from PEM files");
+                        Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
+                        Console.WriteLine($"[SwiftGoldPay] Client cert issuer: {cert.Issuer}");
+                        Console.WriteLine($"[SwiftGoldPay] Client cert serial: {cert.SerialNumber}");
+                        Console.WriteLine($"[SwiftGoldPay] Client cert thumbprint: {cert.Thumbprint}");
+                        Console.WriteLine($"[SwiftGoldPay] Client cert has private key: {cert.HasPrivateKey}");
+                        Console.WriteLine($"[SwiftGoldPay] Client cert valid from (UTC): {cert.NotBefore.ToUniversalTime():u}");
+                        Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
+                        
+                        // Check if certificate is expired
+                        var now = DateTime.UtcNow;
+                        if (now < cert.NotBefore || now > cert.NotAfter)
+                        {
+                            Console.WriteLine($"[SwiftGoldPay] WARNING: Certificate is expired or not yet valid! Current time: {now:u}");
+                        }
+                        
+                        foundDir = dir;
+                        
+                        // Optionally attach intermediate chain if present
+                        TryAttachClientChain(handler, cert, foundDir, searchDirs, chainOverridePath, chainOverridePem);
+                        break;
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        // On macOS/Windows, direct PEM loading works fine
-                        cert = X509Certificate2.CreateFromPemFile(pemPathTry, keyPathTry);
+                        Console.WriteLine($"[SwiftGoldPay] Failed to load PEM certificate: {ex.GetType().Name}: {ex.Message}");
+                        Console.WriteLine($"[SwiftGoldPay] Stack trace: {ex.StackTrace}");
                     }
-                    handler.ClientCertificates.Add(cert);
-                    handler.ClientCertificateOptions = ClientCertificateOption.Manual;
-                    Console.WriteLine($"[SwiftGoldPay] Loaded client certificate from: {pemPathTry}");
-                    Console.WriteLine($"[SwiftGoldPay] Client cert subject: {cert.Subject}");
-                    Console.WriteLine($"[SwiftGoldPay] Client cert issuer: {cert.Issuer}");
-                    Console.WriteLine($"[SwiftGoldPay] Client cert serial: {cert.SerialNumber}");
-                    Console.WriteLine($"[SwiftGoldPay] Client cert thumbprint: {cert.Thumbprint}");
-                    Console.WriteLine($"[SwiftGoldPay] Client cert valid until (UTC): {cert.NotAfter.ToUniversalTime():u}");
-                    Console.WriteLine($"[SwiftGoldPay] Client cert has private key: {cert.HasPrivateKey}");
-                    foundDir = dir;
-
-                    // Optionally attach intermediate chain if present
-                    TryAttachClientChain(handler, cert, foundDir, searchDirs, chainOverridePath, chainOverridePem);
-                    break;
                 }
             }
         }
         if (foundDir == null)
         {
-            Console.WriteLine("[SwiftGoldPay] Client certificate not found. Place certificate.pem and private.key under /cert or set CERT_DIR.");
+            Console.WriteLine("[SwiftGoldPay] ========================================");
+            Console.WriteLine("[SwiftGoldPay] WARNING: No client certificate found!");
+            Console.WriteLine("[SwiftGoldPay] ========================================");
+            Console.WriteLine("[SwiftGoldPay] SwiftGoldPay requires mTLS (mutual TLS) authentication.");
+            Console.WriteLine("[SwiftGoldPay] The API will reject requests without a valid client certificate.");
+            Console.WriteLine("[SwiftGoldPay] ");
+            Console.WriteLine("[SwiftGoldPay] To fix this, provide one of:");
+            Console.WriteLine("[SwiftGoldPay]   1. PFX file: Place 'client.pfx' under /cert (or set CERT_PFX_PATH)");
+            Console.WriteLine("[SwiftGoldPay]   2. PEM files: Place 'certificate.pem' and 'private.key' under /cert");
+            Console.WriteLine("[SwiftGoldPay]   3. Environment: Set SGP_CLIENT_CERT_PEM + SGP_CLIENT_KEY_PEM");
+            Console.WriteLine("[SwiftGoldPay]   4. Environment: Set SGP_CLIENT_PFX_BASE64 (+ optional SGP_CLIENT_PFX_PASSWORD)");
+            Console.WriteLine("[SwiftGoldPay] ");
+            Console.WriteLine("[SwiftGoldPay] Searched directories:");
+            foreach (var d in searchDirs.Where(x => !string.IsNullOrWhiteSpace(x)))
+            {
+                Console.WriteLine($"[SwiftGoldPay]   - {d}");
+            }
+            Console.WriteLine("[SwiftGoldPay] ========================================");
+        }
+        else
+        {
+            Console.WriteLine($"[SwiftGoldPay] Client certificate configuration complete. Loaded {handler.ClientCertificates.Count} certificate(s).");
         }
 
         if (!builder.Environment.IsDevelopment())
