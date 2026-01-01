@@ -2177,18 +2177,6 @@
                 return;
             }
 
-            // Show modal immediately
-            const modal = document.getElementById('nuvei-modal');
-            const closeBtn = document.getElementById('nuvei-close-btn');
-            const iframe = document.getElementById('nuvei-iframe');
-            
-            if (!modal || !iframe) return;
-            
-            modal.style.display = 'flex';
-            
-            // Set up close button handler - will navigate to back_url
-            let backUrl = null;
-            
             try {
                 const formData = new FormData();
                 formData.append('amount', amountInput.value);
@@ -2201,7 +2189,6 @@
                 
                 if(!resp.ok){
                     alert('Failed to create Nuvei session. HTTP ' + resp.status);
-                    modal.style.display = 'none';
                     return;
                 }
                 
@@ -2210,23 +2197,8 @@
                 
                 if(!data.success || !data.formUrl){
                     alert('Nuvei form creation failed: ' + (data.error || 'Unknown error'));
-                    modal.style.display = 'none';
                     return;
                 }
-                
-                // Find back_url from fields
-                const backUrlField = data.fields?.find(f => (f.key || f.Key) === 'back_url');
-                if (backUrlField) {
-                    backUrl = backUrlField.value || backUrlField.Value;
-                }
-                
-                // Set up close button to navigate to back_url
-                closeBtn.onclick = () => {
-                    modal.style.display = 'none';
-                    if (backUrl) {
-                        window.location.href = backUrl;
-                    }
-                };
                 
                 // Build GET URL with query parameters
                 const params = new URLSearchParams();
@@ -2242,8 +2214,44 @@
                 const nuveiUrl = data.formUrl + '?' + params.toString();
                 console.debug('Loading Nuvei HPP URL:', nuveiUrl);
                 
-                // Load URL directly in iframe
-                iframe.src = nuveiUrl;
+                // Apple Pay doesn't work in cross-origin iframes due to security restrictions
+                // Open in popup window instead for Apple Pay, use iframe for Google Pay
+                if (isApplePay) {
+                    // Open in popup window for Apple Pay
+                    const width = 900;
+                    const height = 700;
+                    const left = (screen.width / 2) - (width / 2);
+                    const top = (screen.height / 2) - (height / 2);
+                    window.open(
+                        nuveiUrl, 
+                        'NuveiApplePay',
+                        `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+                    );
+                } else {
+                    // Use iframe for Google Pay
+                    const modal = document.getElementById('nuvei-modal');
+                    const closeBtn = document.getElementById('nuvei-close-btn');
+                    const iframe = document.getElementById('nuvei-iframe');
+                    
+                    if (!modal || !iframe) return;
+                    
+                    modal.style.display = 'flex';
+                    
+                    // Find back_url from fields
+                    const backUrlField = data.fields?.find(f => (f.key || f.Key) === 'back_url');
+                    const backUrl = backUrlField ? (backUrlField.value || backUrlField.Value) : null;
+                    
+                    // Set up close button to navigate to back_url
+                    closeBtn.onclick = () => {
+                        modal.style.display = 'none';
+                        if (backUrl) {
+                            window.location.href = backUrl;
+                        }
+                    };
+                    
+                    // Load URL in iframe
+                    iframe.src = nuveiUrl;
+                }
                 
             } catch(err) {
                 console.error('Nuvei create error', err);
