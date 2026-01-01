@@ -78,6 +78,7 @@ namespace WebCashier.Services
                 F("encoding", "UTF-8"),
                 F("payment_method", req.PaymentMethod),
                 F("payment_method_mode", "filter"),
+                F("inIframeMode", "true"),
                 F("notify_url", notifyUrl),
                 F("success_url", successUrl),
                 F("error_url", errorUrl),
