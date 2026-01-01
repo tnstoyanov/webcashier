@@ -697,7 +697,24 @@
     </div>
 </div>
 
-<!-- Nuvei (GPay/Apple Pay) Modal -->
+<!-- Apple Pay Nuvei Confirmation Modal -->
+<div id="applepay-nuvei-modal" class="luxtak-modal" style="display:none;">
+    <div class="luxtak-modal-content">
+        <div class="luxtak-modal-header">
+            <h3 id="applepay-nuvei-modal-title">Apple Pay Nuvei HPP</h3>
+        </div>
+        <div class="luxtak-modal-body">
+            <p id="applepay-nuvei-modal-message">Apple Pay Nuvei HPP will open in a new tab. Continue?</p>
+            <div id="applepay-nuvei-error" class="text-danger" style="display:none;"></div>
+        </div>
+        <div class="luxtak-modal-footer">
+            <button id="applepay-nuvei-ok-btn" class="btn-ok">OK</button>
+            <button id="applepay-nuvei-cancel-btn" class="btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Nuvei (GPay) Modal with iframe -->
 <div id="nuvei-modal" class="luxtak-modal" style="display:none;">
     <div class="luxtak-modal-content" style="max-width: 900px; height: 80vh; padding: 0; position: relative;">
         <button id="nuvei-close-btn" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: #fff; border: 1px solid #ccc; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">&times;</button>
@@ -2177,6 +2194,10 @@
                 return;
             }
 
+            // Show loading overlay
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
             try {
                 const formData = new FormData();
                 formData.append('amount', amountInput.value);
@@ -2188,6 +2209,7 @@
                 const resp = await fetch('/Nuvei/Create', { method:'POST', body: formData, headers: { 'X-Requested-With':'XMLHttpRequest' } });
                 
                 if(!resp.ok){
+                    if (loadingOverlay) loadingOverlay.style.display = 'none';
                     alert('Failed to create Nuvei session. HTTP ' + resp.status);
                     return;
                 }
@@ -2196,6 +2218,7 @@
                 console.debug('Nuvei Create response:', data);
                 
                 if(!data.success || !data.formUrl){
+                    if (loadingOverlay) loadingOverlay.style.display = 'none';
                     alert('Nuvei form creation failed: ' + (data.error || 'Unknown error'));
                     return;
                 }
@@ -2214,19 +2237,31 @@
                 const nuveiUrl = data.formUrl + '?' + params.toString();
                 console.debug('Loading Nuvei HPP URL:', nuveiUrl);
                 
+                // Hide loading overlay
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                
                 // Apple Pay doesn't work in cross-origin iframes due to security restrictions
-                // Open in popup window instead for Apple Pay, use iframe for Google Pay
+                // Show confirmation modal and open in new tab for Apple Pay, use iframe for Google Pay
                 if (isApplePay) {
-                    // Open in popup window for Apple Pay
-                    const width = 900;
-                    const height = 700;
-                    const left = (screen.width / 2) - (width / 2);
-                    const top = (screen.height / 2) - (height / 2);
-                    window.open(
-                        nuveiUrl, 
-                        'NuveiApplePay',
-                        `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
-                    );
+                    // Show Apple Pay confirmation modal
+                    const apModal = document.getElementById('applepay-nuvei-modal');
+                    const apOkBtn = document.getElementById('applepay-nuvei-ok-btn');
+                    const apCancelBtn = document.getElementById('applepay-nuvei-cancel-btn');
+                    
+                    if (!apModal || !apOkBtn || !apCancelBtn) return;
+                    
+                    apModal.style.display = 'flex';
+                    
+                    // OK button - open in new tab
+                    apOkBtn.onclick = () => {
+                        apModal.style.display = 'none';
+                        window.open(nuveiUrl, '_blank', 'noopener,noreferrer');
+                    };
+                    
+                    // Cancel button - close modal
+                    apCancelBtn.onclick = () => {
+                        apModal.style.display = 'none';
+                    };
                 } else {
                     // Use iframe for Google Pay
                     const modal = document.getElementById('nuvei-modal');
