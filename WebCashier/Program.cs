@@ -9,6 +9,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add HttpContextAccessor for accessing HttpContext in controllers and services
+builder.Services.AddHttpContextAccessor();
+
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
 {

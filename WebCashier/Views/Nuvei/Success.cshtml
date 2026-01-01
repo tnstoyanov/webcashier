@@ -5,6 +5,7 @@
     var txnId = Q("TransactionID");
     var pppTxn = Q("PPP_TransactionID");
     var merchantRef = Q("merchant_unique_id");
+    var clientUniqueId = Q("ClientUniqueID");
     var productId = Q("productId");
     var currency = Q("currency");
     var amount = string.IsNullOrWhiteSpace(Q("totalAmount")) ? Q("total_amount") : Q("totalAmount");
@@ -53,12 +54,14 @@
     </div>
     <div class="nuvei-summary">
         <h2>Transaction Summary</h2>
+        @if (!string.IsNullOrWhiteSpace(status)) { <div class="nuvei-row"><span class="label">Status</span><span class="value">@status</span></div>; }
         @if (!string.IsNullOrWhiteSpace(txnId)) { <div class="nuvei-row"><span class="label">Transaction ID</span><span class="value">@txnId</span></div>; }
+        @if (!string.IsNullOrWhiteSpace(clientUniqueId)) { <div class="nuvei-row"><span class="label">Client Unique ID</span><span class="value">@clientUniqueId</span></div>; }
+        @if (!string.IsNullOrWhiteSpace(paymentMethod)) { <div class="nuvei-row"><span class="label">Payment Method</span><span class="value">@paymentMethod</span></div>; }
+        @if (!string.IsNullOrWhiteSpace(currency) || !string.IsNullOrWhiteSpace(amount)) { <div class="nuvei-row"><span class="label">Total Amount</span><span class="value">@(amount) @(currency)</span></div>; }
         @if (!string.IsNullOrWhiteSpace(pppTxn)) { <div class="nuvei-row"><span class="label">PPP Transaction ID</span><span class="value">@pppTxn</span></div>; }
         @if (!string.IsNullOrWhiteSpace(merchantRef)) { <div class="nuvei-row"><span class="label">Merchant Ref</span><span class="value">@merchantRef</span></div>; }
         @if (!string.IsNullOrWhiteSpace(productId)) { <div class="nuvei-row"><span class="label">Product ID</span><span class="value">@productId</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(currency) || !string.IsNullOrWhiteSpace(amount)) { <div class="nuvei-row"><span class="label">Amount</span><span class="value">@(amount) @(currency)</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(paymentMethod)) { <div class="nuvei-row"><span class="label">Payment Method</span><span class="value">@paymentMethod</span></div>; }
         @if (!string.IsNullOrWhiteSpace(cardBrand) || !string.IsNullOrWhiteSpace(cardHolder)) { <div class="nuvei-row"><span class="label">Card</span><span class="value">@((cardBrand + (string.IsNullOrWhiteSpace(cardHolder) ? "" : " • " + cardHolder)).Trim())</span></div>; }
         @if (!string.IsNullOrWhiteSpace(issuer)) { <div class="nuvei-row"><span class="label">Issuer</span><span class="value">@issuer</span></div>; }
         @if (!string.IsNullOrWhiteSpace(authCode)) { <div class="nuvei-row"><span class="label">Auth Code</span><span class="value">@authCode</span></div>; }

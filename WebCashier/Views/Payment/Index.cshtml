@@ -2228,26 +2228,22 @@
                     }
                 };
                 
-                // Create a form and submit it to the iframe
-                const tempForm = document.createElement('form');
-                tempForm.method = 'POST';
-                tempForm.action = data.formUrl;
-                tempForm.target = 'nuvei-iframe';
-                tempForm.style.display = 'none';
-                
+                // Build GET URL with query parameters
+                const params = new URLSearchParams();
                 (data.fields||[]).forEach(field => {
-                    const inp = document.createElement('input');
-                    inp.type = 'hidden';
                     const key = field.key || field.Key;
                     const val = field.value || field.Value;
-                    inp.name = key;
-                    inp.value = val;
-                    tempForm.appendChild(inp);
+                    if (key && val) {
+                        params.append(key, val);
+                    }
                 });
                 
-                document.body.appendChild(tempForm);
-                tempForm.submit();
-                document.body.removeChild(tempForm);
+                // Construct the full GET URL
+                const nuveiUrl = data.formUrl + '?' + params.toString();
+                console.debug('Loading Nuvei HPP URL:', nuveiUrl);
+                
+                // Load URL directly in iframe
+                iframe.src = nuveiUrl;
                 
             } catch(err) {
                 console.error('Nuvei create error', err);
