@@ -118,6 +118,16 @@
                                         <span class="payment-brand" style="color: white;">Zota MG APMs</span>
                                     </label>
                                 </div>
+
+                                <div class="carousel-item" id="apple-pay-nuvei-hpp" tabindex="0">
+                                    <input type="radio" id="apple-pay-nuvei" name="PaymentMethod" value="apple-pay-nuvei" />
+                                    <label for="apple-pay-nuvei" class="method-option">
+                                        <div class="apple-pay-nuvei-icon">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Apple_Pay_logo.svg/2560px-Apple_Pay_logo.svg.png" alt="Apple Pay Nuvei HPP" width="52" height="35" />
+                                        </div>
+                                        <span class="payment-brand">Apple Pay HPP</span>
+                                    </label>
+                                </div>
                             </div> <!-- /carousel-track -->
                         </div> <!-- /method-carousel -->
                         <button type="button" class="carousel-arrow carousel-next" onclick="movePaymentCarousel(1)">
@@ -399,6 +409,49 @@
                                     <p style="color: white;">Secure payment processing via Zota platform.</p>
                                     <div class="zota-logo-large">
                                         <img src="https://zota.com/wp-content/uploads/2023/01/zota-logo.svg" alt="Zota" width="150" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Apple Pay Nuvei HPP Form -->
+                    <div id="apple-pay-nuvei-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
+                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
+                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="ApplePayAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="ApplePayCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                            <option value="BRL">BRL</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <input name="ApplePayPromotionCode" class="form-control" placeholder="Promotion code (optional)" />
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>Apple Pay via Nuvei</h3>
+                                    <p>Quick and secure payments with Apple Pay through Nuvei's Hosted Payment Page.</p>
+                                    <div class="apple-pay-logo-large">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Apple_Pay_logo.svg/2560px-Apple_Pay_logo.svg.png" alt="Apple Pay" width="120" />
                                     </div>
                                 </div>
                             </div>
@@ -1011,6 +1064,9 @@
                         break;
                     case 'gpay':
                         targetFormId = 'gpay-details';
+                        break;
+                    case 'apple-pay-nuvei':
+                        targetFormId = 'apple-pay-nuvei-details';
                         break;
                     case 'luxtak':
                         targetFormId = 'luxtak-details';
@@ -1670,7 +1726,13 @@
             // For GPay Nuvei payment, intercept and show modal first
             if (selectedPaymentMethod === 'gpay') {
                 e.preventDefault();
-                showNuveiPreModal(e.target);
+                showNuveiPreModal(e.target, 'ppp_GooglePay');
+                return;
+            }
+            // For Apple Pay Nuvei payment, intercept and show modal first
+            if (selectedPaymentMethod === 'apple-pay-nuvei') {
+                e.preventDefault();
+                showNuveiPreModal(e.target, 'ppp_ApplePay');
                 return;
             }
             if (selectedPaymentMethod === 'swiftgoldpay') {
@@ -2110,26 +2172,41 @@
         window.showZotaModal = showZotaModal;
 
         // Show pre-request Nuvei modal
-        function showNuveiPreModal(form) {
+        function showNuveiPreModal(form, paymentMethod = 'ppp_GooglePay') {
             const modal = document.getElementById('nuvei-modal');
             const okBtn = document.getElementById('nuvei-ok-btn');
             const cancelBtn = document.getElementById('nuvei-cancel-btn');
+            const titleEl = document.getElementById('nuvei-modal-title');
+            const msgEl = document.getElementById('nuvei-modal-message');
+            
             if (!modal) return;
+            
+            // Update modal text based on payment method
+            if (paymentMethod === 'ppp_ApplePay') {
+                if (titleEl) titleEl.textContent = 'Apple Pay Nuvei Payment';
+                if (msgEl) msgEl.textContent = 'Apple Pay will open in a new tab. Continue?';
+            } else {
+                if (titleEl) titleEl.textContent = 'Google Pay Nuvei Payment';
+                if (msgEl) msgEl.textContent = 'Google Pay will open in a new tab. Continue?';
+            }
+            
             modal.style.display = 'flex';
             cancelBtn.onclick = () => { modal.style.display = 'none'; };
             okBtn.onclick = () => {
                 modal.style.display = 'none';
-                // Placeholder: will implement actual Nuvei request + open new tab
-                initiateNuveiRequest(form);
+                initiateNuveiRequest(form, paymentMethod);
             };
         }
 
-        // Placeholder Nuvei initiation logic (to be replaced with real request call)
-        async function initiateNuveiRequest(form) {
-            const amountInput = document.querySelector('[name="GPayAmount"]');
-            const currencySelect = document.querySelector('[name="GPayCurrency"]');
+        // Nuvei initiation logic
+        async function initiateNuveiRequest(form, paymentMethod = 'ppp_GooglePay') {
+            const isApplePay = paymentMethod === 'ppp_ApplePay';
+            const amountInput = document.querySelector(`[name="${isApplePay ? 'ApplePayAmount' : 'GPayAmount'}"]`);
+            const currencySelect = document.querySelector(`[name="${isApplePay ? 'ApplePayCurrency' : 'GPayCurrency'}"]`);
+            const methodLabel = isApplePay ? 'Apple Pay' : 'Google Pay';
+            
             if (!amountInput?.value || !currencySelect?.value) {
-                alert('Please provide amount and currency for Google Pay Nuvei.');
+                alert(`Please provide amount and currency for ${methodLabel} Nuvei.`);
                 return;
             }
             const popup = window.open('', '_blank');
@@ -2140,6 +2217,7 @@
                 const formData = new FormData();
                 formData.append('amount', amountInput.value);
                 formData.append('currency', currencySelect.value);
+                formData.append('paymentMethod', paymentMethod);
                 const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]');
                 if (antiForgeryToken) formData.append('__RequestVerificationToken', antiForgeryToken.value);
                 const resp = await fetch('/Nuvei/Create', { method:'POST', body: formData, headers: { 'X-Requested-With':'XMLHttpRequest' } });

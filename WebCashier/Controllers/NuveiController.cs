@@ -22,13 +22,13 @@ namespace WebCashier.Controllers
 
     [HttpPost("Create")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([FromForm] decimal amount, [FromForm] string currency)
+    public async Task<IActionResult> Create([FromForm] decimal amount, [FromForm] string currency, [FromForm] string paymentMethod = "ppp_GooglePay")
         {
             try
             {
-                await _commLog.LogAsync("nuvei-inbound", new { provider = "Nuvei", action = "Create", amount, currency }, "nuvei");
+                await _commLog.LogAsync("nuvei-inbound", new { provider = "Nuvei", action = "Create", amount, currency, paymentMethod }, "nuvei");
                 var baseUrl = GetBaseUrl();
-                var form = _nuvei.BuildPaymentForm(new NuveiRequest(amount, currency, "12204834", "cashier"), baseUrl);
+                var form = _nuvei.BuildPaymentForm(new NuveiRequest(amount, currency, "12204834", "cashier", paymentMethod), baseUrl);
                 var formUrl = form.SubmitFormUrl;
                 if (string.IsNullOrWhiteSpace(formUrl))
                 {

@@ -1,9 +1,11 @@
 @{
     ViewData["Title"] = "Nuvei Error";
+    var paymentMethod = Context.Request.Query["payment_method"].FirstOrDefault() ?? "Google Pay";
+    var methodLabel = paymentMethod.Contains("Apple", StringComparison.OrdinalIgnoreCase) ? "Apple Pay" : "Google Pay";
 }
 <div class="container py-5">
     <h1 class="h3">Payment Failed</h1>
-    <p>There was a problem processing your Google Pay Nuvei transaction.</p>
+    <p>There was a problem processing your @methodLabel Nuvei transaction.</p>
     <hr />
     <h2 class="h5 mt-4">Callback Details</h2>
     <div class="table-responsive">
@@ -25,5 +27,5 @@
             </tbody>
         </table>
     </div>
-    <a href="/Payment?paymentMethod=gpay" class="btn btn-secondary mt-3">Try Again</a>
+    <a href="/Payment?paymentMethod=@(paymentMethod.Contains("Apple", StringComparison.OrdinalIgnoreCase) ? "apple-pay-nuvei" : "gpay")" class="btn btn-secondary mt-3">Try Again</a>
 </div>

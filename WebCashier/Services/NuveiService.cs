@@ -43,7 +43,12 @@ namespace WebCashier.Services
             string successUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Success"));
             string errorUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Error"));
             string pendingUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Pending"));
-            string backUrl = ForceHttps(Combine(baseUrl, "/Payment?paymentMethod=gpay"));
+            // Determine back_url based on payment method
+            string backUrl = req.PaymentMethod switch
+            {
+                "ppp_ApplePay" => ForceHttps(Combine(baseUrl, "/Payment?paymentMethod=apple-pay-nuvei")),
+                _ => ForceHttps(Combine(baseUrl, "/Payment?paymentMethod=gpay"))
+            };
 
             var fields = new List<NuveiFormField>
             {
@@ -71,7 +76,7 @@ namespace WebCashier.Services
                 F("phone1", "359888123456"),
                 F("version", "4.0.0"),
                 F("encoding", "UTF-8"),
-                F("payment_method", "ppp_GooglePay"),
+                F("payment_method", req.PaymentMethod),
                 F("payment_method_mode", "filter"),
                 F("notify_url", notifyUrl),
                 F("success_url", successUrl),
