@@ -697,18 +697,12 @@
     </div>
 </div>
 
-<!-- Nuvei (GPay) Modal -->
+<!-- Nuvei (GPay/Apple Pay) Modal -->
 <div id="nuvei-modal" class="luxtak-modal" style="display:none;">
-    <div class="luxtak-modal-content">
-        <div class="luxtak-modal-header">
-            <h3 id="nuvei-modal-title">GPay Nuvei Payment</h3>
-        </div>
-        <div class="luxtak-modal-body">
-            <p id="nuvei-modal-message">Google Pay Nuvei will open in a new tab. Continue?</p>
-        </div>
-        <div class="luxtak-modal-footer">
-            <button id="nuvei-ok-btn" class="btn-ok">OK</button>
-            <button id="nuvei-cancel-btn" class="btn-cancel">Cancel</button>
+    <div class="luxtak-modal-content" style="max-width: 900px; height: 80vh; padding: 0; position: relative;">
+        <button id="nuvei-close-btn" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: #fff; border: 1px solid #ccc; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">&times;</button>
+        <div id="nuvei-iframe-container" style="width: 100%; height: 100%; border-radius: 8px; overflow: hidden;">
+            <iframe id="nuvei-iframe" name="nuvei-iframe" style="width: 100%; height: 100%; border: none;"></iframe>
         </div>
     </div>
 </div>
@@ -2171,35 +2165,8 @@
         window.handleZotaPayment = handleZotaPayment;
         window.showZotaModal = showZotaModal;
 
-        // Show pre-request Nuvei modal
-        function showNuveiPreModal(form, paymentMethod = 'ppp_GooglePay') {
-            const modal = document.getElementById('nuvei-modal');
-            const okBtn = document.getElementById('nuvei-ok-btn');
-            const cancelBtn = document.getElementById('nuvei-cancel-btn');
-            const titleEl = document.getElementById('nuvei-modal-title');
-            const msgEl = document.getElementById('nuvei-modal-message');
-            
-            if (!modal) return;
-            
-            // Update modal text based on payment method
-            if (paymentMethod === 'ppp_ApplePay') {
-                if (titleEl) titleEl.textContent = 'Apple Pay Nuvei Payment';
-                if (msgEl) msgEl.textContent = 'Apple Pay will open in a new tab. Continue?';
-            } else {
-                if (titleEl) titleEl.textContent = 'Google Pay Nuvei Payment';
-                if (msgEl) msgEl.textContent = 'Google Pay will open in a new tab. Continue?';
-            }
-            
-            modal.style.display = 'flex';
-            cancelBtn.onclick = () => { modal.style.display = 'none'; };
-            okBtn.onclick = () => {
-                modal.style.display = 'none';
-                initiateNuveiRequest(form, paymentMethod);
-            };
-        }
-
-        // Nuvei initiation logic
-        async function initiateNuveiRequest(form, paymentMethod = 'ppp_GooglePay') {
+        // Show Nuvei HPP in modal
+        async function showNuveiPreModal(form, paymentMethod = 'ppp_GooglePay') {
             const isApplePay = paymentMethod === 'ppp_ApplePay';
             const amountInput = document.querySelector(`[name="${isApplePay ? 'ApplePayAmount' : 'GPayAmount'}"]`);
             const currencySelect = document.querySelector(`[name="${isApplePay ? 'ApplePayCurrency' : 'GPayCurrency'}"]`);
@@ -2209,10 +2176,19 @@
                 alert(`Please provide amount and currency for ${methodLabel} Nuvei.`);
                 return;
             }
-            const popup = window.open('', '_blank');
-            if(!popup){ alert('Popup blocked. Please allow popups for this site.'); return; }
-            popup.document.write('<html><head><title>Nuvei</title><style>body{font-family:Arial,sans-serif;padding:16px;}code{white-space:pre-wrap;display:block;background:#f5f5f5;padding:8px;border:1px solid #ddd;border-radius:4px;}</style></head><body><h3>Initializing Nuvei session...</h3><p id="nuvei-status">Requesting form...</p><div id="nuvei-error"></div></body></html>');
-            popup.document.close();
+
+            // Show modal immediately
+            const modal = document.getElementById('nuvei-modal');
+            const closeBtn = document.getElementById('nuvei-close-btn');
+            const iframe = document.getElementById('nuvei-iframe');
+            
+            if (!modal || !iframe) return;
+            
+            modal.style.display = 'flex';
+            
+            // Set up close button handler - will navigate to back_url
+            let backUrl = null;
+            
             try {
                 const formData = new FormData();
                 formData.append('amount', amountInput.value);
@@ -2220,51 +2196,72 @@
                 formData.append('paymentMethod', paymentMethod);
                 const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]');
                 if (antiForgeryToken) formData.append('__RequestVerificationToken', antiForgeryToken.value);
+                
                 const resp = await fetch('/Nuvei/Create', { method:'POST', body: formData, headers: { 'X-Requested-With':'XMLHttpRequest' } });
-                const statusEl = popup.document.getElementById('nuvei-status');
+                
                 if(!resp.ok){
-                    const raw = await resp.text();
-                    if(statusEl) statusEl.textContent = 'Server returned HTTP ' + resp.status;
-                    const errDiv = popup.document.getElementById('nuvei-error');
-                    if(errDiv){ errDiv.innerHTML = '<h4>Response Body</h4><code>'+escapeHtml(raw)+'</code>'; }
-                    return; // keep popup open for diagnostics
-                }
-                const data = await resp.json();
-                console.debug('Nuvei Create response:', data);
-                if(!data.success || !data.formUrl){
-                    if(statusEl) statusEl.textContent = 'Nuvei form creation failed';
-                    const errDiv = popup.document.getElementById('nuvei-error');
-                    if(errDiv){ errDiv.innerHTML = '<h4>Error</h4><code>'+escapeHtml(JSON.stringify(data,null,2))+'</code>'; }
+                    alert('Failed to create Nuvei session. HTTP ' + resp.status);
+                    modal.style.display = 'none';
                     return;
                 }
-                if(statusEl) statusEl.textContent = 'Form received. Submitting...';
-                const doc = popup.document;
-                doc.body.innerHTML = '';
-                const f = doc.createElement('form');
-                f.method = 'post';
-                f.action = data.formUrl;
-                f.style.display = 'none';
+                
+                const data = await resp.json();
+                console.debug('Nuvei Create response:', data);
+                
+                if(!data.success || !data.formUrl){
+                    alert('Nuvei form creation failed: ' + (data.error || 'Unknown error'));
+                    modal.style.display = 'none';
+                    return;
+                }
+                
+                // Find back_url from fields
+                const backUrlField = data.fields?.find(f => (f.key || f.Key) === 'back_url');
+                if (backUrlField) {
+                    backUrl = backUrlField.value || backUrlField.Value;
+                }
+                
+                // Set up close button to navigate to back_url
+                closeBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    if (backUrl) {
+                        window.location.href = backUrl;
+                    }
+                };
+                
+                // Create a form and submit it to the iframe
+                const tempForm = document.createElement('form');
+                tempForm.method = 'POST';
+                tempForm.action = data.formUrl;
+                tempForm.target = 'nuvei-iframe';
+                tempForm.style.display = 'none';
+                
                 (data.fields||[]).forEach(field => {
-                    const inp = doc.createElement('input');
+                    const inp = document.createElement('input');
                     inp.type = 'hidden';
                     const key = field.key || field.Key;
                     const val = field.value || field.Value;
                     inp.name = key;
                     inp.value = val;
-                    f.appendChild(inp);
+                    tempForm.appendChild(inp);
                 });
-                doc.body.appendChild(f);
-                setTimeout(()=>f.submit(), 30);
+                
+                document.body.appendChild(tempForm);
+                tempForm.submit();
+                document.body.removeChild(tempForm);
+                
             } catch(err) {
                 console.error('Nuvei create error', err);
-                try {
-                    const statusEl = popup.document.getElementById('nuvei-status');
-                    if(statusEl) statusEl.textContent = 'Error initiating request';
-                    const errDiv = popup.document.getElementById('nuvei-error');
-                    if(errDiv) errDiv.innerHTML = '<h4>Exception</h4><code>'+escapeHtml(err.message)+'</code>';
-                } catch {}
+                alert('Error initiating Nuvei request: ' + err.message);
+                modal.style.display = 'none';
             }
         }
+
+        // Deprecated - kept for compatibility but no longer used
+        async function initiateNuveiRequest(form, paymentMethod = 'ppp_GooglePay') {
+            // This function is now deprecated - showNuveiPreModal handles everything
+            console.warn('initiateNuveiRequest is deprecated');
+        }
+        
         function escapeHtml(str){ return str.replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
         // ==== Missing Functions Implemented ====

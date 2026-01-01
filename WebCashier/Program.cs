@@ -288,6 +288,9 @@ builder.Services.AddHttpClient("comm-logs")
 // Register PayPal service
 builder.Services.AddScoped<IPayPalService, PayPalService>();
 
+// Register Nuvei service
+builder.Services.AddScoped<INuveiService, NuveiService>();
+
 // Register HttpClient and SmilepayzService
 builder.Services.AddHttpClient<ISmilepayzService, SmilepayzService>(client =>
 {
