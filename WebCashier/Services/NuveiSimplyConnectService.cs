@@ -66,8 +66,8 @@ namespace WebCashier.Services
                     timeStamp = timeStamp
                 };
 
-                // Calculate checksum: concatenate values in order, prepend secret key, sha256 hex lowercase
-                var toHash = secretKey + merchantId + merchantSiteId + clientUniqueId + currency + amountStr + timeStamp;
+                // Calculate checksum: SHA256(merchantId + merchantSiteId + amount + currency + timeStamp + secretKey)
+                var toHash = merchantId + merchantSiteId + amountStr + currency + timeStamp + secretKey;
                 var checksum = Sha256Hex(toHash);
 
                 // Create final request with checksum
