@@ -294,6 +294,9 @@ builder.Services.AddScoped<IPayPalService, PayPalService>();
 // Register Nuvei service
 builder.Services.AddScoped<INuveiService, NuveiService>();
 
+// Register Nuvei Simply Connect service
+builder.Services.AddScoped<NuveiSimplyConnectService>();
+
 // Register HttpClient and SmilepayzService
 builder.Services.AddHttpClient<ISmilepayzService, SmilepayzService>(client =>
 {

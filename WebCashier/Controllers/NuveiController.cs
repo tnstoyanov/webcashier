@@ -185,6 +185,69 @@ namespace WebCashier.Controllers
         [HttpGet("Pending")] public IActionResult Pending() => View();
 
     // Diagnostic: quick ping to verify base route reachable
+    /// <summary>
+    /// Initiates a Nuvei Simply Connect session by calling the /openOrder API.
+    /// This endpoint prepares the payment session and returns a sessionToken for the frontend.
+    /// </summary>
+    [HttpPost("SimplyConnect/OpenOrder")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OpenOrder([FromForm] decimal amount, [FromForm] string currency)
+    {
+        try
+        {
+            await _commLog.LogAsync("nuvei-simply-connect-inbound", new { 
+                provider = "Nuvei Simply Connect", 
+                action = "OpenOrder", 
+                amount, 
+                currency 
+            }, "nuvei");
+
+            // Generate a unique client ID for this transaction
+            var clientUniqueId = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + Random.Shared.Next(10000, 99999);
+
+            // Call the Simply Connect service
+            var simplyConnectService = HttpContext.RequestServices.GetRequiredService<NuveiSimplyConnectService>();
+            var sessionResponse = await simplyConnectService.InitiateSessionAsync(amount, currency, clientUniqueId);
+
+            if (sessionResponse == null || string.IsNullOrEmpty(sessionResponse.SessionToken))
+            {
+                _logger.LogError("Failed to initiate Nuvei Simply Connect session");
+                return Json(new { success = false, error = "Failed to initiate payment session" });
+            }
+
+            await _commLog.LogAsync("nuvei-simply-connect-session-created", new {
+                provider = "Nuvei Simply Connect",
+                clientUniqueId = sessionResponse.ClientUniqueId,
+                orderId = sessionResponse.OrderId,
+                amount,
+                currency
+            }, "nuvei");
+
+            return Json(new
+            {
+                success = true,
+                sessionToken = sessionResponse.SessionToken,
+                orderId = sessionResponse.OrderId,
+                clientUniqueId = sessionResponse.ClientUniqueId,
+                merchantId = sessionResponse.MerchantId,
+                merchantSiteId = sessionResponse.MerchantSiteId,
+                amount = amount,
+                currency = currency
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initiating Nuvei Simply Connect session");
+            await _commLog.LogAsync("nuvei-simply-connect-error", new {
+                provider = "Nuvei Simply Connect",
+                action = "OpenOrder",
+                error = ex.Message,
+                stackTrace = ex.StackTrace
+            }, "nuvei");
+            return Json(new { success = false, error = "An error occurred while initiating the payment session" });
+        }
+    }
+
     [HttpGet("")]
     public IActionResult Index() => Ok(new { status = "nuvei-controller-ok", time = DateTime.UtcNow });
 
