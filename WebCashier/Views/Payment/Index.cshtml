@@ -470,52 +470,15 @@
 
                     <!-- Nuvei Simply Connect Form -->
                     <div id="nuvei-simply-connect-details" class="payment-form-container" style="display: none;">
-                        <div class="form-layout">
-                            <div class="form-left">
-                                <!-- Amount suggestion buttons -->
-                                <div class="amount-suggestions">
-                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
-                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
-                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
-                                </div>
-
-                                <div class="form-row">
-                                    <div class="form-group amount-group">
-                                        <input id="nuvei-sc-amount" name="NuveiSimplyConnectAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
-                                    </div>
-                                    <div class="form-group currency-group">
-                                        <select id="nuvei-sc-currency" name="NuveiSimplyConnectCurrency" class="form-control">
-                                            <option value="">Currency</option>
-                                            <option value="USD">USD</option>
-                                            <option value="EUR">EUR</option>
-                                            <option value="GBP">GBP</option>
-                                            <option value="BRL">BRL</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <input id="nuvei-sc-promo" name="NuveiSimplyConnectPromoCode" class="form-control" placeholder="Promotion code (optional)" />
-                                </div>
-
-                                <button id="initiate-checkout-btn" type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;">
-                                    Proceed to Payment
-                                </button>
-                            </div>
-
-                            <div class="form-right">
-                                <div class="payment-info-card">
-                                    <h3>Nuvei Simply Connect</h3>
-                                    <p>Select from multiple payment methods including cards, digital wallets, and local payment options. Fast, secure, and convenient.</p>
-                                    <div class="nuvei-logo-large" style="margin-top: 20px;">
-                                        <img src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Nuvei_Organization_logo.png" alt="Nuvei" width="120" />
-                                    </div>
-                                    <div id="checkout" style="width: 100%; height: 500px; border: 1px solid #d3dce6; margin-top: 20px; background-color: #f5f5f5; display: none; align-items: center; justify-content: center;">
-                                        <p style="color: #999;">Payment form loading...</p>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="checkout" id="nuvei-checkout" style="width: 100%; height: 600px; border: 1px solid #d3dce6; background-color: #f5f5f5; display: flex; align-items: center; justify-content: center;">
+                            <p style="color: #999;">Loading payment methods...</p>
                         </div>
+                        
+                        <!-- Hidden inputs to store session data -->
+                        <input type="hidden" id="nuvei-session-token" />
+                        <input type="hidden" id="nuvei-merchant-id" />
+                        <input type="hidden" id="nuvei-merchant-site-id" />
+                        <input type="hidden" id="nuvei-order-id" />
                     </div>
 
                     <div id="gpay-details" class="payment-form-container" style="display: none;">
@@ -2752,112 +2715,112 @@
         }
 
         // Nuvei Simply Connect Implementation
-        let nuveiScSessionToken = null;
-        let nuveiScConfig = {
-            merchantId: null,
-            merchantSiteId: null,
-            orderId: null
-        };
+        let nuveiSimplyConnectSessionActive = false;
 
-        // Handle Initiate Checkout button for Simply Connect
-        const initiateCheckoutBtn = document.getElementById('initiate-checkout-btn');
-        if (initiateCheckoutBtn) {
-            initiateCheckoutBtn.addEventListener('click', async function() {
-                const amount = document.getElementById('nuvei-sc-amount').value;
-                const currency = document.getElementById('nuvei-sc-currency').value;
+        // Intercept form submission for Nuvei Simply Connect
+        const paymentForm = document.querySelector('.payment-form');
+        if (paymentForm) {
+            paymentForm.addEventListener('submit', async function(e) {
+                const selectedMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
 
-                if (!amount || amount <= 0) {
-                    alert('Please enter a valid amount');
-                    return;
-                }
+                if (selectedMethod === 'nuvei-simply-connect') {
+                    e.preventDefault();
 
-                if (!currency) {
-                    alert('Please select a currency');
-                    return;
-                }
-
-                initiateCheckoutBtn.disabled = true;
-                initiateCheckoutBtn.textContent = 'Initiating...';
-
-                try {
-                    // Call backend to initiate session
-                    const formData = new FormData();
-                    formData.append('amount', amount);
-                    formData.append('currency', currency);
-                    formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-
-                    const response = await fetch('/Nuvei/SimplyConnect/OpenOrder', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success && data.sessionToken) {
-                        nuveiScSessionToken = data.sessionToken;
-                        nuveiScConfig.merchantId = data.merchantId;
-                        nuveiScConfig.merchantSiteId = data.merchantSiteId;
-                        nuveiScConfig.orderId = data.orderId;
-
-                        console.log('Nuvei Simply Connect session initiated:', {
-                            orderId: data.orderId,
-                            amount: data.amount,
-                            currency: data.currency
-                        });
-
-                        // Show the checkout container and initialize checkout
-                        const checkoutContainer = document.getElementById('checkout');
-                        checkoutContainer.style.display = 'flex';
-                        checkoutContainer.innerHTML = '<p style="color: #999;">Loading payment methods...</p>';
-
-                        // Initialize the checkout form
-                        initializeNuveiCheckout(data.sessionToken, data.merchantId, data.merchantSiteId, amount, currency);
-
-                        initiateCheckoutBtn.textContent = 'Payment Form Loaded';
-                    } else {
-                        alert('Failed to initiate payment session: ' + (data.error || 'Unknown error'));
-                        initiateCheckoutBtn.disabled = false;
-                        initiateCheckoutBtn.textContent = 'Proceed to Payment';
+                    // If session is already active, allow normal submission
+                    if (nuveiSimplyConnectSessionActive) {
+                        return true;
                     }
-                } catch (error) {
-                    console.error('Error initiating Nuvei checkout:', error);
-                    alert('Error initiating payment session: ' + error.message);
-                    initiateCheckoutBtn.disabled = false;
-                    initiateCheckoutBtn.textContent = 'Proceed to Payment';
+
+                    // Get the form's amount and currency
+                    const amount = document.querySelector('[name="Amount"]')?.value;
+                    const currency = document.querySelector('[name="Currency"]')?.value;
+
+                    if (!amount || amount <= 0) {
+                        alert('Please enter a valid amount');
+                        return false;
+                    }
+
+                    if (!currency) {
+                        alert('Please select a currency');
+                        return false;
+                    }
+
+                    // Initiate Nuvei session
+                    await initiateNuveiSimplyConnectSession(amount, currency);
+                    return false;
                 }
             });
+        }
+
+        async function initiateNuveiSimplyConnectSession(amount, currency) {
+            try {
+                console.log('Initiating Nuvei Simply Connect session for amount:', amount, 'currency:', currency);
+
+                // Call backend to initiate session
+                const formData = new FormData();
+                formData.append('amount', amount);
+                formData.append('currency', currency);
+                formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+
+                console.log('Sending openOrder request to /Nuvei/SimplyConnect/OpenOrder');
+                const response = await fetch('/Nuvei/SimplyConnect/OpenOrder', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                console.log('OpenOrder response:', data);
+
+                if (data.success && data.sessionToken) {
+                    console.log('Session initiated successfully, sessionToken:', data.sessionToken.substring(0, 20) + '...');
+                    
+                    // Store session data
+                    document.getElementById('nuvei-session-token').value = data.sessionToken;
+                    document.getElementById('nuvei-merchant-id').value = data.merchantId;
+                    document.getElementById('nuvei-merchant-site-id').value = data.merchantSiteId;
+                    document.getElementById('nuvei-order-id').value = data.orderId;
+
+                    // Initialize the checkout form
+                    nuveiSimplyConnectSessionActive = true;
+                    initializeNuveiCheckout(data.sessionToken, data.merchantId, data.merchantSiteId, amount, currency);
+                } else {
+                    alert('Failed to initiate payment session: ' + (data.error || 'Unknown error'));
+                    console.error('OpenOrder failed:', data);
+                }
+            } catch (error) {
+                console.error('Error initiating Nuvei checkout:', error);
+                alert('Error initiating payment session: ' + error.message);
+            }
         }
 
         function initializeNuveiCheckout(sessionToken, merchantId, merchantSiteId, amount, currency) {
             // Wait for checkout.js to be loaded
             if (typeof window.checkout === 'undefined') {
+                console.log('Waiting for checkout.js to load...');
                 setTimeout(() => initializeNuveiCheckout(sessionToken, merchantId, merchantSiteId, amount, currency), 500);
                 return;
             }
+
+            const checkoutContainer = document.getElementById('nuvei-checkout');
+            checkoutContainer.innerHTML = '<p style="color: #999;">Loading payment methods...</p>';
+            checkoutContainer.style.display = 'flex';
 
             const amount_str = amount.toString();
 
             // Call the checkout() method with configuration
             try {
+                console.log('Calling window.checkout() with sessionToken:', sessionToken.substring(0, 20) + '...');
+                
                 window.checkout({
                     sessionToken: sessionToken,
                     merchantSiteId: merchantSiteId,
                     merchantId: merchantId,
-                    country: "US", // Can be detected from user data
+                    country: "US",
                     currency: currency,
                     amount: amount_str,
-                    renderTo: "#checkout",
-                    env: "int", // test environment (use "prod" for production)
+                    renderTo: "#nuvei-checkout",
+                    env: "int",
 
-                    // Billing address pre-fill (optional)
-                    billingAddress: {
-                        firstName: "John",
-                        lastName: "Doe",
-                        email: "customer@example.com",
-                        country: "US"
-                    },
-
-                    // Callbacks
                     onReady: function(result) {
                         console.log('Nuvei checkout ready:', result);
                     },
@@ -2870,21 +2833,11 @@
                         console.log('Payment event:', result);
                     },
 
-                    prePayment: function(paymentDetails) {
-                        console.log('Pre-payment check:', paymentDetails);
-                        return new Promise((resolve, reject) => {
-                            // Perform any pre-payment validation here
-                            resolve(); // or reject('Message') to cancel
-                        });
-                    },
-
                     onResult: function(result) {
                         console.log('Nuvei checkout result:', result);
 
-                        // Handle payment result
                         if (result.transactionStatus === 'APPROVED') {
                             console.log('Payment approved:', result);
-                            // Redirect to success page or process the payment
                             window.location.href = '/Payment/Success?transactionId=' + encodeURIComponent(result.transactionId || '');
                         } else if (result.transactionStatus === 'DECLINED') {
                             console.log('Payment declined:', result);
@@ -2897,27 +2850,18 @@
                         }
                     },
 
-                    onDeclineRecovery: function(declineRecoveryHistory) {
-                        console.log('Decline recovery:', declineRecoveryHistory);
-                        return new Promise((resolve, reject) => {
-                            // Allow retry, different card, or custom message
-                            resolve(); // Continue with decline recovery
-                        });
-                    },
-
                     // Payment form customization
                     disableDeclineRecovery: false,
-                    savePM: "true", // Save payment method for future use
+                    savePM: "true",
                     showCardLogos: true,
                     alwaysCollectCvv: "true",
                     maskCvv: true,
                     locale: "en",
                     textDirection: "ltr",
-                    theme: "tiles" // "accordion", "horizontal", "tiles", "cashier"
+                    theme: "tiles"
                 });
             } catch (error) {
                 console.error('Error initializing Nuvei checkout:', error);
-                const checkoutContainer = document.getElementById('checkout');
                 checkoutContainer.innerHTML = '<p style="color: #d00;">Error loading payment form: ' + error.message + '</p>';
             }
         }

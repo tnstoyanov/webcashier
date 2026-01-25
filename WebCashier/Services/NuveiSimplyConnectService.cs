@@ -102,8 +102,14 @@ namespace WebCashier.Services
                 var jsonContent = JsonSerializer.Serialize(requestWithChecksum);
                 var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
+                // Log the complete request payload
+                _logger.LogInformation("Nuvei Simply Connect openOrder request payload: {Payload}", jsonContent);
                 _logger.LogInformation("Sending Nuvei Simply Connect openOrder request to {Endpoint}", endpoint);
+                
                 var response = await httpClient.PostAsync(endpoint, content);
+                
+                // Log response status
+                _logger.LogInformation("Nuvei Simply Connect openOrder response status: {StatusCode}", response.StatusCode);
 
                 if (!response.IsSuccessStatusCode)
                 {
