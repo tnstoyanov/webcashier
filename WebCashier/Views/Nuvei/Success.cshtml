@@ -1,75 +1,181 @@
 @{
-    ViewData["Title"] = "Nuvei Payment Success";
+    ViewData["Title"] = "Payment Success";
+    
+    // Helper to get query parameter safely
     string Q(string k) => Context.Request.Query[k].FirstOrDefault() ?? string.Empty;
+    
+    // Extract all relevant fields
+    var transactionId = Q("TransactionID");
+    var pppTransactionId = Q("PPP_TransactionID");
     var status = Q("Status");
-    var txnId = Q("TransactionID");
-    var pppTxn = Q("PPP_TransactionID");
-    var merchantRef = Q("merchant_unique_id");
-    var clientUniqueId = Q("ClientUniqueID");
-    var productId = Q("productId");
-    var currency = Q("currency");
     var amount = string.IsNullOrWhiteSpace(Q("totalAmount")) ? Q("total_amount") : Q("totalAmount");
-    var cardHolder = Q("cardHolderName");
-    var cardBrand = Q("cardBrand");
-    var issuer = Q("issuerName");
+    var currency = Q("currency");
+    var merchantRef = Q("merchant_unique_id");
+    var clientId = Q("ClientUniqueID");
     var paymentMethod = Q("payment_method");
     var authCode = Q("AuthCode");
-    var customData = Q("customData");
-    var checksum = Q("advanceResponseChecksum");
+    var cardBrand = Q("cardBrand");
+    var issuer = Q("issuerName");
+    var timestamp = Q("responseTimeStamp");
+    
+    // Determine if we have a successful transaction
+    var isSuccessful = !string.IsNullOrWhiteSpace(transactionId) && 
+                       (string.Equals(status, "APPROVED", StringComparison.OrdinalIgnoreCase) || 
+                        string.Equals(status, "SUCCESS", StringComparison.OrdinalIgnoreCase));
 }
-<style>
-    .nuvei-success-hero { position:relative; padding:2.75rem 2.5rem; border-radius:1.35rem; background:linear-gradient(135deg,#0d6efd 0%,#6610f2 55%,#6f42c1 100%); color:#fff; overflow:hidden; box-shadow:0 10px 26px -6px rgba(0,0,0,.28),0 18px 48px -12px rgba(0,0,0,.22); }
-    .nuvei-success-hero:before, .nuvei-success-hero:after { content:""; position:absolute; border-radius:50%; filter:blur(40px); opacity:.25; }
-    .nuvei-success-hero:before { width:280px; height:280px; background:radial-gradient(circle at 30% 30%,#ffffff 0%,rgba(255,255,255,0) 70%); top:-90px; right:-60px; }
-    .nuvei-success-hero:after { width:220px; height:220px; background:radial-gradient(circle at 70% 70%,#ffffff 0%,rgba(255,255,255,0) 70%); bottom:-70px; left:-50px; }
-    .nuvei-checkmark { width:78px; height:78px; border-radius:50%; background:rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; margin-bottom:1.25rem; box-shadow:0 0 0 6px rgba(255,255,255,.08); backdrop-filter:blur(4px); }
-    .nuvei-checkmark svg { width:46px; height:46px; stroke:#fff; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; fill:none; }
-    .nuvei-summary { background:#fff; border-radius:1.2rem; margin-top:-2.2rem; position:relative; padding:2.25rem 2rem 2rem; box-shadow:0 8px 22px -4px rgba(0,0,0,.15),0 12px 40px -10px rgba(0,0,0,.12); }
-    .nuvei-summary h2 { font-size:1.25rem; font-weight:600; margin-bottom:1.25rem; letter-spacing:.5px; color:#343a40; }
-    .nuvei-row { display:flex; flex-wrap:wrap; padding:.55rem 0; border-bottom:1px dashed #e3e6ef; }
-    .nuvei-row:last-child { border-bottom:none; }
-    .nuvei-row span.label { flex:0 0 210px; font-weight:600; color:#495057; font-size:.75rem; text-transform:uppercase; letter-spacing:.5px; }
-    .nuvei-row span.value { flex:1; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:.9rem; color:#212529; word-break:break-all; }
-    .nuvei-actions { margin-top:2.25rem; display:flex; gap:.75rem; flex-wrap:wrap; }
-    .nuvei-status-pill { display:inline-block; padding:.4rem .9rem; border-radius:50px; font-size:.65rem; letter-spacing:.75px; font-weight:600; background:rgba(255,255,255,.18); text-transform:uppercase; box-shadow:0 2px 4px rgba(0,0,0,.12); backdrop-filter:blur(2px); }
-    @@media (max-width: 640px){ .nuvei-row span.label { flex:0 0 100%; margin-bottom:.2rem; } .nuvei-summary { padding:1.75rem 1.25rem 1.4rem; } }
-    .confetti { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; }
-    .confetti span { position:absolute; display:block; width:10px; height:10px; background:rgba(255,255,255,.85); top:-10px; animation:fall 6s linear infinite; opacity:.9; }
-    @@keyframes fall { 0% { transform:translateY(0) rotate(0deg); } 100% { transform:translateY(140vh) rotate(720deg); } }
-</style>
-<div class="container py-5">
-    <div class="nuvei-success-hero mb-4">
-        <div class="confetti" aria-hidden="true">
-            @for (var i=0; i<18; i++) {
-                var l = i * (100/18.0);
-                <span style="left:@l%; animation-delay:@((i*0.25).ToString("0.00"))s; animation-duration:@(5+i%5)s; background:hsla(@(210 + i*8),85%,@((55 + i*2)%100)%,0.85);"></span>
-            }
-        </div>
-        <div class="nuvei-checkmark">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
-        </div>
-        <div class="nuvei-status-pill">@(!string.IsNullOrWhiteSpace(status) ? status : "SUCCESS")</div>
-        <h1 class="h2 fw-bold mt-2 mb-2">Payment Successful</h1>
-        <p class="mb-0">Your Nuvei transaction completed successfully. Keep this summary for your records.</p>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .container { max-width: 600px; width: 100%; }
+        .success-card { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .success-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; position: relative; }
+        .success-icon { width: 80px; height: 80px; margin: 0 auto 20px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: scaleIn 0.6s ease-out; }
+        .success-icon svg { width: 45px; height: 45px; stroke: white; stroke-width: 2; }
+        .success-header h1 { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
+        .success-header p { font-size: 14px; opacity: 0.9; }
+        .success-body { padding: 40px 30px; }
+        .transaction-detail { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .transaction-detail:last-child { border-bottom: none; }
+        .detail-label { font-weight: 600; color: #666; }
+        .detail-value { color: #333; font-family: 'Courier New', monospace; }
+        .detail-value.highlight { font-weight: 600; color: #667eea; }
+        .amount-display { background: #f8f9ff; border-left: 4px solid #667eea; padding: 16px; margin: 20px 0; border-radius: 4px; }
+        .amount-display .label { font-size: 12px; color: #999; text-transform: uppercase; margin-bottom: 4px; }
+        .amount-display .value { font-size: 28px; font-weight: 700; color: #333; }
+        .action-buttons { display: flex; gap: 12px; margin-top: 30px; }
+        .btn { flex: 1; padding: 12px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; transition: all 0.2s; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .empty-state { text-align: center; padding: 40px 20px; }
+        .empty-state svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.5; }
+        .empty-state h2 { font-size: 18px; color: #333; margin-bottom: 10px; }
+        .empty-state p { color: #999; font-size: 14px; margin-bottom: 20px; }
+        @@keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @@media (max-width: 600px) {
+            .success-header { padding: 30px 15px; }
+            .success-body { padding: 25px 15px; }
+            .success-header h1 { font-size: 24px; }
+            .amount-display .value { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        @if (isSuccessful)
+        {
+            <div class="success-card">
+                <div class="success-header">
+                    <div class="success-icon">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <h1>Payment Successful!</h1>
+                    <p>Your transaction has been completed.</p>
+                </div>
+                <div class="success-body">
+                    @if (!string.IsNullOrWhiteSpace(amount) && !string.IsNullOrWhiteSpace(currency))
+                    {
+                        <div class="amount-display">
+                            <div class="label">Amount Charged</div>
+                            <div class="value">@amount <span style="font-size: 20px;">@currency</span></div>
+                        </div>
+                    }
+                    
+                    <div class="transaction-detail">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-value highlight">@(string.IsNullOrWhiteSpace(status) ? "APPROVED" : status)</span>
+                    </div>
+                    
+                    @if (!string.IsNullOrWhiteSpace(transactionId))
+                    {
+                        <div class="transaction-detail">
+                            <span class="detail-label">Transaction ID</span>
+                            <span class="detail-value">@transactionId</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(pppTransactionId))
+                    {
+                        <div class="transaction-detail">
+                            <span class="detail-label">PPP Transaction ID</span>
+                            <span class="detail-value">@pppTransactionId</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(clientId))
+                    {
+                        <div class="transaction-detail">
+                            <span class="detail-label">Client ID</span>
+                            <span class="detail-value">@clientId</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(merchantRef))
+                    {
+                        <div class="transaction-detail">
+                            <span class="detail-label">Merchant Reference</span>
+                            <span class="detail-value">@merchantRef</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(paymentMethod))
+                    {
+                        <div class="transaction-detail">
+                            <span class="detail-label">Payment Method</span>
+                            <span class="detail-value">@paymentMethod</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(cardBrand))
+                    {
+                        <div class="transaction-detail">
+                            <span class="detail-label">Card Brand</span>
+                            <span class="detail-value">@cardBrand</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(authCode))
+                    {
+                        <div class="transaction-detail">
+                            <span class="detail-label">Auth Code</span>
+                            <span class="detail-value">@authCode</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(timestamp))
+                    {
+                        <div class="transaction-detail">
+                            <span class="detail-label">Timestamp</span>
+                            <span class="detail-value">@timestamp</span>
+                        </div>
+                    }
+                    
+                    <div class="action-buttons">
+                        <a href="/Payment" class="btn btn-primary">Make Another Payment</a>
+                        <a href="/" class="btn btn-secondary">Return Home</a>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="success-card">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <h2>No Transaction Data</h2>
+                    <p>We couldn't find the transaction details. Please check your transaction ID or go back to try again.</p>
+                    <a href="/Payment" class="btn btn-primary" style="margin-top: 20px; display: inline-block; width: auto; padding: 10px 30px;">Return to Payment</a>
+                </div>
+            </div>
+        }
     </div>
-    <div class="nuvei-summary">
-        <h2>Transaction Summary</h2>
-        @if (!string.IsNullOrWhiteSpace(status)) { <div class="nuvei-row"><span class="label">Status</span><span class="value">@status</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(txnId)) { <div class="nuvei-row"><span class="label">Transaction ID</span><span class="value">@txnId</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(clientUniqueId)) { <div class="nuvei-row"><span class="label">Client Unique ID</span><span class="value">@clientUniqueId</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(paymentMethod)) { <div class="nuvei-row"><span class="label">Payment Method</span><span class="value">@paymentMethod</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(currency) || !string.IsNullOrWhiteSpace(amount)) { <div class="nuvei-row"><span class="label">Total Amount</span><span class="value">@(amount) @(currency)</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(pppTxn)) { <div class="nuvei-row"><span class="label">PPP Transaction ID</span><span class="value">@pppTxn</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(merchantRef)) { <div class="nuvei-row"><span class="label">Merchant Ref</span><span class="value">@merchantRef</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(productId)) { <div class="nuvei-row"><span class="label">Product ID</span><span class="value">@productId</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(cardBrand) || !string.IsNullOrWhiteSpace(cardHolder)) { <div class="nuvei-row"><span class="label">Card</span><span class="value">@((cardBrand + (string.IsNullOrWhiteSpace(cardHolder) ? "" : " • " + cardHolder)).Trim())</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(issuer)) { <div class="nuvei-row"><span class="label">Issuer</span><span class="value">@issuer</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(authCode)) { <div class="nuvei-row"><span class="label">Auth Code</span><span class="value">@authCode</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(customData)) { <div class="nuvei-row"><span class="label">Custom Data</span><span class="value">@customData</span></div>; }
-        @if (!string.IsNullOrWhiteSpace(checksum)) { <div class="nuvei-row"><span class="label">Response Checksum</span><span class="value">@checksum</span></div>; }
-        <div class="nuvei-actions">
-            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Home</a>
-            <a asp-controller="Payment" asp-action="Index" class="btn btn-primary">Make Another Payment</a>
-        </div>
-    </div>
-</div>
+</body>
+</html>
