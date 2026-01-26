@@ -2,7 +2,7 @@
     ViewData["Title"] = "Payment Error";
     
     // Helper to get query parameter safely
-    string Q(string k) => Request.Query[k].FirstOrDefault() ?? string.Empty;
+    string Q(string k) => Context.Request.Query[k].FirstOrDefault() ?? string.Empty;
     
     // Extract error response fields from Nuvei
     var result = Q("result") ?? Q("Status") ?? "DECLINED";

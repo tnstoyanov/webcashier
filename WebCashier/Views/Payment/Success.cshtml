@@ -2,7 +2,7 @@
     ViewData["Title"] = "Payment Success";
     
     // Helper to get query parameter safely
-    string Q(string k) => Request.Query[k].FirstOrDefault() ?? string.Empty;
+    string Q(string k) => Context.Request.Query[k].FirstOrDefault() ?? string.Empty;
     
     // Extract transaction response fields from Nuvei
     var result = Q("result") ?? Q("Status") ?? "APPROVED";
