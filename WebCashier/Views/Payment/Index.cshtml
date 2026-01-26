@@ -2778,6 +2778,10 @@
         }
 
         async function initiateNuveiSimplyConnectSession(amount, currency) {
+            // Show loading overlay
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
             try {
                 console.log('Initiating Nuvei Simply Connect session for amount:', amount, 'currency:', currency);
 
@@ -2805,14 +2809,21 @@
                     document.getElementById('nuvei-merchant-site-id').value = data.merchantSiteId;
                     document.getElementById('nuvei-order-id').value = data.orderId;
 
+                    // Hide loading overlay before initializing checkout
+                    if (loadingOverlay) loadingOverlay.style.display = 'none';
+
                     // Initialize the checkout form
                     nuveiSimplyConnectSessionActive = true;
                     initializeNuveiCheckout(data.sessionToken, data.merchantId, data.merchantSiteId, amount, currency);
                 } else {
+                    // Hide loading overlay on error
+                    if (loadingOverlay) loadingOverlay.style.display = 'none';
                     alert('Failed to initiate payment session: ' + (data.error || 'Unknown error'));
                     console.error('OpenOrder failed:', data);
                 }
             } catch (error) {
+                // Hide loading overlay on error
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
                 console.error('Error initiating Nuvei checkout:', error);
                 alert('Error initiating payment session: ' + error.message);
             }
