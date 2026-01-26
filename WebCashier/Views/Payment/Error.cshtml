@@ -1,0 +1,171 @@
+@{
+    ViewData["Title"] = "Payment Error";
+    
+    // Helper to get query parameter safely
+    string Q(string k) => Request.Query[k].FirstOrDefault() ?? string.Empty;
+    
+    // Extract error response fields from Nuvei
+    var result = Q("result") ?? Q("Status") ?? "DECLINED";
+    var transactionStatus = Q("transactionStatus") ?? Q("Status") ?? result;
+    var transactionId = Q("transactionId") ?? Q("TransactionID");
+    var errorCode = Q("errCode") ?? Q("ErrCode");
+    var errorDescription = Q("errorDescription") ?? Q("ErrorDescription");
+    var transactionType = Q("transactionType") ?? "Sale";
+    var amount = string.IsNullOrWhiteSpace(Q("totalAmount")) ? Q("total_amount") : Q("totalAmount");
+    var currency = Q("currency");
+    var paymentMethod = Q("payment_method");
+    var timestamp = Q("responseTimeStamp");
+    var cardNumber = Q("ccCardNumber");
+    var last4Digits = Q("last4Digits");
+    
+    // Determine if we have error information
+    var hasErrorInfo = !string.IsNullOrWhiteSpace(transactionId) || !string.IsNullOrWhiteSpace(errorCode) || !string.IsNullOrWhiteSpace(errorDescription);
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; background: linear-gradient(135deg, #f93b1d 0%, #ea580c 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .container { max-width: 600px; width: 100%; }
+        .error-card { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .error-header { background: linear-gradient(135deg, #f93b1d 0%, #ea580c 100%); color: white; padding: 40px 20px; text-align: center; position: relative; }
+        .error-icon { width: 80px; height: 80px; margin: 0 auto 20px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: shake 0.5s ease-in-out; }
+        .error-icon svg { width: 45px; height: 45px; stroke: white; stroke-width: 2; }
+        .error-header h1 { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
+        .error-header p { font-size: 14px; opacity: 0.9; }
+        .error-body { padding: 40px 30px; }
+        .error-detail { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .error-detail:last-child { border-bottom: none; }
+        .detail-label { font-weight: 600; color: #666; }
+        .detail-value { color: #333; font-family: 'Courier New', monospace; word-break: break-all; }
+        .detail-value.highlight { font-weight: 600; color: #ea580c; }
+        .error-message-box { background: #fef2f2; border-left: 4px solid #ea580c; padding: 16px; margin: 20px 0; border-radius: 4px; }
+        .error-message-label { font-size: 12px; color: #999; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+        .error-message-text { color: #333; font-size: 14px; line-height: 1.5; }
+        .amount-display { background: #f8f9ff; border-left: 4px solid #667eea; padding: 16px; margin: 20px 0; border-radius: 4px; }
+        .amount-display .label { font-size: 12px; color: #999; text-transform: uppercase; margin-bottom: 4px; }
+        .amount-display .value { font-size: 28px; font-weight: 700; color: #333; }
+        .action-buttons { display: flex; gap: 12px; margin-top: 30px; }
+        .btn { flex: 1; padding: 12px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; transition: all 0.2s; }
+        .btn-primary { background: #ea580c; color: white; }
+        .btn-primary:hover { background: #d64607; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .empty-state { text-align: center; padding: 40px 20px; }
+        .empty-state svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.5; }
+        .empty-state h2 { font-size: 18px; color: #333; margin-bottom: 10px; }
+        .empty-state p { color: #999; font-size: 14px; margin-bottom: 20px; }
+        @@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        @@media (max-width: 600px) {
+            .error-header { padding: 30px 15px; }
+            .error-body { padding: 25px 15px; }
+            .error-header h1 { font-size: 24px; }
+            .amount-display .value { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        @if (hasErrorInfo)
+        {
+            <div class="error-card">
+                <div class="error-header">
+                    <div class="error-icon">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <h1>Payment Failed</h1>
+                    <p>Your transaction could not be completed.</p>
+                </div>
+                <div class="error-body">
+                    @if (!string.IsNullOrWhiteSpace(errorDescription))
+                    {
+                        <div class="error-message-box">
+                            <div class="error-message-label">Error Reason</div>
+                            <div class="error-message-text">@errorDescription</div>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(amount) && !string.IsNullOrWhiteSpace(currency))
+                    {
+                        <div class="amount-display">
+                            <div class="label">Attempted Amount</div>
+                            <div class="value">@amount <span style="font-size: 20px;">@currency</span></div>
+                        </div>
+                    }
+                    
+                    <div class="error-detail">
+                        <span class="detail-label">Transaction Type</span>
+                        <span class="detail-value">@(string.IsNullOrWhiteSpace(transactionType) ? "Sale" : transactionType)</span>
+                    </div>
+                    
+                    <div class="error-detail">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-value highlight">@(string.IsNullOrWhiteSpace(transactionStatus) ? "DECLINED" : transactionStatus)</span>
+                    </div>
+                    
+                    @if (!string.IsNullOrWhiteSpace(errorCode))
+                    {
+                        <div class="error-detail">
+                            <span class="detail-label">Error Code</span>
+                            <span class="detail-value">@errorCode</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(transactionId))
+                    {
+                        <div class="error-detail">
+                            <span class="detail-label">Transaction ID</span>
+                            <span class="detail-value">@transactionId</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(paymentMethod))
+                    {
+                        <div class="error-detail">
+                            <span class="detail-label">Payment Method</span>
+                            <span class="detail-value">@paymentMethod</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(cardNumber) || !string.IsNullOrWhiteSpace(last4Digits))
+                    {
+                        <div class="error-detail">
+                            <span class="detail-label">Card</span>
+                            <span class="detail-value">@(string.IsNullOrWhiteSpace(cardNumber) ? last4Digits : cardNumber)</span>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrWhiteSpace(timestamp))
+                    {
+                        <div class="error-detail">
+                            <span class="detail-label">Timestamp</span>
+                            <span class="detail-value">@timestamp</span>
+                        </div>
+                    }
+                    
+                    <div class="action-buttons">
+                        <a href="/Payment" class="btn btn-primary">Try Another Method</a>
+                        <a href="/" class="btn btn-secondary">Return Home</a>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="error-card">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <h2>No Error Information</h2>
+                    <p>We couldn't find the error details. Please check your payment details or go back to try again.</p>
+                    <a href="/Payment" class="btn btn-primary" style="margin-top: 20px; display: inline-block; width: auto; padding: 10px 30px;">Return to Payment</a>
+                </div>
+            </div>
+        }
+    </div>
+</body>
+</html>
