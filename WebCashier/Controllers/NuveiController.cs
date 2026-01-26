@@ -248,6 +248,73 @@ namespace WebCashier.Controllers
         }
     }
 
+    [HttpPost("SimplyConnect/GetPaymentStatus")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GetPaymentStatus([FromForm] string clientUniqueId)
+    {
+        try
+        {
+            _logger.LogInformation("GetPaymentStatus called with clientUniqueId: {ClientUniqueId}", clientUniqueId);
+            
+            if (string.IsNullOrWhiteSpace(clientUniqueId))
+            {
+                _logger.LogWarning("GetPaymentStatus called with empty clientUniqueId");
+                return Json(new { success = false, error = "clientUniqueId is required" });
+            }
+
+            await _commLog.LogAsync("nuvei-get-payment-status-inbound", new { 
+                provider = "Nuvei Simply Connect", 
+                action = "GetPaymentStatus", 
+                clientUniqueId
+            }, "nuvei");
+
+            var simplyConnectService = HttpContext.RequestServices.GetRequiredService<NuveiSimplyConnectService>();
+            var statusResponse = await simplyConnectService.GetPaymentStatusAsync(clientUniqueId);
+
+            if (statusResponse == null)
+            {
+                _logger.LogError("Failed to get payment status from Nuvei for clientUniqueId: {ClientUniqueId}", clientUniqueId);
+                return Json(new { success = false, error = "Failed to retrieve payment status" });
+            }
+
+            _logger.LogInformation("Payment status retrieved: {TransactionStatus} for clientUniqueId: {ClientUniqueId}", 
+                statusResponse.TransactionStatus, clientUniqueId);
+
+            await _commLog.LogAsync("nuvei-get-payment-status-retrieved", new {
+                provider = "Nuvei Simply Connect",
+                transactionStatus = statusResponse.TransactionStatus,
+                transactionId = statusResponse.TransactionId,
+                clientUniqueId = statusResponse.ClientUniqueId,
+                amount = statusResponse.Amount,
+                currency = statusResponse.Currency
+            }, "nuvei");
+
+            return Json(new
+            {
+                success = true,
+                transactionStatus = statusResponse.TransactionStatus,
+                gwExtendedErrorCode = statusResponse.GwExtendedErrorCode,
+                errorCode = statusResponse.ErrorCode,
+                transactionId = statusResponse.TransactionId,
+                amount = statusResponse.Amount,
+                currency = statusResponse.Currency,
+                clientUniqueId = statusResponse.ClientUniqueId
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting payment status");
+            await _commLog.LogAsync("nuvei-get-payment-status-error", new {
+                provider = "Nuvei Simply Connect",
+                action = "GetPaymentStatus",
+                clientUniqueId = clientUniqueId,
+                error = ex.Message,
+                stackTrace = ex.StackTrace
+            }, "nuvei");
+            return Json(new { success = false, error = "An error occurred while retrieving payment status" });
+        }
+    }
+
     [HttpGet("")]
     public IActionResult Index() => Ok(new { status = "nuvei-controller-ok", time = DateTime.UtcNow });
 

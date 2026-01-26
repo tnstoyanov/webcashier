@@ -2801,6 +2801,7 @@
 
                 if (data.success && data.sessionToken) {
                     console.log('Session initiated successfully, sessionToken:', data.sessionToken.substring(0, 20) + '...');
+                    console.log('Client Unique ID:', data.clientUniqueId);
                     
                     // Store session data
                     document.getElementById('nuvei-session-token').value = data.sessionToken;
@@ -2817,7 +2818,7 @@
 
                     // Initialize the checkout form
                     nuveiSimplyConnectSessionActive = true;
-                    initializeNuveiCheckout(data.sessionToken, data.merchantId, data.merchantSiteId, amount, currency);
+                    initializeNuveiCheckout(data.sessionToken, data.merchantId, data.merchantSiteId, amount, currency, data.clientUniqueId);
                 } else {
                     // Hide loading overlay on error
                     if (loadingOverlay) loadingOverlay.style.display = 'none';
@@ -2832,11 +2833,11 @@
             }
         }
 
-        function initializeNuveiCheckout(sessionToken, merchantId, merchantSiteId, amount, currency) {
+        function initializeNuveiCheckout(sessionToken, merchantId, merchantSiteId, amount, currency, clientUniqueId) {
             // Wait for checkout.js to be loaded
             if (typeof window.checkout === 'undefined') {
                 console.log('Waiting for checkout.js to load...');
-                setTimeout(() => initializeNuveiCheckout(sessionToken, merchantId, merchantSiteId, amount, currency), 500);
+                setTimeout(() => initializeNuveiCheckout(sessionToken, merchantId, merchantSiteId, amount, currency, clientUniqueId), 500);
                 return;
             }
 
@@ -2874,18 +2875,12 @@
 
                     onResult: function(result) {
                         console.log('Nuvei checkout result:', result);
-
-                        if (result.transactionStatus === 'APPROVED') {
-                            console.log('Payment approved:', result);
-                            window.location.href = '/Payment/Success?transactionId=' + encodeURIComponent(result.transactionId || '');
-                        } else if (result.transactionStatus === 'DECLINED') {
-                            console.log('Payment declined:', result);
-                            alert('Payment was declined: ' + (result.errorDescription || result.errCode || 'Unknown error'));
-                        } else if (result.transactionStatus === 'ERROR') {
-                            console.log('Payment error:', result);
-                            alert('Payment error: ' + (result.errorDescription || result.errCode || 'Unknown error'));
+                        
+                        // Call getPaymentStatus to get the full transaction details
+                        if (clientUniqueId) {
+                            getPaymentStatus(clientUniqueId, result);
                         } else {
-                            console.log('Payment pending or other status:', result);
+                            handlePaymentResult(result);
                         }
                     },
 
@@ -2904,4 +2899,103 @@
                 checkoutContainer.innerHTML = '<p style="color: #d00;">Error loading payment form: ' + error.message + '</p>';
             }
         }
-    </script>}
+
+        async function getPaymentStatus(clientUniqueId, checkoutResult) {
+            console.log('Fetching payment status for clientUniqueId:', clientUniqueId);
+            try {
+                const formData = new FormData();
+                formData.append('clientUniqueId', clientUniqueId);
+                formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+
+                const response = await fetch('/Nuvei/SimplyConnect/GetPaymentStatus', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                console.log('Payment status response:', data);
+
+                if (data.success) {
+                    displayPaymentResult(data);
+                } else {
+                    console.error('Failed to get payment status:', data.error);
+                    handlePaymentResult(checkoutResult);
+                }
+            } catch (error) {
+                console.error('Error getting payment status:', error);
+                handlePaymentResult(checkoutResult);
+            }
+        }
+
+        function displayPaymentResult(statusData) {
+            const checkoutDiv = document.getElementById('nuvei-checkout');
+            
+            const resultHtml = `
+                <div style="width: 100%; padding: 20px; background: white; border-radius: 8px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0 0 10px 0; color: #333;">Transaction Result</h2>
+                    </div>
+                    
+                    <div style="background: #f8f9ff; padding: 16px; border-radius: 6px; border-left: 4px solid #667eea;">
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                            <span style="font-weight: 600; color: #666;">Transaction Status</span>
+                            <span style="color: ${statusData.transactionStatus === 'APPROVED' ? '#22c55e' : '#ef4444'}; font-weight: 600;">${statusData.transactionStatus || 'UNKNOWN'}</span>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                            <span style="font-weight: 600; color: #666;">Transaction ID</span>
+                            <span style="color: #333; font-family: monospace;">${statusData.transactionId || 'N/A'}</span>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                            <span style="font-weight: 600; color: #666;">Amount</span>
+                            <span style="color: #333; font-weight: 600;">${statusData.amount || 'N/A'} ${statusData.currency || ''}</span>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                            <span style="font-weight: 600; color: #666;">Client Unique ID</span>
+                            <span style="color: #333; font-family: monospace; word-break: break-all;">${statusData.clientUniqueId || 'N/A'}</span>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                            <span style="font-weight: 600; color: #666;">Error Code</span>
+                            <span style="color: #333;">${statusData.errorCode || '0'}</span>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                            <span style="font-weight: 600; color: #666;">Extended Error Code</span>
+                            <span style="color: #333;">${statusData.gwExtendedErrorCode || '0'}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; margin-top: 20px;">
+                        <button onclick="location.href='/Payment'" style="flex: 1; padding: 10px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Make Another Payment</button>
+                        <button onclick="location.href='/'" style="flex: 1; padding: 10px; background: #f0f0f0; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Return Home</button>
+                    </div>
+                </div>
+            `;
+            
+            checkoutDiv.innerHTML = resultHtml;
+            checkoutDiv.style.display = 'flex';
+            checkoutDiv.style.flexDirection = 'column';
+            checkoutDiv.style.alignItems = 'center';
+            checkoutDiv.style.justifyContent = 'flex-start';
+            checkoutDiv.style.height = 'auto';
+        }
+
+        function handlePaymentResult(result) {
+            if (result.transactionStatus === 'APPROVED') {
+                console.log('Payment approved:', result);
+                window.location.href = '/Payment/Success?transactionId=' + encodeURIComponent(result.transactionId || '');
+            } else if (result.transactionStatus === 'DECLINED') {
+                console.log('Payment declined:', result);
+                alert('Payment was declined: ' + (result.errorDescription || result.errCode || 'Unknown error'));
+            } else if (result.transactionStatus === 'ERROR') {
+                console.log('Payment error:', result);
+                alert('Payment error: ' + (result.errorDescription || result.errCode || 'Unknown error'));
+            } else {
+                console.log('Payment pending or other status:', result);
+                alert('Payment status: ' + (result.transactionStatus || 'Unknown'));
+            }
+        }
+    </script>

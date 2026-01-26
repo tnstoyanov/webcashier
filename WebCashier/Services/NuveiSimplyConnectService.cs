@@ -16,6 +16,8 @@ namespace WebCashier.Services
         private readonly IRuntimeConfigStore _runtime;
         private const string OpenOrderEndpoint = "https://ppp-test.nuvei.com/ppp/api/v1/openOrder.do";
         private const string OpenOrderProdEndpoint = "https://ppp.nuvei.com/ppp/api/v1/openOrder.do";
+        private const string GetPaymentStatusEndpoint = "https://ppp-test.nuvei.com/ppp/api/v1/getPaymentStatus.do";
+        private const string GetPaymentStatusProdEndpoint = "https://ppp.nuvei.com/ppp/api/v1/getPaymentStatus.do";
 
         public NuveiSimplyConnectService(
             IConfiguration config,
@@ -173,6 +175,163 @@ namespace WebCashier.Services
 
         private string? Get(string key) => _runtime.Get(key) ?? _config[key];
 
+        /// <summary>
+        /// Gets the payment status for a transaction using clientUniqueId
+        /// </summary>
+        public async Task<PaymentStatusResponse?> GetPaymentStatusAsync(string clientUniqueId)
+        {
+            try
+            {
+                var merchantId = Get("Nuvei:merchant_id");
+                var merchantSiteId = Get("Nuvei:merchant_site_id");
+                var secretKey = Get("Nuvei:secret_key");
+                var environment = Get("Nuvei:environment") ?? "test";
+
+                if (string.IsNullOrWhiteSpace(merchantId) || string.IsNullOrWhiteSpace(merchantSiteId) || string.IsNullOrWhiteSpace(secretKey))
+                {
+                    _logger.LogError("Nuvei Simply Connect configuration incomplete for getPaymentStatus");
+                    throw new InvalidOperationException("Nuvei configuration incomplete");
+                }
+
+                var endpoint = environment.Equals("prod", StringComparison.OrdinalIgnoreCase) 
+                    ? GetPaymentStatusProdEndpoint 
+                    : GetPaymentStatusEndpoint;
+
+                var timeStamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+
+                // Build the request payload
+                var request = new
+                {
+                    merchantId = merchantId,
+                    merchantSiteId = merchantSiteId,
+                    clientUniqueId = clientUniqueId,
+                    timeStamp = timeStamp
+                };
+
+                // Calculate checksum: SHA256(merchantId + merchantSiteId + clientUniqueId + timeStamp + secretKey)
+                var toHash = merchantId + merchantSiteId + clientUniqueId + timeStamp + secretKey;
+                var checksum = Sha256Hex(toHash);
+
+                // Create final request with checksum
+                var requestWithChecksum = new
+                {
+                    merchantId = merchantId,
+                    merchantSiteId = merchantSiteId,
+                    clientUniqueId = clientUniqueId,
+                    timeStamp = timeStamp,
+                    checksum = checksum
+                };
+
+                // Log outbound request
+                _logger.LogInformation("Calling Nuvei getPaymentStatus for clientUniqueId: {ClientUniqueId}", clientUniqueId);
+                await _commLog.LogAsync("nuvei-get-payment-status-outbound", new
+                {
+                    provider = "Nuvei Simply Connect",
+                    action = "getPaymentStatus",
+                    endpoint = endpoint,
+                    merchantId = merchantId,
+                    merchantSiteId = merchantSiteId,
+                    clientUniqueId = clientUniqueId,
+                    timeStamp = timeStamp,
+                    checksum = checksum
+                }, "nuvei");
+
+                // Send request to Nuvei
+                using var httpClient = new HttpClient();
+                var jsonContent = JsonSerializer.Serialize(requestWithChecksum);
+                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                _logger.LogInformation("Nuvei getPaymentStatus request payload: {Payload}", jsonContent);
+                
+                var response = await httpClient.PostAsync(endpoint, content);
+                
+                _logger.LogInformation("Nuvei getPaymentStatus response status: {StatusCode}", response.StatusCode);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorBody = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Nuvei getPaymentStatus failed with status {StatusCode}: {ErrorBody}", response.StatusCode, errorBody);
+                    await _commLog.LogAsync("nuvei-get-payment-status-error", new
+                    {
+                        provider = "Nuvei Simply Connect",
+                        action = "getPaymentStatus",
+                        statusCode = response.StatusCode,
+                        errorBody = errorBody
+                    }, "nuvei");
+                    return null;
+                }
+
+                var responseBody = await response.Content.ReadAsStringAsync();
+                _logger.LogInformation("Nuvei getPaymentStatus response body: {ResponseBody}", responseBody);
+                
+                var jsonResponse = JsonSerializer.Deserialize<JsonElement>(responseBody);
+
+                // Log successful response
+                await _commLog.LogAsync("nuvei-get-payment-status-response", new
+                {
+                    provider = "Nuvei Simply Connect",
+                    action = "getPaymentStatus",
+                    transactionStatus = jsonResponse.TryGetProperty("transactionStatus", out var status) ? status.GetString() : null,
+                    transactionId = jsonResponse.TryGetProperty("transactionId", out var txId) ? txId.GetString() : null,
+                    errorCode = jsonResponse.TryGetProperty("errorCode", out var errCode) ? errCode.GetString() : null
+                }, "nuvei");
+
+                // Parse and return the full response
+                var statusResponse = new PaymentStatusResponse();
+                
+                if (jsonResponse.TryGetProperty("transactionStatus", out var statusProp))
+                    statusResponse.TransactionStatus = statusProp.GetString();
+                if (jsonResponse.TryGetProperty("gwExtendedErrorCode", out var gwErr))
+                    statusResponse.GwExtendedErrorCode = gwErr.GetInt32();
+                if (jsonResponse.TryGetProperty("errorCode", out var errCodeProp))
+                    statusResponse.ErrorCode = errCodeProp.GetInt32();
+                if (jsonResponse.TryGetProperty("reason", out var reasonProp))
+                    statusResponse.Reason = reasonProp.GetString();
+                if (jsonResponse.TryGetProperty("authCode", out var authProp))
+                    statusResponse.AuthCode = authProp.GetString();
+                if (jsonResponse.TryGetProperty("clientRequestId", out var clientReqProp))
+                    statusResponse.ClientRequestId = clientReqProp.GetString();
+                if (jsonResponse.TryGetProperty("internalRequestId", out var internalReqProp))
+                    statusResponse.InternalRequestId = internalReqProp.GetInt64();
+                if (jsonResponse.TryGetProperty("version", out var verProp))
+                    statusResponse.Version = verProp.GetString();
+                if (jsonResponse.TryGetProperty("transactionId", out var txIdProp))
+                    statusResponse.TransactionId = txIdProp.GetString();
+                if (jsonResponse.TryGetProperty("amount", out var amountProp))
+                    statusResponse.Amount = amountProp.GetString();
+                if (jsonResponse.TryGetProperty("currency", out var currencyProp))
+                    statusResponse.Currency = currencyProp.GetString();
+                if (jsonResponse.TryGetProperty("merchantId", out var merIdProp))
+                    statusResponse.MerchantId = merIdProp.GetString();
+                if (jsonResponse.TryGetProperty("merchantSiteId", out var merSiteIdProp))
+                    statusResponse.MerchantSiteId = merSiteIdProp.GetString();
+                if (jsonResponse.TryGetProperty("transactionType", out var txTypeProp))
+                    statusResponse.TransactionType = txTypeProp.GetString();
+                if (jsonResponse.TryGetProperty("clientUniqueId", out var clientUniqueProp))
+                    statusResponse.ClientUniqueId = clientUniqueProp.GetString();
+                if (jsonResponse.TryGetProperty("errCode", out var errCodeIntProp))
+                    statusResponse.ErrCode = errCodeIntProp.GetInt32();
+                if (jsonResponse.TryGetProperty("status", out var statusStrProp))
+                    statusResponse.Status = statusStrProp.GetString();
+
+                return statusResponse;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Nuvei getPaymentStatus API call failed");
+                await _commLog.LogAsync("nuvei-get-payment-status-exception", new
+                {
+                    provider = "Nuvei Simply Connect",
+                    action = "getPaymentStatus",
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
+                }, "nuvei");
+                return null;
+            }
+        }
+
+        private string? Get(string key) => _runtime.Get(key) ?? _config[key];
+
         private static string Sha256Hex(string input)
         {
             using var sha = SHA256.Create();
@@ -189,5 +348,26 @@ namespace WebCashier.Services
         public string? ClientUniqueId { get; set; }
         public string? MerchantId { get; set; }
         public string? MerchantSiteId { get; set; }
+    }
+
+    public class PaymentStatusResponse
+    {
+        public string? TransactionStatus { get; set; }
+        public int GwExtendedErrorCode { get; set; }
+        public int ErrorCode { get; set; }
+        public string? Reason { get; set; }
+        public string? AuthCode { get; set; }
+        public string? ClientRequestId { get; set; }
+        public long InternalRequestId { get; set; }
+        public string? Version { get; set; }
+        public string? TransactionId { get; set; }
+        public string? Amount { get; set; }
+        public string? Currency { get; set; }
+        public string? MerchantId { get; set; }
+        public string? MerchantSiteId { get; set; }
+        public string? TransactionType { get; set; }
+        public string? ClientUniqueId { get; set; }
+        public int ErrCode { get; set; }
+        public string? Status { get; set; }
     }
 }
