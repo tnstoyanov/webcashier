@@ -330,8 +330,6 @@ namespace WebCashier.Services
             }
         }
 
-        private string? Get(string key) => _runtime.Get(key) ?? _config[key];
-
         private static string Sha256Hex(string input)
         {
             using var sha = SHA256.Create();
