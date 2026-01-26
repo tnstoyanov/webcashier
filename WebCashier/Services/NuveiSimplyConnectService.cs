@@ -176,9 +176,9 @@ namespace WebCashier.Services
         private string? Get(string key) => _runtime.Get(key) ?? _config[key];
 
         /// <summary>
-        /// Gets the payment status for a transaction using clientUniqueId
+        /// Gets the payment status for a transaction using transactionId
         /// </summary>
-        public async Task<PaymentStatusResponse?> GetPaymentStatusAsync(string clientUniqueId)
+        public async Task<PaymentStatusResponse?> GetPaymentStatusAsync(string transactionId)
         {
             try
             {
@@ -204,12 +204,12 @@ namespace WebCashier.Services
                 {
                     merchantId = merchantId,
                     merchantSiteId = merchantSiteId,
-                    clientUniqueId = clientUniqueId,
+                    transactionId = transactionId,
                     timeStamp = timeStamp
                 };
 
-                // Calculate checksum: SHA256(merchantId + merchantSiteId + clientUniqueId + timeStamp + secretKey)
-                var toHash = merchantId + merchantSiteId + clientUniqueId + timeStamp + secretKey;
+                // Calculate checksum: SHA256(merchantId + merchantSiteId + transactionId + timeStamp + secretKey)
+                var toHash = merchantId + merchantSiteId + transactionId + timeStamp + secretKey;
                 var checksum = Sha256Hex(toHash);
 
                 // Create final request with checksum
@@ -217,13 +217,13 @@ namespace WebCashier.Services
                 {
                     merchantId = merchantId,
                     merchantSiteId = merchantSiteId,
-                    clientUniqueId = clientUniqueId,
+                    transactionId = transactionId,
                     timeStamp = timeStamp,
                     checksum = checksum
                 };
 
                 // Log outbound request
-                _logger.LogInformation("Calling Nuvei getPaymentStatus for clientUniqueId: {ClientUniqueId}", clientUniqueId);
+                _logger.LogInformation("Calling Nuvei getPaymentStatus for transactionId: {TransactionId}", transactionId);
                 await _commLog.LogAsync("nuvei-get-payment-status-outbound", new
                 {
                     provider = "Nuvei Simply Connect",
@@ -231,7 +231,7 @@ namespace WebCashier.Services
                     endpoint = endpoint,
                     merchantId = merchantId,
                     merchantSiteId = merchantSiteId,
-                    clientUniqueId = clientUniqueId,
+                    transactionId = transactionId,
                     timeStamp = timeStamp,
                     checksum = checksum
                 }, "nuvei");

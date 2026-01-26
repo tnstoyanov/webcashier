@@ -250,41 +250,40 @@ namespace WebCashier.Controllers
 
     [HttpPost("SimplyConnect/GetPaymentStatus")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> GetPaymentStatus([FromForm] string clientUniqueId)
+    public async Task<IActionResult> GetPaymentStatus([FromForm] string transactionId)
     {
         try
         {
-            _logger.LogInformation("GetPaymentStatus called with clientUniqueId: {ClientUniqueId}", clientUniqueId);
+            _logger.LogInformation("GetPaymentStatus called with transactionId: {TransactionId}", transactionId);
             
-            if (string.IsNullOrWhiteSpace(clientUniqueId))
+            if (string.IsNullOrWhiteSpace(transactionId))
             {
-                _logger.LogWarning("GetPaymentStatus called with empty clientUniqueId");
-                return Json(new { success = false, error = "clientUniqueId is required" });
+                _logger.LogWarning("GetPaymentStatus called with empty transactionId");
+                return Json(new { success = false, error = "transactionId is required" });
             }
 
             await _commLog.LogAsync("nuvei-get-payment-status-inbound", new { 
                 provider = "Nuvei Simply Connect", 
                 action = "GetPaymentStatus", 
-                clientUniqueId
+                transactionId
             }, "nuvei");
 
             var simplyConnectService = HttpContext.RequestServices.GetRequiredService<NuveiSimplyConnectService>();
-            var statusResponse = await simplyConnectService.GetPaymentStatusAsync(clientUniqueId);
+            var statusResponse = await simplyConnectService.GetPaymentStatusAsync(transactionId);
 
             if (statusResponse == null)
             {
-                _logger.LogError("Failed to get payment status from Nuvei for clientUniqueId: {ClientUniqueId}", clientUniqueId);
+                _logger.LogError("Failed to get payment status from Nuvei for transactionId: {TransactionId}", transactionId);
                 return Json(new { success = false, error = "Failed to retrieve payment status" });
             }
 
-            _logger.LogInformation("Payment status retrieved: {TransactionStatus} for clientUniqueId: {ClientUniqueId}", 
-                statusResponse.TransactionStatus, clientUniqueId);
+            _logger.LogInformation("Payment status retrieved: {TransactionStatus} for transactionId: {TransactionId}", 
+                statusResponse.TransactionStatus, transactionId);
 
             await _commLog.LogAsync("nuvei-get-payment-status-retrieved", new {
                 provider = "Nuvei Simply Connect",
                 transactionStatus = statusResponse.TransactionStatus,
                 transactionId = statusResponse.TransactionId,
-                clientUniqueId = statusResponse.ClientUniqueId,
                 amount = statusResponse.Amount,
                 currency = statusResponse.Currency
             }, "nuvei");
@@ -307,7 +306,7 @@ namespace WebCashier.Controllers
             await _commLog.LogAsync("nuvei-get-payment-status-error", new {
                 provider = "Nuvei Simply Connect",
                 action = "GetPaymentStatus",
-                clientUniqueId = clientUniqueId,
+                transactionId = transactionId,
                 error = ex.Message,
                 stackTrace = ex.StackTrace
             }, "nuvei");

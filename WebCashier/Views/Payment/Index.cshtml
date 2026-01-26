@@ -2877,8 +2877,8 @@
                         console.log('Nuvei checkout result:', result);
                         
                         // Call getPaymentStatus to get the full transaction details
-                        if (clientUniqueId) {
-                            getPaymentStatus(clientUniqueId, result);
+                        if (result.transactionId) {
+                            getPaymentStatus(result.transactionId, result);
                         } else {
                             handlePaymentResult(result);
                         }
@@ -2900,11 +2900,11 @@
             }
         }
 
-        async function getPaymentStatus(clientUniqueId, checkoutResult) {
-            console.log('Fetching payment status for clientUniqueId:', clientUniqueId);
+        async function getPaymentStatus(transactionId, checkoutResult) {
+            console.log('Fetching payment status for transactionId:', transactionId);
             try {
                 const formData = new FormData();
-                formData.append('clientUniqueId', clientUniqueId);
+                formData.append('transactionId', transactionId);
                 formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
 
                 const response = await fetch('/Nuvei/SimplyConnect/GetPaymentStatus', {
