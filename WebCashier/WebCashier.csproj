@@ -17,4 +17,8 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Nuvei-NetSDK" Version="1.0.0.30" />
+  </ItemGroup>
+
 </Project>
