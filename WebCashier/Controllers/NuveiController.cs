@@ -315,7 +315,9 @@ namespace WebCashier.Controllers
                 currency = statusResponse.Currency,
                 transactionType = statusResponse.TransactionType,
                 paymentMethod = statusResponse.PaymentMethod,
+                gwErrorCode = statusResponse.GwErrorCode,
                 gwExtendedErrorCode = statusResponse.GwExtendedErrorCode,
+                gwErrorReason = statusResponse.GwErrorReason,
                 errCode = statusResponse.ErrCode,
                 reason = statusResponse.Reason,
                 clientUniqueId = statusResponse.ClientUniqueId

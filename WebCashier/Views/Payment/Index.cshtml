@@ -2781,6 +2781,12 @@
             const loadingOverlay = document.getElementById('loading-overlay');
             if (loadingOverlay) loadingOverlay.style.display = 'flex';
 
+            // Hide the deposit button
+            const depositBtn = document.getElementById('deposit-btn');
+            if (depositBtn) {
+                depositBtn.style.display = 'none';
+            }
+
             try {
                 console.log('Initiating Nuvei Simply Connect session for amount:', amount, 'currency:', currency);
 
@@ -2959,12 +2965,17 @@
                         
                         <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
                             <span style="font-weight: 600; color: #666;">Error Code</span>
-                            <span style="color: #333;">${statusData.errorCode || '0'}</span>
+                            <span style="color: #333;">${statusData.gwErrorCode !== undefined && statusData.gwErrorCode !== 0 ? statusData.gwErrorCode : 'N/A'}</span>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0;">
+                            <span style="font-weight: 600; color: #666;">Extended Error Code</span>
+                            <span style="color: #333;">${statusData.gwExtendedErrorCode !== undefined && statusData.gwExtendedErrorCode !== 0 ? statusData.gwExtendedErrorCode : 'N/A'}</span>
                         </div>
                         
                         <div style="display: flex; justify-content: space-between; padding: 8px 0;">
-                            <span style="font-weight: 600; color: #666;">Extended Error Code</span>
-                            <span style="color: #333;">${statusData.gwExtendedErrorCode || '0'}</span>
+                            <span style="font-weight: 600; color: #666;">Error Message</span>
+                            <span style="color: #333;">${statusData.gwErrorReason || 'N/A'}</span>
                         </div>
                     </div>
                     

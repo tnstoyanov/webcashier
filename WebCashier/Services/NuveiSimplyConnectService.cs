@@ -253,8 +253,12 @@ namespace WebCashier.Services
                 
                 if (jsonResponse.TryGetProperty("transactionStatus", out var statusProp))
                     statusResponse.TransactionStatus = statusProp.GetString();
+                if (jsonResponse.TryGetProperty("gwErrorCode", out var gwErrorCode))
+                    statusResponse.GwErrorCode = gwErrorCode.GetInt32();
                 if (jsonResponse.TryGetProperty("gwExtendedErrorCode", out var gwErr))
                     statusResponse.GwExtendedErrorCode = gwErr.GetInt32();
+                if (jsonResponse.TryGetProperty("gwErrorReason", out var gwErrorReason))
+                    statusResponse.GwErrorReason = gwErrorReason.GetString();
                 if (jsonResponse.TryGetProperty("errCode", out var errCodeProp))
                     statusResponse.ErrCode = errCodeProp.GetInt32();
                 if (jsonResponse.TryGetProperty("reason", out var reasonProp))
@@ -340,7 +344,9 @@ namespace WebCashier.Services
     public class PaymentStatusResponse
     {
         public string? TransactionStatus { get; set; }
+        public int GwErrorCode { get; set; }
         public int GwExtendedErrorCode { get; set; }
+        public string? GwErrorReason { get; set; }
         public int ErrorCode { get; set; }
         public string? Reason { get; set; }
         public string? AuthCode { get; set; }
