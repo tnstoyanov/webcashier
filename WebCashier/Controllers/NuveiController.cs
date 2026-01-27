@@ -250,53 +250,58 @@ namespace WebCashier.Controllers
 
     [HttpPost("SimplyConnect/GetPaymentStatus")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> GetPaymentStatus([FromForm] string transactionId)
+    public async Task<IActionResult> GetPaymentStatus([FromForm] string sessionToken)
     {
         try
         {
-            _logger.LogInformation("GetPaymentStatus called with transactionId: {TransactionId}", transactionId);
+            _logger.LogInformation("GetPaymentStatus called with sessionToken");
             
-            if (string.IsNullOrWhiteSpace(transactionId))
+            if (string.IsNullOrWhiteSpace(sessionToken))
             {
-                _logger.LogWarning("GetPaymentStatus called with empty transactionId");
-                return Json(new { success = false, error = "transactionId is required" });
+                _logger.LogWarning("GetPaymentStatus called with empty sessionToken");
+                return Json(new { success = false, error = "sessionToken is required" });
             }
 
             await _commLog.LogAsync("nuvei-get-payment-status-inbound", new { 
                 provider = "Nuvei Simply Connect", 
                 action = "GetPaymentStatus", 
-                transactionId
+                sessionTokenProvided = true
             }, "nuvei");
 
             var simplyConnectService = HttpContext.RequestServices.GetRequiredService<NuveiSimplyConnectService>();
-            var statusResponse = await simplyConnectService.GetPaymentStatusAsync(transactionId);
+            var statusResponse = await simplyConnectService.GetPaymentStatusAsync(sessionToken);
 
             if (statusResponse == null)
             {
-                _logger.LogError("Failed to get payment status from Nuvei for transactionId: {TransactionId}", transactionId);
+                _logger.LogError("Failed to get payment status from Nuvei");
                 return Json(new { success = false, error = "Failed to retrieve payment status" });
             }
 
-            _logger.LogInformation("Payment status retrieved: {TransactionStatus} for transactionId: {TransactionId}", 
-                statusResponse.TransactionStatus, transactionId);
+            _logger.LogInformation("Payment status retrieved: {TransactionStatus}", 
+                statusResponse.TransactionStatus);
 
             await _commLog.LogAsync("nuvei-get-payment-status-retrieved", new {
                 provider = "Nuvei Simply Connect",
                 transactionStatus = statusResponse.TransactionStatus,
                 transactionId = statusResponse.TransactionId,
                 amount = statusResponse.Amount,
-                currency = statusResponse.Currency
+                currency = statusResponse.Currency,
+                paymentMethod = statusResponse.PaymentMethod,
+                transactionType = statusResponse.TransactionType
             }, "nuvei");
 
             return Json(new
             {
                 success = true,
                 transactionStatus = statusResponse.TransactionStatus,
-                gwExtendedErrorCode = statusResponse.GwExtendedErrorCode,
-                errorCode = statusResponse.ErrorCode,
                 transactionId = statusResponse.TransactionId,
                 amount = statusResponse.Amount,
                 currency = statusResponse.Currency,
+                transactionType = statusResponse.TransactionType,
+                paymentMethod = statusResponse.PaymentMethod,
+                gwExtendedErrorCode = statusResponse.GwExtendedErrorCode,
+                errCode = statusResponse.ErrCode,
+                reason = statusResponse.Reason,
                 clientUniqueId = statusResponse.ClientUniqueId
             });
         }
@@ -306,7 +311,6 @@ namespace WebCashier.Controllers
             await _commLog.LogAsync("nuvei-get-payment-status-error", new {
                 provider = "Nuvei Simply Connect",
                 action = "GetPaymentStatus",
-                transactionId = transactionId,
                 error = ex.Message,
                 stackTrace = ex.StackTrace
             }, "nuvei");

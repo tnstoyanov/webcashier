@@ -176,69 +176,38 @@ namespace WebCashier.Services
         private string? Get(string key) => _runtime.Get(key) ?? _config[key];
 
         /// <summary>
-        /// Gets the payment status for a transaction using transactionId
+        /// Gets the payment status for a transaction using sessionToken from openOrder response.
+        /// Simply Connect API requires only the sessionToken (no merchant/transaction details or checksum).
         /// </summary>
-        public async Task<PaymentStatusResponse?> GetPaymentStatusAsync(string transactionId)
+        public async Task<PaymentStatusResponse?> GetPaymentStatusAsync(string sessionToken)
         {
             try
             {
-                var merchantId = Get("Nuvei:merchant_id");
-                var merchantSiteId = Get("Nuvei:merchant_site_id");
-                var secretKey = Get("Nuvei:secret_key");
                 var environment = Get("Nuvei:environment") ?? "test";
-
-                if (string.IsNullOrWhiteSpace(merchantId) || string.IsNullOrWhiteSpace(merchantSiteId) || string.IsNullOrWhiteSpace(secretKey))
-                {
-                    _logger.LogError("Nuvei Simply Connect configuration incomplete for getPaymentStatus");
-                    throw new InvalidOperationException("Nuvei configuration incomplete");
-                }
 
                 var endpoint = environment.Equals("prod", StringComparison.OrdinalIgnoreCase) 
                     ? GetPaymentStatusProdEndpoint 
                     : GetPaymentStatusEndpoint;
 
-                var timeStamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-
-                // Build the request payload
-                var request = new
+                // Build the request payload - Simply Connect only needs sessionToken
+                var requestWithSessionToken = new
                 {
-                    merchantId = merchantId,
-                    merchantSiteId = merchantSiteId,
-                    transactionId = transactionId,
-                    timeStamp = timeStamp
-                };
-
-                // Calculate checksum: SHA256(merchantId + merchantSiteId + transactionId + timeStamp + secretKey)
-                var toHash = merchantId + merchantSiteId + transactionId + timeStamp + secretKey;
-                var checksum = Sha256Hex(toHash);
-
-                // Create final request with checksum
-                var requestWithChecksum = new
-                {
-                    merchantId = merchantId,
-                    merchantSiteId = merchantSiteId,
-                    transactionId = transactionId,
-                    timeStamp = timeStamp,
-                    checksum = checksum
+                    sessionToken = sessionToken
                 };
 
                 // Log outbound request
-                _logger.LogInformation("Calling Nuvei getPaymentStatus for transactionId: {TransactionId}", transactionId);
+                _logger.LogInformation("Calling Nuvei getPaymentStatus with sessionToken");
                 await _commLog.LogAsync("nuvei-get-payment-status-outbound", new
                 {
                     provider = "Nuvei Simply Connect",
                     action = "getPaymentStatus",
                     endpoint = endpoint,
-                    merchantId = merchantId,
-                    merchantSiteId = merchantSiteId,
-                    transactionId = transactionId,
-                    timeStamp = timeStamp,
-                    checksum = checksum
+                    sessionTokenProvided = !string.IsNullOrWhiteSpace(sessionToken)
                 }, "nuvei");
 
                 // Send request to Nuvei
                 using var httpClient = new HttpClient();
-                var jsonContent = JsonSerializer.Serialize(requestWithChecksum);
+                var jsonContent = JsonSerializer.Serialize(requestWithSessionToken);
                 var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
                 _logger.LogInformation("Nuvei getPaymentStatus request payload: {Payload}", jsonContent);
@@ -273,7 +242,10 @@ namespace WebCashier.Services
                     action = "getPaymentStatus",
                     transactionStatus = jsonResponse.TryGetProperty("transactionStatus", out var status) ? status.GetString() : null,
                     transactionId = jsonResponse.TryGetProperty("transactionId", out var txId) ? txId.GetString() : null,
-                    errorCode = jsonResponse.TryGetProperty("errorCode", out var errCode) ? errCode.GetString() : null
+                    transactionType = jsonResponse.TryGetProperty("transactionType", out var txType) ? txType.GetString() : null,
+                    amount = jsonResponse.TryGetProperty("amount", out var amt) ? amt.GetString() : null,
+                    currency = jsonResponse.TryGetProperty("currency", out var curr) ? curr.GetString() : null,
+                    status = jsonResponse.TryGetProperty("status", out var respStatus) ? respStatus.GetString() : null
                 }, "nuvei");
 
                 // Parse and return the full response
@@ -283,8 +255,8 @@ namespace WebCashier.Services
                     statusResponse.TransactionStatus = statusProp.GetString();
                 if (jsonResponse.TryGetProperty("gwExtendedErrorCode", out var gwErr))
                     statusResponse.GwExtendedErrorCode = gwErr.GetInt32();
-                if (jsonResponse.TryGetProperty("errorCode", out var errCodeProp))
-                    statusResponse.ErrorCode = errCodeProp.GetInt32();
+                if (jsonResponse.TryGetProperty("errCode", out var errCodeProp))
+                    statusResponse.ErrCode = errCodeProp.GetInt32();
                 if (jsonResponse.TryGetProperty("reason", out var reasonProp))
                     statusResponse.Reason = reasonProp.GetString();
                 if (jsonResponse.TryGetProperty("authCode", out var authProp))
@@ -309,10 +281,27 @@ namespace WebCashier.Services
                     statusResponse.TransactionType = txTypeProp.GetString();
                 if (jsonResponse.TryGetProperty("clientUniqueId", out var clientUniqueProp))
                     statusResponse.ClientUniqueId = clientUniqueProp.GetString();
-                if (jsonResponse.TryGetProperty("errCode", out var errCodeIntProp))
-                    statusResponse.ErrCode = errCodeIntProp.GetInt32();
                 if (jsonResponse.TryGetProperty("status", out var statusStrProp))
                     statusResponse.Status = statusStrProp.GetString();
+
+                // Extract payment option details if available
+                if (jsonResponse.TryGetProperty("paymentOption", out var paymentOption))
+                {
+                    if (paymentOption.TryGetProperty("card", out var card))
+                    {
+                        statusResponse.PaymentOptionType = "card";
+                        if (card.TryGetProperty("uniqueCC", out var uniqueCC))
+                            statusResponse.UniqueCC = uniqueCC.GetString();
+                    }
+                    else if (paymentOption.TryGetProperty("alternativePaymentMethod", out var apm))
+                    {
+                        statusResponse.PaymentOptionType = "alternativePaymentMethod";
+                        if (apm.TryGetProperty("paymentMethod", out var paymentMethod))
+                            statusResponse.PaymentMethod = paymentMethod.GetString();
+                        if (apm.TryGetProperty("externalAccountID", out var extAcctId))
+                            statusResponse.ExternalAccountID = extAcctId.GetString();
+                    }
+                }
 
                 return statusResponse;
             }
@@ -367,5 +356,11 @@ namespace WebCashier.Services
         public string? ClientUniqueId { get; set; }
         public int ErrCode { get; set; }
         public string? Status { get; set; }
+        
+        // Payment option details
+        public string? PaymentOptionType { get; set; }  // "card" or "alternativePaymentMethod"
+        public string? PaymentMethod { get; set; }      // For APM (e.g., "apmgw_expresscheckout")
+        public string? UniqueCC { get; set; }           // For card
+        public string? ExternalAccountID { get; set; }  // For APM
     }
 }
