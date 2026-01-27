@@ -215,6 +215,10 @@ namespace WebCashier.Controllers
                 return Json(new { success = false, error = "Failed to initiate payment session" });
             }
 
+            // Store the sessionToken in the HTTP session for later use in GetPaymentStatus
+            HttpContext.Session.SetString("Nuvei_SessionToken", sessionResponse.SessionToken);
+            HttpContext.Session.SetString("Nuvei_ClientUniqueId", sessionResponse.ClientUniqueId);
+
             await _commLog.LogAsync("nuvei-simply-connect-session-created", new {
                 provider = "Nuvei Simply Connect",
                 clientUniqueId = sessionResponse.ClientUniqueId,
@@ -248,24 +252,32 @@ namespace WebCashier.Controllers
         }
     }
 
+    /// <summary>
+    /// Retrieves the payment status using the sessionToken stored in the HTTP session.
+    /// Should be called after the Nuvei checkout UI closes/completes payment processing.
+    /// </summary>
     [HttpPost("SimplyConnect/GetPaymentStatus")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> GetPaymentStatus([FromForm] string sessionToken)
+    public async Task<IActionResult> GetPaymentStatus()
     {
         try
         {
-            _logger.LogInformation("GetPaymentStatus called with sessionToken");
-            
+            // Retrieve the sessionToken from the HTTP session
+            var sessionToken = HttpContext.Session.GetString("Nuvei_SessionToken");
+            var clientUniqueId = HttpContext.Session.GetString("Nuvei_ClientUniqueId");
+
             if (string.IsNullOrWhiteSpace(sessionToken))
             {
-                _logger.LogWarning("GetPaymentStatus called with empty sessionToken");
-                return Json(new { success = false, error = "sessionToken is required" });
+                _logger.LogWarning("GetPaymentStatus called but no sessionToken in session");
+                return Json(new { success = false, error = "No active payment session found" });
             }
+
+            _logger.LogInformation("GetPaymentStatus called, retrieving status for session");
 
             await _commLog.LogAsync("nuvei-get-payment-status-inbound", new { 
                 provider = "Nuvei Simply Connect", 
-                action = "GetPaymentStatus", 
-                sessionTokenProvided = true
+                action = "GetPaymentStatus",
+                clientUniqueId = clientUniqueId
             }, "nuvei");
 
             var simplyConnectService = HttpContext.RequestServices.GetRequiredService<NuveiSimplyConnectService>();
@@ -289,6 +301,10 @@ namespace WebCashier.Controllers
                 paymentMethod = statusResponse.PaymentMethod,
                 transactionType = statusResponse.TransactionType
             }, "nuvei");
+
+            // Clear the session tokens after successful retrieval
+            HttpContext.Session.Remove("Nuvei_SessionToken");
+            HttpContext.Session.Remove("Nuvei_ClientUniqueId");
 
             return Json(new
             {
