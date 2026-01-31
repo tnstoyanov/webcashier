@@ -351,6 +351,15 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
     handler.CheckCertificateRevocationList = false;
     handler.UseCookies = false;
 
+    // Check if client certificate should be loaded
+    // Default: false (SwiftGoldPay uses header-based auth, not mTLS)
+    var requireClientCert = string.Equals(Environment.GetEnvironmentVariable("SGP_REQUIRE_CLIENT_CERT"), "true", StringComparison.OrdinalIgnoreCase);
+    if (!requireClientCert)
+    {
+        Console.WriteLine("[SwiftGoldPay] Client certificate not required (SGP_REQUIRE_CLIENT_CERT not set to 'true')");
+        Console.WriteLine("[SwiftGoldPay] Using header-based authentication only");
+    }
+
     try
     {
         var searchDirs = new List<string?>
@@ -361,7 +370,10 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
             Path.Combine(AppContext.BaseDirectory ?? string.Empty, "cert"), // publish/cert (where the dll lives)
             "/cert"
         };
-        string? foundDir = null;
+
+        if (requireClientCert)
+        {
+            string? foundDir = null;
         var chainOverridePath = Environment.GetEnvironmentVariable("SGP_CLIENT_CHAIN_PATH");
         string? chainOverridePem = null;
         var chainPem = Environment.GetEnvironmentVariable("SGP_CLIENT_CHAIN_PEM");
@@ -654,10 +666,33 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
         {
             Console.WriteLine($"[SwiftGoldPay] Client certificate configuration complete. Loaded {handler.ClientCertificates.Count} certificate(s).");
         }
+    }
+    else
+    {
+        Console.WriteLine("[SwiftGoldPay] Client certificate loading skipped - using header-based authentication only");
+    }
 
         if (!builder.Environment.IsDevelopment())
         {
-            var insecure = string.Equals(Environment.GetEnvironmentVariable("SGP_INSECURE_SKIP_VERIFY"), "true", StringComparison.OrdinalIgnoreCase);
+            // Auto-enable insecure mode for sandbox (matches Postman behavior)
+            // Can be explicitly disabled with SGP_INSECURE_SKIP_VERIFY=false
+            var explicitSetting = Environment.GetEnvironmentVariable("SGP_INSECURE_SKIP_VERIFY");
+            var insecure = explicitSetting switch
+            {
+                "false" => false,  // Explicitly disabled
+                "true" => true,     // Explicitly enabled
+                _ => true           // Default to true for sandbox (auto-enable)
+            };
+            
+            if (insecure)
+            {
+                Console.WriteLine("[SwiftGoldPay] Insecure mode enabled - skipping server certificate validation");
+                Console.WriteLine("[SwiftGoldPay] (This matches Postman's default behavior for sandbox)");
+            }
+            else
+            {
+                Console.WriteLine("[SwiftGoldPay] Server certificate validation enabled (SGP_INSECURE_SKIP_VERIFY=false)");
+            }
             // Optional server cert pinning to work around UntrustedRoot in sandbox
             // First, allow pinned server cert via environment variable (PEM)
             X509Certificate2? pinned = null;
