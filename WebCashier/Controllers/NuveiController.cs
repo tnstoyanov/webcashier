@@ -64,6 +64,90 @@ namespace WebCashier.Controllers
             }
         }
 
+        /// <summary>
+        /// Generates the Apple Pay IFrame payment URL with all parameters.
+        /// Returns a complete GET URL that can be loaded in an iframe.
+        /// </summary>
+        [HttpPost("ApplePay/GetIFrameUrl")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GetApplePayIFrameUrl([FromForm] decimal amount, [FromForm] string currency)
+        {
+            try
+            {
+                _logger.LogInformation("Generating Apple Pay IFrame URL for amount={Amount} currency={Currency}", amount, currency);
+
+                await _commLog.LogAsync("nuvei-applepay-iframe-inbound", new
+                {
+                    provider = "Nuvei",
+                    action = "GetApplePayIFrameUrl",
+                    amount,
+                    currency
+                }, "nuvei");
+
+                var baseUrl = GetBaseUrl();
+                var form = _nuvei.BuildPaymentForm(new NuveiRequest(amount, currency, "12204834", "cashier", "ppp_ApplePay"), baseUrl);
+                
+                var formUrl = form.SubmitFormUrl;
+                if (string.IsNullOrWhiteSpace(formUrl))
+                {
+                    formUrl = "https://ppp-test.safecharge.com/ppp/purchase.do";
+                    _logger.LogWarning("Nuvei form SubmitFormUrl was blank for Apple Pay IFrame. Using default PPP URL fallback.");
+                }
+
+                // Build GET URL with query parameters
+                var uriBuilder = new UriBuilder(formUrl);
+                var queryParams = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+                
+                // Add all fields from the form to query parameters
+                foreach (var field in form.Fields)
+                {
+                    queryParams[field.Key] = field.Value;
+                }
+
+                // Add parent_url parameter for Apple Pay IFrame support
+                queryParams["parent_url"] = baseUrl;
+
+                uriBuilder.Query = queryParams.ToString();
+                var iframeUrl = uriBuilder.ToString();
+
+                var responseObj = new
+                {
+                    success = true,
+                    iframeUrl,
+                    formUrl,
+                    parentUrl = baseUrl,
+                    amount,
+                    currency
+                };
+
+                var masked = new
+                {
+                    responseObj.success,
+                    iframeUrl = iframeUrl.Contains("checksum") ? "***" : iframeUrl,
+                    responseObj.formUrl,
+                    responseObj.parentUrl,
+                    responseObj.amount,
+                    responseObj.currency
+                };
+
+                await _commLog.LogAsync("nuvei-applepay-iframe-outbound", masked, "nuvei");
+
+                return Json(responseObj);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating Apple Pay IFrame URL");
+                await _commLog.LogAsync("nuvei-applepay-iframe-error", new
+                {
+                    provider = "Nuvei",
+                    action = "GetApplePayIFrameUrl",
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
+                }, "nuvei");
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
     [IgnoreAntiforgeryToken]
     [HttpPost("Callback")]
         [HttpGet("Callback")] // GET remains for diagnostics; Nuvei should POST

@@ -129,6 +129,16 @@
                                     </label>
                                 </div>
 
+                                <div class="carousel-item" id="apple-pay-nuvei-iframe" tabindex="0">
+                                    <input type="radio" id="apple-pay-nuvei-iframe-radio" name="PaymentMethod" value="apple-pay-nuvei-iframe" />
+                                    <label for="apple-pay-nuvei-iframe-radio" class="method-option">
+                                        <div class="apple-pay-nuvei-iframe-icon">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Apple_Pay_logo.svg/2560px-Apple_Pay_logo.svg.png" alt="Apple Pay Nuvei IF" width="52" height="35" />
+                                        </div>
+                                        <span class="payment-brand">Apple Pay IFrame</span>
+                                    </label>
+                                </div>
+
                                 <div class="carousel-item" id="nuvei-simply-connect" tabindex="0">
                                     <input type="radio" id="nuvei-simply-connect-radio" name="PaymentMethod" value="nuvei-simply-connect" />
                                     <label for="nuvei-simply-connect-radio" class="method-option">
@@ -465,6 +475,54 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Apple Pay Nuvei IFrame Form -->
+                    <div id="apple-pay-nuvei-iframe-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
+                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
+                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="ApplePayIFrameAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="ApplePayIFrameCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                            <option value="BRL">BRL</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <input name="ApplePayIFramePromotionCode" class="form-control" placeholder="Promotion code (optional)" />
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>Apple Pay via Nuvei IFrame</h3>
+                                    <p>Quick and secure payments with Apple Pay through Nuvei's embedded payment form.</p>
+                                    <div class="apple-pay-logo-large">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Apple_Pay_logo.svg/2560px-Apple_Pay_logo.svg.png" alt="Apple Pay" width="120" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Nuvei IFrame container -->
+                        <div id="apple-pay-nuvei-iframe-container" style="width: 100%; height: 600px; border: 1px solid #d3dce6; background-color: #f5f5f5; display: none; margin-top: 20px;">
+                            <iframe id="nuvei-apple-pay-iframe" name="nuvei_apple_pay" style="width: 100%; height: 100%; border: none;"></iframe>
                         </div>
                     </div>
 
@@ -1130,6 +1188,9 @@
                         break;
                     case 'apple-pay-nuvei':
                         targetFormId = 'apple-pay-nuvei-details';
+                        break;
+                    case 'apple-pay-nuvei-iframe':
+                        targetFormId = 'apple-pay-nuvei-iframe-details';
                         break;
                     case 'luxtak':
                         targetFormId = 'luxtak-details';
@@ -1801,6 +1862,12 @@
                 showNuveiPreModal(e.target, 'ppp_ApplePay');
                 return;
             }
+            // For Apple Pay Nuvei IFrame payment
+            if (selectedPaymentMethod === 'apple-pay-nuvei-iframe') {
+                e.preventDefault();
+                handleApplePayNuveiIFrame(e.target);
+                return;
+            }
             if (selectedPaymentMethod === 'swiftgoldpay') {
                 e.preventDefault();
                 handleSwiftGoldPayFlow(e.target);
@@ -1853,6 +1920,64 @@
             } catch(err){
                 console.error('Zota MG error', err);
                 showZotaModal(null, 'Unexpected error. Please try again.');
+            }
+        }
+
+        // Apple Pay Nuvei IFrame handler
+        async function handleApplePayNuveiIFrame(form) {
+            const amountInput = document.querySelector('[name="ApplePayIFrameAmount"]');
+            const currencySelect = document.querySelector('[name="ApplePayIFrameCurrency"]');
+            
+            if (!amountInput?.value || !currencySelect?.value) {
+                alert('Please provide amount and currency for Apple Pay.');
+                return;
+            }
+
+            try {
+                // Show loading overlay
+                const loadingOverlay = document.getElementById('loading-overlay');
+                if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+                const formData = new FormData();
+                formData.append('amount', amountInput.value);
+                formData.append('currency', currencySelect.value);
+                const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (antiForgeryToken) formData.append('__RequestVerificationToken', antiForgeryToken.value);
+
+                // Call backend to get the iframe URL
+                const resp = await fetch('/Nuvei/ApplePay/GetIFrameUrl', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+
+                const data = await resp.json();
+                console.debug('Apple Pay IFrame response:', data);
+
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+
+                if (!data.success || !data.iframeUrl) {
+                    alert('Failed to generate Apple Pay payment form: ' + (data.error || 'Unknown error'));
+                    return;
+                }
+
+                // Show iframe container
+                const iframeContainer = document.getElementById('apple-pay-nuvei-iframe-container');
+                const iframe = document.getElementById('nuvei-apple-pay-iframe');
+                
+                if (iframeContainer && iframe) {
+                    // Load the URL in the iframe
+                    iframe.src = data.iframeUrl;
+                    iframeContainer.style.display = 'flex';
+                    
+                    // Scroll to the iframe
+                    iframeContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            } catch (err) {
+                console.error('Apple Pay IFrame error:', err);
+                const loadingOverlay = document.getElementById('loading-overlay');
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                alert('Error initiating Apple Pay payment: ' + err.message);
             }
         }
 
@@ -2642,6 +2767,7 @@
         window.handleLuxtakPayment = handleLuxtakPayment;
         window.handleSmilepayzPayment = handleSmilepayzPayment;
         window.handlePaysolutionsPayment = handlePaysolutionsPayment;
+        window.handleApplePayNuveiIFrame = handleApplePayNuveiIFrame;
         window.showLuxtakModal = showLuxtakModal;
         window.initializeCarousel = initializeCarousel;
         
