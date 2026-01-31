@@ -1934,9 +1934,14 @@
             }
 
             try {
+                console.log('[Apple Pay IFrame] Starting payment flow for amount:', amountInput.value, 'currency:', currencySelect.value);
+
                 // Show loading overlay
                 const loadingOverlay = document.getElementById('loading-overlay');
-                if (loadingOverlay) loadingOverlay.style.display = 'flex';
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'flex';
+                    console.log('[Apple Pay IFrame] Loading overlay shown');
+                }
 
                 const formData = new FormData();
                 formData.append('amount', amountInput.value);
@@ -1945,6 +1950,7 @@
                 if (antiForgeryToken) formData.append('__RequestVerificationToken', antiForgeryToken.value);
 
                 // Call backend to get the iframe URL
+                console.log('[Apple Pay IFrame] Calling backend: /Nuvei/ApplePay/GetIFrameUrl');
                 const resp = await fetch('/Nuvei/ApplePay/GetIFrameUrl', {
                     method: 'POST',
                     body: formData,
@@ -1952,11 +1958,17 @@
                 });
 
                 const data = await resp.json();
-                console.debug('Apple Pay IFrame response:', data);
+                console.log('[Apple Pay IFrame] Backend response:', {
+                    success: data.success,
+                    hasIframeUrl: !!data.iframeUrl,
+                    iframeUrlLength: data.iframeUrl?.length,
+                    error: data.error
+                });
 
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
 
                 if (!data.success || !data.iframeUrl) {
+                    console.error('[Apple Pay IFrame] Backend returned error or no URL:', data.error);
                     alert('Failed to generate Apple Pay payment form: ' + (data.error || 'Unknown error'));
                     return;
                 }
@@ -1965,16 +1977,39 @@
                 const iframeContainer = document.getElementById('apple-pay-nuvei-iframe-container');
                 const iframe = document.getElementById('nuvei-apple-pay-iframe');
                 
-                if (iframeContainer && iframe) {
-                    // Load the URL in the iframe
-                    iframe.src = data.iframeUrl;
-                    iframeContainer.style.display = 'flex';
-                    
-                    // Scroll to the iframe
-                    iframeContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (!iframeContainer || !iframe) {
+                    console.error('[Apple Pay IFrame] IFrame container or iframe element not found');
+                    alert('Payment form container not found on page');
+                    return;
                 }
+
+                console.log('[Apple Pay IFrame] Setting iframe src to Nuvei URL (length: ' + data.iframeUrl.length + ')');
+                
+                // Load the URL in the iframe
+                iframe.src = data.iframeUrl;
+                iframe.onload = function() {
+                    console.log('[Apple Pay IFrame] IFrame loaded successfully');
+                };
+                iframe.onerror = function(err) {
+                    console.error('[Apple Pay IFrame] IFrame failed to load:', err);
+                };
+                
+                // Make container visible
+                iframeContainer.style.display = 'block';
+                iframeContainer.style.height = '600px';
+                iframeContainer.style.border = '1px solid #d3dce6';
+                iframeContainer.style.backgroundColor = '#f5f5f5';
+                iframeContainer.style.marginTop = '20px';
+                
+                console.log('[Apple Pay IFrame] IFrame container displayed');
+                
+                // Scroll to the iframe
+                setTimeout(() => {
+                    iframeContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    console.log('[Apple Pay IFrame] Scrolled to iframe');
+                }, 100);
             } catch (err) {
-                console.error('Apple Pay IFrame error:', err);
+                console.error('[Apple Pay IFrame] Error:', err);
                 const loadingOverlay = document.getElementById('loading-overlay');
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
                 alert('Error initiating Apple Pay payment: ' + err.message);
