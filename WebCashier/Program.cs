@@ -352,11 +352,11 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
     handler.UseCookies = false;
 
     // Check if client certificate should be loaded
-    // Default: false (SwiftGoldPay uses header-based auth, not mTLS)
-    var requireClientCert = string.Equals(Environment.GetEnvironmentVariable("SGP_REQUIRE_CLIENT_CERT"), "true", StringComparison.OrdinalIgnoreCase);
+    // Default: true (SwiftGoldPay requires mTLS client certificate)
+    var requireClientCert = !string.Equals(Environment.GetEnvironmentVariable("SGP_SKIP_CLIENT_CERT"), "true", StringComparison.OrdinalIgnoreCase);
     if (!requireClientCert)
     {
-        Console.WriteLine("[SwiftGoldPay] Client certificate not required (SGP_REQUIRE_CLIENT_CERT not set to 'true')");
+        Console.WriteLine("[SwiftGoldPay] Client certificate loading disabled via SGP_SKIP_CLIENT_CERT=true");
         Console.WriteLine("[SwiftGoldPay] Using header-based authentication only");
     }
 
