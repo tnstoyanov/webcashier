@@ -128,7 +128,10 @@ namespace WebCashier.Services
 
         /// <summary>
         /// Builds payment form for IFrame mode - same as BuildPaymentForm but without inIframeMode parameter
-        /// and uses the exact checksum calculation method as per Nuvei's Apple Pay specification
+        /// and uses the exact checksum calculation method as per Nuvei's Apple Pay specification.
+        /// 
+        /// IMPORTANT: Checksum is calculated by concatenating parameter VALUES (not field names) in the EXACT order
+        /// they are sent in the request, with the secret key prepended.
         /// </summary>
         public NuveiFormResponse BuildPaymentFormForIFrame(NuveiRequest req, string baseUrl)
         {
@@ -159,21 +162,22 @@ namespace WebCashier.Services
                 _ => ForceHttps(Combine(baseUrl, "/Payment?paymentMethod=gpay"))
             };
 
-            // Build fields WITHOUT inIframeMode for iframe requests
+            // Build fields in the EXACT order they will be sent in the URL query string
+            // This order is critical for checksum calculation
             var fields = new List<NuveiFormField>
             {
                 F("merchant_id", merchantId!),
                 F("merchant_site_id", merchantSiteId!),
-                F("time_stamp", timestamp.Replace("-", "-")),
+                F("time_stamp", timestamp),
                 F("currency", req.Currency),
                 F("merchantLocale", "en_US"),
                 F("userid", userToken),
                 F("merchant_unique_id", transactionRef),
                 F("item_name_1", req.ItemName),
                 F("item_number_1", "1"),
-                F("item_amount_1", amountStr),
+                F("item_amount_1", amountFormatted),
                 F("item_quantity_1", "1"),
-                F("total_amount", amountStr),
+                F("total_amount", amountFormatted),
                 F("user_token_id", userToken),
                 F("first_name", "Tony"),
                 F("last_name", "Stoyanov"),
@@ -186,7 +190,6 @@ namespace WebCashier.Services
                 F("version", "4.0.0"),
                 F("payment_method", req.PaymentMethod),
                 F("payment_method_mode", "filter"),
-                // NOTE: NO inIframeMode, NO encoding - Nuvei doesn't include these in iframe checksum
                 F("notify_url", notifyUrl),
                 F("success_url", successUrl),
                 F("error_url", errorUrl),
@@ -194,42 +197,26 @@ namespace WebCashier.Services
                 F("back_url", backUrl)
             };
 
-            // Checksum calculated EXACTLY as per Nuvei spec: secretKey + field_values (no field names, no inIframeMode)
-            // Using amounts formatted as "0.00" for checksum calculation
-            var checksumSource = secretKey
-                + merchantId
-                + merchantSiteId
-                + timestamp.Replace("-", "-")
-                + req.Currency
-                + "en_US"
-                + userToken
-                + transactionRef
-                + req.ItemName
-                + "1"
-                + amountFormatted  // "0.00" format for checksum
-                + "1"
-                + amountFormatted  // "0.00" format for checksum
-                + userToken
-                + "Tony"
-                + "Stoyanov"
-                + "integration@tiebreak.solutions"
-                + "Sun City"
-                + "DE"
-                + "11 Te St"
-                + "1000"
-                + "359888123456"
-                + "4.0.0"
-                + req.PaymentMethod
-                + "filter"
-                + notifyUrl
-                + successUrl
-                + errorUrl
-                + pendingUrl
-                + backUrl;
+            // Checksum calculation per Nuvei spec:
+            // Concatenate parameter VALUES (not field names) in the exact order they appear in the request
+            // Prepend the secret key to the concatenated string
+            var checksumSource = secretKey;
+            foreach (var field in fields)
+            {
+                checksumSource += field.Value;
+            }
 
             var checksum = Sha256Hex(checksumSource);
-            _logger.LogInformation("[Apple Pay IFrame] Checksum calculated with exact Nuvei spec. Amount format: {Amount} for display, {AmountFormatted} for checksum", amountStr, amountFormatted);
-            _logger.LogInformation("[Apple Pay IFrame] Form built with transactionRef {Ref} checksum {Checksum}", transactionRef, checksum);
+            
+            _logger.LogInformation("[Apple Pay IFrame] SHA256 Checksum Debug Info:");
+            _logger.LogInformation("[Apple Pay IFrame]   Secret Key: {SecretKey}", secretKey ?? "NULL");
+            _logger.LogInformation("[Apple Pay IFrame]   Merchant ID: {MerchantId}", merchantId);
+            _logger.LogInformation("[Apple Pay IFrame]   Amount (formatted for checksum): {AmountFormatted}", amountFormatted);
+            _logger.LogInformation("[Apple Pay IFrame]   Field count: {FieldCount}", fields.Count);
+            _logger.LogInformation("[Apple Pay IFrame]   Checksum Source Length: {Length}", checksumSource.Length);
+            _logger.LogInformation("[Apple Pay IFrame]   Checksum Source Preview: {Preview}...", checksumSource.Substring(0, Math.Min(150, checksumSource.Length)));
+            _logger.LogInformation("[Apple Pay IFrame]   Calculated Checksum: {Checksum}", checksum);
+            _logger.LogInformation("[Apple Pay IFrame] Form built with transactionRef {Ref}", transactionRef);
             
             fields.Add(F("checksum", checksum));
 
