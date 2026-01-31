@@ -67,7 +67,7 @@ namespace WebCashier.Controllers
         /// <summary>
         /// Generates the Apple Pay IFrame payment URL with all parameters.
         /// Returns a complete GET URL that can be loaded in an iframe.
-        /// Note: We do NOT include inIframeMode in the iframe URL as Nuvei doesn't recognize it.
+        /// Uses BuildPaymentFormForIFrame which calculates checksum WITHOUT inIframeMode parameter.
         /// </summary>
         [HttpPost("ApplePay/GetIFrameUrl")]
         [ValidateAntiForgeryToken]
@@ -88,8 +88,8 @@ namespace WebCashier.Controllers
                 var baseUrl = GetBaseUrl();
                 _logger.LogInformation("[Apple Pay IFrame] Base URL: {BaseUrl}", baseUrl);
                 
-                // Build the form using the standard method
-                var form = _nuvei.BuildPaymentForm(new NuveiRequest(amount, currency, "12204834", "cashier", "ppp_ApplePay"), baseUrl);
+                // Use BuildPaymentFormForIFrame which doesn't include inIframeMode and recalculates checksum properly
+                var form = _nuvei.BuildPaymentFormForIFrame(new NuveiRequest(amount, currency, "12204834", "cashier", "ppp_ApplePay"), baseUrl);
                 _logger.LogInformation("[Apple Pay IFrame] Form built with {FieldCount} fields", form.Fields.Count);
                 
                 var formUrl = form.SubmitFormUrl;
@@ -106,14 +106,9 @@ namespace WebCashier.Controllers
                 var queryParams = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
                 
                 // Add all fields from the form to query parameters
-                // But filter out inIframeMode as Nuvei doesn't recognize it for iframe requests
+                // Note: inIframeMode should NOT be in these fields since we used BuildPaymentFormForIFrame
                 foreach (var field in form.Fields)
                 {
-                    if (field.Key.Equals("inIframeMode", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _logger.LogInformation("[Apple Pay IFrame] Skipping inIframeMode parameter (not recognized by Nuvei)");
-                        continue;
-                    }
                     queryParams[field.Key] = field.Value;
                 }
 

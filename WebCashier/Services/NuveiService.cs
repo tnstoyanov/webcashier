@@ -126,6 +126,116 @@ namespace WebCashier.Services
             return new NuveiFormResponse(endpoint, fields);
         }
 
+        /// <summary>
+        /// Builds payment form for IFrame mode - same as BuildPaymentForm but without inIframeMode parameter
+        /// and uses the exact checksum calculation method as per Nuvei's Apple Pay specification
+        /// </summary>
+        public NuveiFormResponse BuildPaymentFormForIFrame(NuveiRequest req, string baseUrl)
+        {
+            var merchantId = Get("Nuvei:merchant_id");
+            var merchantSiteId = Get("Nuvei:merchant_site_id");
+            var secretKey = Get("Nuvei:secret_key");
+            var configuredEndpoint = Get("Nuvei:endpoint");
+            var endpoint = string.IsNullOrWhiteSpace(configuredEndpoint) ? DefaultPppUrl : configuredEndpoint;
+
+            if (string.IsNullOrWhiteSpace(merchantId) || string.IsNullOrWhiteSpace(merchantSiteId) || string.IsNullOrWhiteSpace(secretKey))
+                throw new InvalidOperationException("Nuvei configuration incomplete");
+
+            var transactionRef = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + Random.Shared.Next(1000,9999);
+            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd.HH:mm:ss");
+            var userToken = req.UserTokenId;
+            var amountStr = req.Amount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            var amountFormatted = req.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+
+            // URLs
+            string ForceHttps(string url) => url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ? "https://" + url.Substring("http://".Length) : url;
+            string notifyUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Callback"));
+            string successUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Success"));
+            string errorUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Error"));
+            string pendingUrl = ForceHttps(Combine(baseUrl, "/Nuvei/Pending"));
+            string backUrl = req.PaymentMethod switch
+            {
+                "ppp_ApplePay" => ForceHttps(Combine(baseUrl, "/Payment?paymentMethod=apple-pay-nuvei-iframe")),
+                _ => ForceHttps(Combine(baseUrl, "/Payment?paymentMethod=gpay"))
+            };
+
+            // Build fields WITHOUT inIframeMode for iframe requests
+            var fields = new List<NuveiFormField>
+            {
+                F("merchant_id", merchantId!),
+                F("merchant_site_id", merchantSiteId!),
+                F("time_stamp", timestamp.Replace("-", "-")),
+                F("currency", req.Currency),
+                F("merchantLocale", "en_US"),
+                F("userid", userToken),
+                F("merchant_unique_id", transactionRef),
+                F("item_name_1", req.ItemName),
+                F("item_number_1", "1"),
+                F("item_amount_1", amountStr),
+                F("item_quantity_1", "1"),
+                F("total_amount", amountStr),
+                F("user_token_id", userToken),
+                F("first_name", "Tony"),
+                F("last_name", "Stoyanov"),
+                F("email", "integration@tiebreak.solutions"),
+                F("city", "Sun City"),
+                F("country", "DE"),
+                F("address1", "11 Te St"),
+                F("zip", "1000"),
+                F("phone1", "359888123456"),
+                F("version", "4.0.0"),
+                F("payment_method", req.PaymentMethod),
+                F("payment_method_mode", "filter"),
+                // NOTE: NO inIframeMode, NO encoding - Nuvei doesn't include these in iframe checksum
+                F("notify_url", notifyUrl),
+                F("success_url", successUrl),
+                F("error_url", errorUrl),
+                F("pending_url", pendingUrl),
+                F("back_url", backUrl)
+            };
+
+            // Checksum calculated EXACTLY as per Nuvei spec: secretKey + field_values (no field names, no inIframeMode)
+            // Using amounts formatted as "0.00" for checksum calculation
+            var checksumSource = secretKey
+                + merchantId
+                + merchantSiteId
+                + timestamp.Replace("-", "-")
+                + req.Currency
+                + "en_US"
+                + userToken
+                + transactionRef
+                + req.ItemName
+                + "1"
+                + amountFormatted  // "0.00" format for checksum
+                + "1"
+                + amountFormatted  // "0.00" format for checksum
+                + userToken
+                + "Tony"
+                + "Stoyanov"
+                + "integration@tiebreak.solutions"
+                + "Sun City"
+                + "DE"
+                + "11 Te St"
+                + "1000"
+                + "359888123456"
+                + "4.0.0"
+                + req.PaymentMethod
+                + "filter"
+                + notifyUrl
+                + successUrl
+                + errorUrl
+                + pendingUrl
+                + backUrl;
+
+            var checksum = Sha256Hex(checksumSource);
+            _logger.LogInformation("[Apple Pay IFrame] Checksum calculated with exact Nuvei spec. Amount format: {Amount} for display, {AmountFormatted} for checksum", amountStr, amountFormatted);
+            _logger.LogInformation("[Apple Pay IFrame] Form built with transactionRef {Ref} checksum {Checksum}", transactionRef, checksum);
+            
+            fields.Add(F("checksum", checksum));
+
+            return new NuveiFormResponse(endpoint, fields);
+        }
+
         private static NuveiFormField F(string k, string v) => new(k, v);
         private string? Get(string key) => _runtime.Get(key) ?? _config[key];
         private static string Combine(string baseUrl, string path) => baseUrl.TrimEnd('/') + path;

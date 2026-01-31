@@ -8,5 +8,6 @@ namespace WebCashier.Services
     public interface INuveiService
     {
         NuveiFormResponse BuildPaymentForm(NuveiRequest request, string baseUrl);
+        NuveiFormResponse BuildPaymentFormForIFrame(NuveiRequest request, string baseUrl);
     }
 }
