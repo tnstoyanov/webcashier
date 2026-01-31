@@ -641,7 +641,9 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
                         foundDir = dir;
                         
                         // Optionally attach intermediate chain if present
-                        TryAttachClientChain(handler, cert, foundDir, searchDirs, chainOverridePath, chainOverridePem);
+                        // TESTING: Disable chain attachment - SwiftGoldPay might not want it
+                        // TryAttachClientChain(handler, cert, foundDir, searchDirs, chainOverridePath, chainOverridePem);
+                        Console.WriteLine("[SwiftGoldPay] Chain attachment disabled for testing");
                         break;
                     }
                     catch (Exception ex)
