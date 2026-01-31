@@ -350,6 +350,9 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
     handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
     handler.CheckCertificateRevocationList = false;
     handler.UseCookies = false;
+    
+    Console.WriteLine($"[SwiftGoldPay] Environment: {builder.Environment.EnvironmentName}");
+    Console.WriteLine($"[SwiftGoldPay] Content root path: {builder.Environment.ContentRootPath}");
 
     // Check if client certificate should be loaded
     // Default: true (SwiftGoldPay requires mTLS client certificate)
@@ -565,13 +568,21 @@ builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client
         // Fallback: PEM + private key
         if (handler.ClientCertificates.Count == 0)
         {
+            Console.WriteLine("[SwiftGoldPay] Searching for PEM certificate files in:");
+            foreach (var dir in searchDirs)
+            {
+                Console.WriteLine($"[SwiftGoldPay]   - {dir}");
+            }
+            
             foreach (var dir in searchDirs)
             {
                 if (string.IsNullOrWhiteSpace(dir)) continue;
                 var pemPathTry = Path.Combine(dir, "certificate.pem");
                 var keyPathTry = Path.Combine(dir, "private.key");
+                Console.WriteLine($"[SwiftGoldPay] Checking: {pemPathTry}");
                 if (File.Exists(pemPathTry) && File.Exists(keyPathTry))
                 {
+                    Console.WriteLine($"[SwiftGoldPay] Found PEM files at: {dir}");
                     try
                     {
                         Console.WriteLine($"[SwiftGoldPay] Attempting to load certificate from PEM files:");
