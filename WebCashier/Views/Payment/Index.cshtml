@@ -1936,6 +1936,13 @@
             try {
                 console.log('[Apple Pay IFrame] Starting payment flow for amount:', amountInput.value, 'currency:', currencySelect.value);
 
+                // Hide the Deposit button
+                const depositBtn = document.getElementById('deposit-btn');
+                if (depositBtn) {
+                    depositBtn.style.display = 'none';
+                    console.log('[Apple Pay IFrame] Deposit button hidden');
+                }
+
                 // Show loading overlay
                 const loadingOverlay = document.getElementById('loading-overlay');
                 if (loadingOverlay) {
