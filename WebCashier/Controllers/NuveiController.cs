@@ -67,6 +67,7 @@ namespace WebCashier.Controllers
         /// <summary>
         /// Generates the Apple Pay IFrame payment URL with all parameters.
         /// Returns a complete GET URL that can be loaded in an iframe.
+        /// Note: We do NOT include inIframeMode in the iframe URL as Nuvei doesn't recognize it.
         /// </summary>
         [HttpPost("ApplePay/GetIFrameUrl")]
         [ValidateAntiForgeryToken]
@@ -87,6 +88,7 @@ namespace WebCashier.Controllers
                 var baseUrl = GetBaseUrl();
                 _logger.LogInformation("[Apple Pay IFrame] Base URL: {BaseUrl}", baseUrl);
                 
+                // Build the form using the standard method
                 var form = _nuvei.BuildPaymentForm(new NuveiRequest(amount, currency, "12204834", "cashier", "ppp_ApplePay"), baseUrl);
                 _logger.LogInformation("[Apple Pay IFrame] Form built with {FieldCount} fields", form.Fields.Count);
                 
@@ -104,14 +106,18 @@ namespace WebCashier.Controllers
                 var queryParams = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
                 
                 // Add all fields from the form to query parameters
+                // But filter out inIframeMode as Nuvei doesn't recognize it for iframe requests
                 foreach (var field in form.Fields)
                 {
+                    if (field.Key.Equals("inIframeMode", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogInformation("[Apple Pay IFrame] Skipping inIframeMode parameter (not recognized by Nuvei)");
+                        continue;
+                    }
                     queryParams[field.Key] = field.Value;
                 }
 
-                // Add parent_url parameter for Apple Pay IFrame support
-                queryParams["parent_url"] = baseUrl;
-                _logger.LogInformation("[Apple Pay IFrame] Added parent_url: {ParentUrl}", baseUrl);
+                _logger.LogInformation("[Apple Pay IFrame] Added {ParameterCount} parameters to query string", queryParams.Count);
 
                 uriBuilder.Query = queryParams.ToString();
                 var iframeUrl = uriBuilder.ToString();
