@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Text;
+using System.Text.Json;
 using WebCashier.Services;
 
 namespace WebCashier.Controllers;
@@ -9,15 +11,18 @@ public class JMFController : Controller
     private readonly IJMFService _jmfService;
     private readonly ILogger<JMFController> _logger;
     private readonly ICommLogService _commLog;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public JMFController(
         IJMFService jmfService,
         ILogger<JMFController> logger,
-        ICommLogService commLog)
+        ICommLogService commLog,
+        IHttpClientFactory httpClientFactory)
     {
         _jmfService = jmfService;
         _logger = logger;
         _commLog = commLog;
+        _httpClientFactory = httpClientFactory;
     }
 
     /// <summary>
@@ -162,4 +167,62 @@ public class JMFController : Controller
         
         return View();
     }
+
+    /// <summary>
+    /// Check payment status with JM Financial API.
+    /// This endpoint is called from the Success/Cancel pages to verify transaction status.
+    /// </summary>
+    [HttpPost("Status")]
+    public async Task<IActionResult> Status([FromBody] StatusCheckRequest request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.order_id))
+        {
+            _logger.LogWarning("[JMF] Status check missing order_id");
+            return Json(new { error = "Missing order_id" });
+        }
+
+        try
+        {
+            _logger.LogInformation("[JMF] Checking status for order: {OrderId}", request.order_id);
+
+            var client = _httpClientFactory.CreateClient();
+            var payload = JsonSerializer.Serialize(new
+            {
+                merchant_key = request.merchant_key,
+                order_id = request.order_id,
+                hash = request.hash
+            });
+
+            var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("https://checkout.jmfinancialkw.com/api/v1/payment/status", content);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            _logger.LogDebug("[JMF] Status API Response: {StatusCode} - {Content}", response.StatusCode, responseContent);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("[JMF] Status check failed: {StatusCode}", response.StatusCode);
+                return Json(new { error = $"API returned status {response.StatusCode}" });
+            }
+
+            // Parse and forward the response from JM Financial
+            var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
+            return Json(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[JMF] Error checking payment status");
+            return Json(new { error = ex.Message });
+        }
+    }
+}
+
+/// <summary>
+/// Request model for payment status checking
+/// </summary>
+public class StatusCheckRequest
+{
+    public string? merchant_key { get; set; }
+    public string? order_id { get; set; }
+    public string? hash { get; set; }
 }
