@@ -147,6 +147,11 @@ public class JMFService : IJMFService
                 if (result?.Response?.RedirectUrl != null)
                 {
                     _logger.LogInformation("[JMF] Payment session created successfully with nested redirect URL");
+                    // Ensure we have the order number we generated
+                    if (result.Response.OrderNumber == null)
+                    {
+                        result.Response.OrderNumber = orderNumber;
+                    }
                     return result;
                 }
                 
@@ -190,7 +195,7 @@ public class JMFService : IJMFService
                                 sessionId = nestedSessionId.GetString();
                             }
                             
-                            // Check for order_number
+                            // Check for order_number in response
                             if (root.TryGetProperty("order_number", out var orderElem))
                             {
                                 parsedOrderNumber = orderElem.GetString();
@@ -199,6 +204,12 @@ public class JMFService : IJMFService
                                      respElem2.TryGetProperty("order_number", out var nestedOrderNumber))
                             {
                                 parsedOrderNumber = nestedOrderNumber.GetString();
+                            }
+                            
+                            // If no order number from response, use the one we generated
+                            if (string.IsNullOrWhiteSpace(parsedOrderNumber))
+                            {
+                                parsedOrderNumber = orderNumber;
                             }
                             
                             if (!string.IsNullOrWhiteSpace(redirectUrl))

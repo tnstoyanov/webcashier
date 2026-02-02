@@ -94,11 +94,17 @@
             const params = new URLSearchParams(window.location.search);
             let orderId = params.get('order_id') || params.get('orderId') || params.get('order');
             
+            console.log('[JMF] Checking URL for order_id:', orderId);
+            
             // If not in URL, try to get from sessionStorage
             if (!orderId) {
                 orderId = sessionStorage.getItem('jmf_order_id');
+                console.log('[JMF] Retrieved from sessionStorage:', orderId);
+            } else {
+                console.log('[JMF] Found in URL:', orderId);
             }
             
+            console.log('[JMF] Final orderId:', orderId);
             return orderId;
         }
 

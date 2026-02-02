@@ -2748,7 +2748,11 @@
                 if (data.success && data.paymentUrl) {
                     // Store order number in sessionStorage for status checking on return pages
                     if (data.orderNumber) {
+                        console.log('[JMF] Storing order ID in sessionStorage:', data.orderNumber);
                         sessionStorage.setItem('jmf_order_id', data.orderNumber);
+                        console.log('[JMF] Order ID stored. Retrieved value:', sessionStorage.getItem('jmf_order_id'));
+                    } else {
+                        console.warn('[JMF] No orderNumber in response:', data);
                     }
                     // Show confirmation modal with redirect to JM Financial
                     showLuxtakModal(data.paymentUrl, true, 'JM Financial');
