@@ -59,6 +59,16 @@
                                     </label>
                                 </div>
 
+                                <div class="carousel-item" tabindex="0">
+                                    <input type="radio" id="jmf" name="PaymentMethod" value="jmf">
+                                    <label for="jmf" class="method-option">
+                                        <div class="jmf-icon">
+                                            <img src="https://jmfinancialkw.com/wp-content/uploads/2023/04/JMF-Logo.png" alt="JMF" width="52" height="35">
+                                        </div>
+                                        <span class="payment-brand">JM Ak HPP </span>
+                                    </label>
+                                </div>
+
                                 <div class="carousel-item">
                                     <input type="radio" id="swiftgoldpay" name="PaymentMethod" value="swiftgoldpay" />
                                     <label for="swiftgoldpay" class="method-option">
@@ -287,6 +297,50 @@
                                     <p>You will be redirected to PayPal to complete your payment securely.</p>
                                     <div class="paypal-logo-large">
                                         <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" width="150">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- JM Financial Form -->
+                    <div id="jmf-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="100">$100</button>
+                                    <button type="button" class="amount-btn" data-amount="150">$150</button>
+                                    <button type="button" class="amount-btn" data-amount="199.99">$199.99</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="JMFAmount" type="number" step="0.01" min="100.00" max="199.99" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="JMFCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD" selected>USD</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <input name="JMFCustomerName" class="form-control" placeholder="Full Name" />
+                                </div>
+
+                                <div class="form-group">
+                                    <input name="JMFCustomerEmail" type="email" class="form-control" placeholder="Email Address" />
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>JM Financial Hosted Page</h3>
+                                    <p>Secure payment processing through JM Financial's hosted payment page.</p>
+                                    <div class="jmf-logo-large">
+                                        <img src="https://jmfinancialkw.com/wp-content/uploads/2023/04/JMF-Logo.png" alt="JMF" width="120">
                                     </div>
                                 </div>
                             </div>
@@ -1174,6 +1228,9 @@
                     case 'paypal':
                         targetFormId = 'paypal-details';
                         break;
+                    case 'jmf':
+                        targetFormId = 'jmf-details';
+                        break;
                     case 'swiftgoldpay':
                         targetFormId = 'swiftgoldpay-details';
                         break;
@@ -1830,6 +1887,12 @@
             if (selectedPaymentMethod === 'paypal') {
                 e.preventDefault();
                 handlePayPalPayment(e.target);
+                return;
+            }
+            // For JM Financial payment, handle with AJAX
+            if (selectedPaymentMethod === 'jmf') {
+                e.preventDefault();
+                handleJMFPayment(e.target);
                 return;
             }
             // For Luxtak payment, handle with AJAX
@@ -2634,6 +2697,67 @@
             }
         }
 
+        async function handleJMFPayment(form) {
+            const amountInput = document.querySelector('[name="JMFAmount"]');
+            const currencySelect = document.querySelector('[name="JMFCurrency"]');
+            const customerName = document.querySelector('[name="JMFCustomerName"]');
+            const customerEmail = document.querySelector('[name="JMFCustomerEmail"]');
+
+            if (!amountInput?.value || !currencySelect?.value) {
+                alert('Please fill in amount and currency for JM Financial payment');
+                return;
+            }
+
+            if (!customerName?.value || !customerEmail?.value) {
+                alert('Please fill in your name and email for JM Financial payment');
+                return;
+            }
+
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+            try {
+                const formData = new FormData();
+                formData.append('amount', amountInput.value);
+                formData.append('currency', currencySelect.value);
+                formData.append('customerName', customerName.value);
+                formData.append('customerEmail', customerEmail.value);
+
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (token) formData.append('__RequestVerificationToken', token.value);
+
+                const resp = await fetch('/JMF/Create', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                    body: formData
+                });
+
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+                const text = await resp.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    throw new Error('Invalid JSON from server');
+                }
+
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+
+                if (data.success && data.paymentUrl) {
+                    // Show confirmation modal with redirect to JM Financial
+                    showLuxtakModal(data.paymentUrl, true, 'JM Financial');
+                } else {
+                    showLuxtakModal(data.error || 'JM Financial payment failed', false, 'JM Financial');
+                }
+            } catch (err) {
+                console.error('JM Financial payment error', err);
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                showLuxtakModal('Network error during JM Financial payment. Please try again.', false, 'JM Financial');
+            }
+        }
+
         async function handleSmilepayzPayment(form) {
             const amountInput = document.querySelector('[name="SmilepayzAmount"]');
             const currencySelect = document.querySelector('[name="SmilepayzCurrency"]');
@@ -2806,6 +2930,7 @@
         // Expose globally for inline onclick handlers
         window.movePaymentCarousel = movePaymentCarousel;
         window.handlePayPalPayment = handlePayPalPayment;
+        window.handleJMFPayment = handleJMFPayment;
         window.handleLuxtakPayment = handleLuxtakPayment;
         window.handleSmilepayzPayment = handleSmilepayzPayment;
         window.handlePaysolutionsPayment = handlePaysolutionsPayment;

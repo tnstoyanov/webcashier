@@ -1,0 +1,61 @@
+@{
+    ViewData["Title"] = "Payment Cancelled";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .container { max-width: 600px; width: 100%; }
+        .error-card { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .error-header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 40px 20px; text-align: center; }
+        .error-icon { width: 80px; height: 80px; margin: 0 auto 20px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: slideIn 0.6s ease-out; }
+        .error-icon svg { width: 45px; height: 45px; stroke: white; stroke-width: 2; }
+        .error-header h1 { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
+        .error-header p { font-size: 14px; opacity: 0.9; }
+        .error-body { padding: 40px 30px; }
+        .action-buttons { display: flex; gap: 12px; margin-top: 30px; }
+        .btn { flex: 1; padding: 12px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; transition: all 0.2s; }
+        .btn-primary { background: #f5576c; color: white; }
+        .btn-primary:hover { background: #e63946; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .info-text { color: #666; font-size: 14px; margin-bottom: 20px; line-height: 1.6; }
+        @@keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @@media (max-width: 600px) {
+            .error-header { padding: 30px 15px; }
+            .error-body { padding: 25px 15px; }
+            .error-header h1 { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-card">
+            <div class="error-header">
+                <div class="error-icon">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <h1>Payment Cancelled</h1>
+                <p>Your payment session has been cancelled.</p>
+            </div>
+            <div class="error-body">
+                <p class="info-text">
+                    Your payment was not processed. If this was unintentional or if you'd like to try again, 
+                    please return to the payment page to initiate a new transaction.
+                </p>
+                
+                <div class="action-buttons">
+                    <a href="/Payment?paymentMethod=jmf" class="btn btn-primary">Try Again</a>
+                    <a href="/" class="btn btn-secondary">Return Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
