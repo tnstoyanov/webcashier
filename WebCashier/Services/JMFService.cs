@@ -119,6 +119,7 @@ public class JMFService : IJMFService
 
             var responseContent = await response.Content.ReadAsStringAsync();
             _logger.LogInformation("[JMF] API Response Status: {StatusCode}", response.StatusCode);
+            _logger.LogDebug("[JMF] API Response Content: {Content}", responseContent);
 
             // Log the response (without sensitive data)
             await _commLog.LogAsync("jmf-api-response", new
@@ -142,20 +143,111 @@ public class JMFService : IJMFService
             {
                 var result = JsonSerializer.Deserialize<JMFPaymentResponse>(responseContent ?? "{}");
                 
+                // Check for redirect URL in nested response object
                 if (result?.Response?.RedirectUrl != null)
                 {
-                    _logger.LogInformation("[JMF] Payment session created successfully. Order: {OrderNumber}", orderNumber);
+                    _logger.LogInformation("[JMF] Payment session created successfully with nested redirect URL");
                     return result;
                 }
-                else
+                
+                // For 3DS or alternative response formats, parse more flexibly
+                if (!string.IsNullOrWhiteSpace(responseContent))
                 {
-                    _logger.LogError("[JMF] Response missing redirect URL");
-                    return result ?? new JMFPaymentResponse
+                    try
                     {
-                        Status = 400,
-                        Error = "Invalid response format from JMF API"
-                    };
+                        using (var doc = JsonDocument.Parse(responseContent))
+                        {
+                            var root = doc.RootElement;
+                            string? redirectUrl = null;
+                            string? sessionId = null;
+                            string? parsedOrderNumber = null;
+                            
+                            // Check for redirect_url at top level (3DS response format)
+                            if (root.TryGetProperty("redirect_url", out var redirectUrlElem))
+                            {
+                                redirectUrl = redirectUrlElem.GetString();
+                                _logger.LogInformation("[JMF] Found redirect_url at top level (3DS format)");
+                            }
+                            
+                            // Check in response object
+                            if (redirectUrl == null && root.TryGetProperty("response", out var responseElem))
+                            {
+                                if (responseElem.TryGetProperty("redirect_url", out var nestedRedirectUrl))
+                                {
+                                    redirectUrl = nestedRedirectUrl.GetString();
+                                    _logger.LogInformation("[JMF] Found redirect_url in response object");
+                                }
+                            }
+                            
+                            // Check for session_id
+                            if (root.TryGetProperty("session_id", out var sessionIdElem))
+                            {
+                                sessionId = sessionIdElem.GetString();
+                            }
+                            else if (root.TryGetProperty("response", out var respElem) && 
+                                     respElem.TryGetProperty("session_id", out var nestedSessionId))
+                            {
+                                sessionId = nestedSessionId.GetString();
+                            }
+                            
+                            // Check for order_number
+                            if (root.TryGetProperty("order_number", out var orderElem))
+                            {
+                                parsedOrderNumber = orderElem.GetString();
+                            }
+                            else if (root.TryGetProperty("response", out var respElem2) && 
+                                     respElem2.TryGetProperty("order_number", out var nestedOrderNumber))
+                            {
+                                parsedOrderNumber = nestedOrderNumber.GetString();
+                            }
+                            
+                            if (!string.IsNullOrWhiteSpace(redirectUrl))
+                            {
+                                _logger.LogInformation("[JMF] Payment session created successfully. SessionId: {SessionId}, Order: {Order}", sessionId, parsedOrderNumber);
+                                
+                                // Return structured response
+                                if (result == null)
+                                {
+                                    result = new JMFPaymentResponse { Status = 200 };
+                                }
+                                if (result.Response == null)
+                                {
+                                    result.Response = new JMFResponse();
+                                }
+                                
+                                result.Response.RedirectUrl = redirectUrl;
+                                result.Response.SessionId = sessionId;
+                                result.Response.OrderNumber = parsedOrderNumber;
+                                
+                                return result;
+                            }
+                            
+                            // No redirect URL found
+                            _logger.LogError("[JMF] No redirect URL found in response. Full response: {Response}", JsonSerializer.Serialize(root));
+                            return new JMFPaymentResponse
+                            {
+                                Status = 400,
+                                Error = "Response missing redirect_url"
+                            };
+                        }
+                    }
+                    catch (JsonException parseEx)
+                    {
+                        _logger.LogError(parseEx, "[JMF] Error parsing flexible response format");
+                        return new JMFPaymentResponse
+                        {
+                            Status = 500,
+                            Error = "Failed to parse API response"
+                        };
+                    }
                 }
+                
+                _logger.LogError("[JMF] Empty or invalid response from API");
+                return new JMFPaymentResponse
+                {
+                    Status = 400,
+                    Error = "Invalid response format from JMF API"
+                };
             }
             catch (JsonException ex)
             {
