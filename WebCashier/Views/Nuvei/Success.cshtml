@@ -69,6 +69,25 @@
     </style>
 </head>
 <body>
+    <script>
+        // Break out of iframe if loaded inside one
+        // This happens when Nuvei redirects to Success/Error/Pending within the Apple Pay iframe
+        (function() {
+            try {
+                // Check if we're inside an iframe
+                if (window.self !== window.top) {
+                    console.log('[Nuvei Success] Detected iframe. Breaking out and navigating parent window.');
+                    // Build the current URL to navigate the parent window
+                    var currentUrl = window.location.href;
+                    // Navigate the parent (entire browser window) to this URL
+                    window.top.location.href = currentUrl;
+                }
+            } catch (e) {
+                console.error('[Nuvei Success] Error checking iframe:', e);
+                // Proceed normally if there's any error
+            }
+        })();
+    </script>
     <div class="container">
         @if (isSuccessful)
         {
