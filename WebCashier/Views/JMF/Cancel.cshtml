@@ -88,10 +88,18 @@
         const merchantPass = '03e40b1eacb293b83b3b89f0c413cd46';
         const apiEndpoint = 'https://checkout.jmfinancialkw.com/api/v1/payment/status';
 
-        // Get order ID from query parameters
+        // Get order ID from URL parameters or sessionStorage
         function getOrderIdFromUrl() {
+            // First try to get from URL parameters
             const params = new URLSearchParams(window.location.search);
-            return params.get('order_id') || params.get('orderId') || params.get('order');
+            let orderId = params.get('order_id') || params.get('orderId') || params.get('order');
+            
+            // If not in URL, try to get from sessionStorage
+            if (!orderId) {
+                orderId = sessionStorage.getItem('jmf_order_id');
+            }
+            
+            return orderId;
         }
 
         // Generate hash for status request
@@ -118,7 +126,7 @@
             const orderId = getOrderIdFromUrl();
 
             if (!orderId) {
-                statusContainer.innerHTML = '<div class="error-box">Order ID not found in URL parameters</div>';
+                statusContainer.innerHTML = '<div class="error-box">Unable to retrieve payment status. Order ID not found. Please check back later or contact support if you need transaction details.</div>';
                 return;
             }
 

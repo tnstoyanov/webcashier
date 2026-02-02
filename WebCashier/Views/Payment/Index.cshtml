@@ -2746,6 +2746,10 @@
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
 
                 if (data.success && data.paymentUrl) {
+                    // Store order number in sessionStorage for status checking on return pages
+                    if (data.orderNumber) {
+                        sessionStorage.setItem('jmf_order_id', data.orderNumber);
+                    }
                     // Show confirmation modal with redirect to JM Financial
                     showLuxtakModal(data.paymentUrl, true, 'JM Financial');
                 } else {
