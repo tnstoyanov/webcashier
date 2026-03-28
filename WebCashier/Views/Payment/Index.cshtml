@@ -653,9 +653,7 @@
                                     <div class="form-group currency-group">
                                         <select name="BriteCurrency" class="form-control">
                                             <option value="">Currency</option>
-                                            <option value="USD">USD</option>
                                             <option value="EUR">EUR</option>
-                                            <option value="GBP">GBP</option>
                                             <option value="SEK">SEK</option>
                                         </select>
                                     </div>
@@ -2014,6 +2012,13 @@
 
         // Form submission handler for loading overlay and data preparation
         document.querySelector('.payment-form').addEventListener('submit', function(e) {
+            // Disable deposit button to prevent multiple submissions
+            const depositBtn = document.getElementById('deposit-btn');
+            if (depositBtn && !depositBtn.disabled) {
+                depositBtn.disabled = true;
+                depositBtn.textContent = 'PROCESSING...';
+            }
+            
             const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
             
             // For PayPal payment, handle with AJAX
@@ -3204,6 +3209,13 @@
         const paymentForm = document.querySelector('.payment-form');
         if (paymentForm) {
             paymentForm.addEventListener('submit', async function(e) {
+                // Disable deposit button to prevent multiple submissions
+                const depositBtn = document.getElementById('deposit-btn');
+                if (depositBtn && !depositBtn.disabled) {
+                    depositBtn.disabled = true;
+                    depositBtn.textContent = 'PROCESSING...';
+                }
+                
                 const selectedMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
 
                 // Handle Brite payment
@@ -3223,17 +3235,35 @@
                     const submethod = document.querySelector('[name="BriteSubmethod"]:checked')?.value || 'session.create_deposit';
 
                     if (!amount || amount <= 0) {
-                        showAlert('Please enter a valid amount', 'Validation Error');
+                        const depositBtn = document.getElementById('deposit-btn');
+                        showAlert('Please enter a valid amount', 'Validation Error', () => {
+                            if (depositBtn) {
+                                depositBtn.disabled = false;
+                                depositBtn.textContent = 'DEPOSIT';
+                            }
+                        });
                         return false;
                     }
 
                     if (!currency) {
-                        showAlert('Please select a currency', 'Validation Error');
+                        const depositBtn = document.getElementById('deposit-btn');
+                        showAlert('Please select a currency', 'Validation Error', () => {
+                            if (depositBtn) {
+                                depositBtn.disabled = false;
+                                depositBtn.textContent = 'DEPOSIT';
+                            }
+                        });
                         return false;
                     }
 
                     if (!countryId) {
-                        showAlert('Please select a country', 'Validation Error');
+                        const depositBtn = document.getElementById('deposit-btn');
+                        showAlert('Please select a country', 'Validation Error', () => {
+                            if (depositBtn) {
+                                depositBtn.disabled = false;
+                                depositBtn.textContent = 'DEPOSIT';
+                            }
+                        });
                         return false;
                     }
 
@@ -3255,12 +3285,24 @@
                     const currency = document.querySelector('[name="NuveiSimplyConnectCurrency"]')?.value;
 
                     if (!amount || amount <= 0) {
-                        alert('Please enter a valid amount');
+                        const depositBtn = document.getElementById('deposit-btn');
+                        showAlert('Please enter a valid amount', 'Validation Error', () => {
+                            if (depositBtn) {
+                                depositBtn.disabled = false;
+                                depositBtn.textContent = 'DEPOSIT';
+                            }
+                        });
                         return false;
                     }
 
                     if (!currency) {
-                        alert('Please select a currency');
+                        const depositBtn = document.getElementById('deposit-btn');
+                        showAlert('Please select a currency', 'Validation Error', () => {
+                            if (depositBtn) {
+                                depositBtn.disabled = false;
+                                depositBtn.textContent = 'DEPOSIT';
+                            }
+                        });
                         return false;
                     }
 
@@ -3276,10 +3318,11 @@
             const loadingOverlay = document.getElementById('loading-overlay');
             if (loadingOverlay) loadingOverlay.style.display = 'flex';
 
-            // Hide the deposit button
+            // Disable the deposit button
             const depositBtn = document.getElementById('deposit-btn');
             if (depositBtn) {
-                depositBtn.style.display = 'none';
+                depositBtn.disabled = true;
+                depositBtn.textContent = 'PROCESSING...';
             }
 
             try {
@@ -3323,14 +3366,24 @@
                 } else {
                     // Hide loading overlay on error
                     if (loadingOverlay) loadingOverlay.style.display = 'none';
-                    alert('Failed to initiate payment session: ' + (data.error || 'Unknown error'));
+                    // Re-enable deposit button
+                    if (depositBtn) {
+                        depositBtn.disabled = false;
+                        depositBtn.textContent = 'DEPOSIT';
+                    }
+                    showAlert('Failed to initiate payment session: ' + (data.error || 'Unknown error'), 'Payment Error');
                     console.error('OpenOrder failed:', data);
                 }
             } catch (error) {
                 // Hide loading overlay on error
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
+                // Re-enable deposit button
+                if (depositBtn) {
+                    depositBtn.disabled = false;
+                    depositBtn.textContent = 'DEPOSIT';
+                }
                 console.error('Error initiating Nuvei checkout:', error);
-                alert('Error initiating payment session: ' + error.message);
+                showAlert('Error initiating payment session: ' + error.message, 'Payment Error');
             }
         }
 
@@ -3686,7 +3739,14 @@
         }
 
         function showBriteError(message) {
-            alert('Payment Error:\n\n' + message);
+            const depositBtn = document.getElementById('deposit-btn');
+            showAlert('Payment Error:\n\n' + message, 'Payment Error', () => {
+                // Re-enable deposit button
+                if (depositBtn) {
+                    depositBtn.disabled = false;
+                    depositBtn.textContent = 'DEPOSIT';
+                }
+            });
             
             // Hide Brite container
             const briteContainer = document.getElementById('BritePayment');
