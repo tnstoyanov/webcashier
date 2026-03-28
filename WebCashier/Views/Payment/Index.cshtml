@@ -663,7 +663,6 @@
 
                                 <!-- Country Select -->
                                 <div class="form-group">
-                                    <label for="BriteCountryId" class="form-label">Country</label>
                                     <select id="BriteCountryId" name="BriteCountryId" class="form-control">
                                         <option value="">Select country</option>
                                         <option value="be">Belgium</option>
@@ -677,10 +676,8 @@
                                     </select>
                                 </div>
 
-                                <!-- Submethods -->
-                                <div class="form-group" style="margin-top: 20px;">
-                                    <label class="form-label" style="margin-bottom: 12px; display: block; font-weight: 500;">Payment Method</label>
-                                    
+                                <!-- Submethods - Only visible for Sweden -->
+                                <div id="brite-submethod-container" style="display: none; margin-top: 20px;">
                                     <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 10px; cursor: pointer; background: #f9fafb;">
                                         <input type="radio" id="brite-instant-bank-transfer" name="BriteSubmethod" value="session.create_deposit" checked style="width: 18px; height: 18px; cursor: pointer;" />
                                         <label for="brite-instant-bank-transfer" style="cursor: pointer; flex: 1; margin: 0; display: flex; align-items: center; gap: 8px;">
@@ -1062,6 +1059,21 @@
     </div>
 </div>
 
+<!-- Generic Alert Modal -->
+<div id="generic-alert-modal" class="luxtak-modal" style="display:none;">
+    <div class="luxtak-modal-content" style="max-width: 500px;">
+        <div class="luxtak-modal-header">
+            <h3 id="generic-alert-title">Alert</h3>
+        </div>
+        <div class="luxtak-modal-body">
+            <p id="generic-alert-message"></p>
+        </div>
+        <div class="luxtak-modal-footer">
+            <button id="generic-alert-ok-btn" class="btn-ok">OK</button>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
@@ -1077,6 +1089,36 @@
             }
             originalError.apply(console, args);
         };
+
+        // Generic alert modal helper function
+        function showAlert(message, title = 'Alert', onOk = null) {
+            const modal = document.getElementById('generic-alert-modal');
+            const titleEl = document.getElementById('generic-alert-title');
+            const messageEl = document.getElementById('generic-alert-message');
+            const okBtn = document.getElementById('generic-alert-ok-btn');
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            modal.style.display = 'flex';
+            
+            // Remove existing click listeners to avoid duplicates
+            const newOkBtn = okBtn.cloneNode(true);
+            okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+            
+            newOkBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+                if (typeof onOk === 'function') onOk();
+            });
+            
+            // Close on escape key
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape' && modal.style.display !== 'none') {
+                    modal.style.display = 'none';
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+        }
 
         // Add missing jQuery Validate creditcard method
         if (typeof $.validator !== 'undefined') {
@@ -2030,6 +2072,16 @@
             if (selectedPaymentMethod === 'zmg') {
                 e.preventDefault();
                 handleZotaPayment(e.target);
+                return;
+            }
+            // For Brite payment, let the custom handler at the end handle it
+            if (selectedPaymentMethod === 'brite') {
+                e.preventDefault();
+                return;
+            }
+            // For Nuvei Simply Connect payment, let the custom handler at the end handle it
+            if (selectedPaymentMethod === 'nuvei-simply-connect') {
+                e.preventDefault();
                 return;
             }
             
@@ -3134,6 +3186,20 @@
         let nuveiSimplyConnectSessionActive = false;
         let briteSessionActive = false;
 
+        // Add event listener to Country select to show/hide payment methods
+        const briteCountrySelect = document.getElementById('BriteCountryId');
+        const briteSubmethodContainer = document.getElementById('brite-submethod-container');
+        if (briteCountrySelect && briteSubmethodContainer) {
+            briteCountrySelect.addEventListener('change', function() {
+                const selectedCountry = this.value;
+                if (selectedCountry === 'se') {
+                    briteSubmethodContainer.style.display = 'block';
+                } else {
+                    briteSubmethodContainer.style.display = 'none';
+                }
+            });
+        }
+
         // Intercept form submission for Nuvei Simply Connect and Brite
         const paymentForm = document.querySelector('.payment-form');
         if (paymentForm) {
@@ -3143,6 +3209,7 @@
                 // Handle Brite payment
                 if (selectedMethod === 'brite') {
                     e.preventDefault();
+                    e.stopPropagation();
 
                     // If session is already active, allow normal submission
                     if (briteSessionActive) {
@@ -3156,17 +3223,17 @@
                     const submethod = document.querySelector('[name="BriteSubmethod"]:checked')?.value || 'session.create_deposit';
 
                     if (!amount || amount <= 0) {
-                        alert('Please enter a valid amount');
+                        showAlert('Please enter a valid amount', 'Validation Error');
                         return false;
                     }
 
                     if (!currency) {
-                        alert('Please select a currency');
+                        showAlert('Please select a currency', 'Validation Error');
                         return false;
                     }
 
                     if (!countryId) {
-                        alert('Please select a country');
+                        showAlert('Please select a country', 'Validation Error');
                         return false;
                     }
 
