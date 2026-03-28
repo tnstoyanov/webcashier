@@ -993,3 +993,47 @@ body {
   background-color: #eee;
   font-weight: bold;
 }
+
+/* Brite Payment Container Styles */
+#BritePayment {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+#BritePayment iframe {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Mobile-first: Full height on small screens */
+@media (max-width: 480px) {
+  #BritePayment {
+    padding: 0;
+  }
+  
+  #BritePayment iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0;
+  }
+}
+
+/* Tablet and desktop: Centered modal */
+@media (min-width: 481px) {
+  #BritePayment iframe {
+    width: 420px !important;
+    height: 620px !important;
+  }
+}

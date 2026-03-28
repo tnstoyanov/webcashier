@@ -4,6 +4,11 @@
     // Helper to get query parameter safely
     string Q(string k) => Context.Request.Query[k].FirstOrDefault() ?? string.Empty;
     
+    // Extract Brite specific parameters
+    var provider = Q("provider");
+    var sessionId = Q("sessionId");
+    var briteTransactionId = Q("transactionId");
+    
     // Extract transaction response fields from Nuvei
     var result = Q("result") ?? Q("Status") ?? "APPROVED";
     var transactionStatus = Q("transactionStatus") ?? Q("Status") ?? result;
@@ -28,9 +33,11 @@
     var timestamp = Q("responseTimeStamp");
     
     // Determine if we have a successful transaction
+    var isBrite = provider?.Equals("brite", StringComparison.OrdinalIgnoreCase) ?? false;
     var isSuccessful = !string.IsNullOrWhiteSpace(transactionId) && 
                        (string.Equals(result, "APPROVED", StringComparison.OrdinalIgnoreCase) || 
-                        string.Equals(transactionStatus, "APPROVED", StringComparison.OrdinalIgnoreCase));
+                        string.Equals(transactionStatus, "APPROVED", StringComparison.OrdinalIgnoreCase)) ||
+                       (isBrite && !string.IsNullOrWhiteSpace(sessionId));
 }
 
 <!DOCTYPE html>
@@ -42,14 +49,14 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .container { max-width: 600px; width: 100%; }
+        .container { max-width: 680px; width: 100%; }
         .success-card { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
         .success-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; position: relative; }
         .success-icon { width: 80px; height: 80px; margin: 0 auto 20px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: scaleIn 0.6s ease-out; }
         .success-icon svg { width: 45px; height: 45px; stroke: white; stroke-width: 2; }
         .success-header h1 { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
         .success-header p { font-size: 14px; opacity: 0.9; }
-        .success-body { padding: 40px 30px; }
+        .success-body { padding: 30px 30px; }
         .transaction-detail { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
         .transaction-detail:last-child { border-bottom: none; }
         .detail-label { font-weight: 600; color: #666; }
@@ -74,12 +81,25 @@
         .empty-state svg { width: 80px; height: 80px; margin-bottom: 20px; opacity: 0.5; }
         .empty-state h2 { font-size: 18px; color: #333; margin-bottom: 10px; }
         .empty-state p { color: #999; font-size: 14px; margin-bottom: 20px; }
+        .brite-table { width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+        .brite-table th { background: #f3f4f6; padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; }
+        .brite-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+        .brite-table tr:last-child td { border-bottom: none; }
+        .brite-table tr:nth-child(even) { background: #f9fafb; }
+        .error-alert { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; padding: 16px; margin: 20px 0; }
+        .error-alert strong { color: #991b1b; }
+        .error-alert p { color: #991b1b; margin: 0; }
+        .loading { text-align: center; padding: 20px; }
+        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @@keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         @@media (max-width: 600px) {
             .success-header { padding: 30px 15px; }
             .success-body { padding: 25px 15px; }
             .success-header h1 { font-size: 24px; }
             .amount-display .value { font-size: 24px; }
+            .brite-table { font-size: 12px; }
+            .brite-table th, .brite-table td { padding: 8px; }
         }
     </style>
 </head>
@@ -101,24 +121,6 @@
                         <div class="amount-display">
                             <div class="label">Amount Charged</div>
                             <div class="value">@amount <span style="font-size: 20px;">@currency</span></div>
-                        </div>
-                    }
-                    
-                    <div class="transaction-detail">
-                        <span class="detail-label">Transaction Type</span>
-                        <span class="detail-value">@(string.IsNullOrWhiteSpace(transactionType) ? "Sale" : transactionType)</span>
-                    </div>
-                    
-                    <div class="transaction-detail">
-                        <span class="detail-label">Status</span>
-                        <span class="detail-value highlight">@(string.IsNullOrWhiteSpace(transactionStatus) ? "APPROVED" : transactionStatus)</span>
-                    </div>
-                    
-                    @if (!string.IsNullOrWhiteSpace(transactionId))
-                    {
-                        <div class="transaction-detail">
-                            <span class="detail-label">Transaction ID</span>
-                            <span class="detail-value">@transactionId</span>
                         </div>
                     }
                     
@@ -213,6 +215,16 @@
                         </div>
                     }
                     
+                    @if (isBrite)
+                    {
+                        <div id="brite-details">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <p>Loading transaction details...</p>
+                            </div>
+                        </div>
+                    }
+                    
                     <div class="action-buttons">
                         <a href="/Payment" class="btn btn-primary">Make Another Payment</a>
                         <a href="/" class="btn btn-secondary">Return Home</a>
@@ -233,4 +245,124 @@
         }
     </div>
 </body>
-</html>
+<script>
+    // Handle Brite payment details display
+    function loadBriteDetails() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const provider = urlParams.get('provider');
+        const sessionId = urlParams.get('sessionId');
+        
+        if (provider !== 'brite' || !sessionId) {
+            return;
+        }
+        
+        // Try to get from sessionStorage first (passed from payment page)
+        const briteData = sessionStorage.getItem('briteSessionData');
+        if (briteData) {
+            try {
+                const data = JSON.parse(briteData);
+                displayBriteTable(data);
+                sessionStorage.removeItem('briteSessionData');
+                return;
+            } catch (e) {
+                console.error('Failed to parse stored Brite data:', e);
+            }
+        }
+        
+        // If not in sessionStorage, fetch from backend
+        fetchBriteDetails(sessionId);
+    }
+    
+    async function fetchBriteDetails(sessionId) {
+        try {
+            // Get bearer token from sessionStorage (should have been saved on payment page)
+            const bearerToken = sessionStorage.getItem('briteBearerToken');
+            if (!bearerToken) {
+                showBriteError('Unable to retrieve payment details - session expired. Please try again.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('bearerToken', bearerToken);
+            formData.append('sessionId', sessionId);
+            
+            const response = await fetch('/Brite/SessionDetails', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                displayBriteTable(data);
+            } else {
+                showBriteError(data.error || 'Failed to retrieve transaction details');
+            }
+        } catch (error) {
+            console.error('Error fetching Brite details:', error);
+            showBriteError('Error retrieving payment details: ' + error.message);
+        }
+    }
+    
+    function displayBriteTable(data) {
+        const container = document.getElementById('brite-details');
+        if (!container) return;
+        
+        const table = `
+            <table class="brite-table">
+                <tbody>
+                    <tr>
+                        <td><strong>Amount</strong></td>
+                        <td>${data.amount || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Currency</strong></td>
+                        <td>${(data.currency || '').toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Merchant Reference</strong></td>
+                        <td>${data.merchantReference || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Transaction ID</strong></td>
+                        <td><code>${data.transactionId || 'N/A'}</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Country</strong></td>
+                        <td>${(data.countryId || '').toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bank Name</strong></td>
+                        <td>${data.bankName || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bank Account (BBAN)</strong></td>
+                        <td><code>${data.bankAccountBban || 'N/A'}</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Account Holder</strong></td>
+                        <td>${data.bankAccountHolder || 'N/A'}</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+        
+        container.innerHTML = table;
+    }
+    
+    function showBriteError(message) {
+        const container = document.getElementById('brite-details');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="error-alert">
+                <strong>Payment Error:</strong>
+                <p>${message}</p>
+            </div>
+        `;
+    }
+    
+    // Load Brite details when page loads
+    document.addEventListener('DOMContentLoaded', loadBriteDetails);
+</script>
+

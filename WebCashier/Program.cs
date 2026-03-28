@@ -291,6 +291,9 @@ builder.Services.AddHttpClient("comm-logs")
 // Register PayPal service
 builder.Services.AddScoped<IPayPalService, PayPalService>();
 
+// Register Brite service
+builder.Services.AddScoped<IBriteService, BriteService>();
+
 // Register JM Financial service
 builder.Services.AddScoped<IJMFService, JMFService>();
 

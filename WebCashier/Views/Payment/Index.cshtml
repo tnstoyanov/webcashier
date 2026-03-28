@@ -149,6 +149,17 @@
                                     </label>
                                 </div>
 
+                                <div class="carousel-item" tabindex="0">
+                                    <input type="radio" id="brite" name="PaymentMethod" value="brite">
+                                    <label for="brite" class="method-option">
+                                        <div class="brite-icon">
+                                            <img src="https://ext-assets.britepayments.com/assets/logo_cluster/brand_badge_primary.svg" alt="Brite"
+                                                width="52" height="35">
+                                        </div>
+                                        <span class="payment-brand">Brite</span>
+                                    </label>
+                                </div>
+
                                 <div class="carousel-item" id="nuvei-simply-connect" tabindex="0">
                                     <input type="radio" id="nuvei-simply-connect-radio" name="PaymentMethod" value="nuvei-simply-connect" />
                                     <label for="nuvei-simply-connect-radio" class="method-option">
@@ -622,6 +633,83 @@
                         
                         <!-- Nuvei Checkout Container (hidden until Deposit is clicked) -->
                         <div class="checkout" id="nuvei-checkout" style="width: 100%; height: 600px; border: 1px solid #d3dce6; background-color: #f5f5f5; display: none; align-items: center; justify-content: center; margin-top: 20px;"></div>
+                    </div>
+
+                    <!-- Brite Form -->
+                    <div id="brite-details" class="payment-form-container" style="display: none;">
+                        <div class="form-layout">
+                            <div class="form-left">
+                                <!-- Amount suggestion buttons -->
+                                <div class="amount-suggestions">
+                                    <button type="button" class="amount-btn" data-amount="50">€50</button>
+                                    <button type="button" class="amount-btn" data-amount="100">€100</button>
+                                    <button type="button" class="amount-btn" data-amount="200">€200</button>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group amount-group">
+                                        <input name="BriteAmount" type="number" step="0.01" class="form-control" placeholder="Amount" />
+                                    </div>
+                                    <div class="form-group currency-group">
+                                        <select name="BriteCurrency" class="form-control">
+                                            <option value="">Currency</option>
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                            <option value="SEK">SEK</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Country Select -->
+                                <div class="form-group">
+                                    <label for="BriteCountryId" class="form-label">Country</label>
+                                    <select id="BriteCountryId" name="BriteCountryId" class="form-control">
+                                        <option value="">Select country</option>
+                                        <option value="be">Belgium</option>
+                                        <option value="ee">Estonia</option>
+                                        <option value="fi">Finland</option>
+                                        <option value="fr">France</option>
+                                        <option value="de">Germany</option>
+                                        <option value="lv">Latvia</option>
+                                        <option value="nl">Netherlands</option>
+                                        <option value="se">Sweden</option>
+                                    </select>
+                                </div>
+
+                                <!-- Submethods -->
+                                <div class="form-group" style="margin-top: 20px;">
+                                    <label class="form-label" style="margin-bottom: 12px; display: block; font-weight: 500;">Payment Method</label>
+                                    
+                                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 10px; cursor: pointer; background: #f9fafb;">
+                                        <input type="radio" id="brite-instant-bank-transfer" name="BriteSubmethod" value="session.create_deposit" checked style="width: 18px; height: 18px; cursor: pointer;" />
+                                        <label for="brite-instant-bank-transfer" style="cursor: pointer; flex: 1; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                            <img src="https://ext-assets.britepayments.com/assets/logo_cluster/brand_badge_primary--logo_cluster_medium--SE--light.svg" alt="Instant Bank Transfer" style="height: 32px; object-fit: contain;" />
+                                            <span>Instant Bank Transfer</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb;">
+                                        <input type="radio" id="brite-swish" name="BriteSubmethod" value="session.create_swish_payment" style="width: 18px; height: 18px; cursor: pointer;" />
+                                        <label for="brite-swish" style="cursor: pointer; flex: 1; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                            <img src="https://images.ctfassets.net/zrqoyh8r449h/5dYSjiUWZq3ITy9acKxDGq/b0809d7847b7afbd11d2ef6c076e4bc0/swish_logo_secondary_light-bg_p3_720.png" alt="Swish" style="height: 32px; object-fit: contain;" />
+                                            <span>Swish</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-right">
+                                <div class="payment-info-card">
+                                    <h3>Instant Bank Transfers</h3>
+                                    <p>Move funds instantly — cost-free. No cards, no sign-ups — zero hassle.</p>
+                                    <div class="brite-logo-large">
+                                        <img src="https://ext-assets.britepayments.com/assets/logo_cluster/brand_badge_primary.svg" alt="Brite"
+                                            width="150">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="gpay-details" class="payment-form-container" style="display: none;">
@@ -1260,6 +1348,9 @@
                         break;
                     case 'nuvei-simply-connect':
                         targetFormId = 'nuvei-simply-connect-details';
+                        break;
+                    case 'brite':
+                        targetFormId = 'brite-details';
                         break;
                     default:
                         targetFormId = 'card-details'; // fallback to card
@@ -3041,12 +3132,48 @@
 
         // Nuvei Simply Connect Implementation
         let nuveiSimplyConnectSessionActive = false;
+        let briteSessionActive = false;
 
-        // Intercept form submission for Nuvei Simply Connect
+        // Intercept form submission for Nuvei Simply Connect and Brite
         const paymentForm = document.querySelector('.payment-form');
         if (paymentForm) {
             paymentForm.addEventListener('submit', async function(e) {
                 const selectedMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
+
+                // Handle Brite payment
+                if (selectedMethod === 'brite') {
+                    e.preventDefault();
+
+                    // If session is already active, allow normal submission
+                    if (briteSessionActive) {
+                        return true;
+                    }
+
+                    // Get Brite form values
+                    const amount = document.querySelector('[name="BriteAmount"]')?.value;
+                    const currency = document.querySelector('[name="BriteCurrency"]')?.value;
+                    const countryId = document.querySelector('[name="BriteCountryId"]')?.value;
+                    const submethod = document.querySelector('[name="BriteSubmethod"]:checked')?.value || 'session.create_deposit';
+
+                    if (!amount || amount <= 0) {
+                        alert('Please enter a valid amount');
+                        return false;
+                    }
+
+                    if (!currency) {
+                        alert('Please select a currency');
+                        return false;
+                    }
+
+                    if (!countryId) {
+                        alert('Please select a country');
+                        return false;
+                    }
+
+                    // Initiate Brite session (email is auto-generated)
+                    await initiateBriteSession(amount, currency, '', countryId, submethod);
+                    return false;
+                }
 
                 if (selectedMethod === 'nuvei-simply-connect') {
                     e.preventDefault();
@@ -3308,6 +3435,208 @@
             } else {
                 console.log('Payment pending or other status:', result);
                 alert('Payment status: ' + (result.transactionStatus || 'Unknown'));
+            }
+        }
+
+        // Brite Payment Implementation
+        let briteClient = null;
+        let briteSessionId = null;
+        let briteBearerToken = null;
+
+        async function initiateBriteSession(amount, currency, email, countryId, submethod) {
+            try {
+                console.log('Initiating Brite session for amount:', amount, 'currency:', currency, 'country:', countryId, 'submethod:', submethod);
+
+                // Step 1: Get Bearer token
+                const tokenResponse = await fetch('/Brite/Authorize', { method: 'GET' });
+                const tokenData = await tokenResponse.json();
+
+                if (!tokenData.success || !tokenData.accessToken) {
+                    throw new Error('Failed to get Brite authorization token');
+                }
+
+                briteBearerToken = tokenData.accessToken;
+                console.log('✓ Brite token obtained:', briteBearerToken.substring(0, 20) + '...');
+
+                // Step 2: Create deposit session
+                const sessionFormData = new FormData();
+                sessionFormData.append('bearerToken', briteBearerToken);
+                sessionFormData.append('amount', amount);
+                sessionFormData.append('countryId', countryId);
+                sessionFormData.append('paymentMethod', submethod);
+                sessionFormData.append('customerEmail', email);
+
+                const sessionResponse = await fetch('/Brite/CreateSession', {
+                    method: 'POST',
+                    body: sessionFormData
+                });
+
+                const sessionData = await sessionResponse.json();
+                console.log('✓ Brite session created:', sessionData);
+
+                if (!sessionData.success) {
+                    const errorMsg = sessionData.error || sessionData.errorMessage || 'Failed to create Brite session';
+                    throw new Error(errorMsg);
+                }
+
+                briteSessionId = sessionData.sessionId;
+                const sessionToken = sessionData.token;
+
+                // Step 3: Load Brite SDK script
+                if (window.Brite === undefined) {
+                    console.log('Loading Brite SDK...');
+                    const script = document.createElement('script');
+                    script.src = 'https://docs.britepayments.com/wp-content/cache/min/1/client.js?ver=1774533308';
+                    script.dataset.minify = '1';
+                    document.head.appendChild(script);
+                    
+                    // Wait for Brite to be available
+                    await new Promise((resolve) => {
+                        const checkBrite = setInterval(() => {
+                            if (window.Brite) {
+                                clearInterval(checkBrite);
+                                resolve();
+                            }
+                        }, 100);
+                    });
+                }
+
+                console.log('✓ Brite SDK loaded');
+
+                // Step 4: Hide payment forms and show Brite container
+                const paymentForms = document.querySelector('.payment-forms');
+                if (paymentForms) {
+                    paymentForms.style.display = 'none';
+                }
+
+                // Create Brite container if it doesn't exist
+                let briteContainer = document.getElementById('BritePayment');
+                if (!briteContainer) {
+                    briteContainer = document.createElement('div');
+                    briteContainer.id = 'BritePayment';
+                    document.body.appendChild(briteContainer);
+                }
+
+                // Step 5: Initialize and render Brite Client
+                briteClient = new Brite(sessionToken);
+                
+                briteClient.start({
+                    selector: '#BritePayment',
+                    width: '400px',
+                    height: '600px',
+                    color_theme: 'light'
+                }, function(state) {
+                    console.log('Brite state change:', state);
+                    
+                    // Handle key milestone states
+                    if (state == Brite.STATE_AUTHENTICATION_COMPLETED) {
+                        console.log('✓ Authentication completed');
+                    } else if (state == Brite.STATE_BANK_ACCOUNT_SELECTION_COMPLETED) {
+                        console.log('✓ Bank account selected');
+                    } else if (state == Brite.STATE_ABORTED) {
+                        console.log('✗ Payment aborted by user');
+                        closeBriteAndReturnToPayment('Payment was cancelled');
+                    } else if (state == Brite.STATE_FAILED) {
+                        console.log('✗ Payment failed');
+                        closeBriteAndReturnToPayment('Payment failed. Please try again.');
+                    } else if (state == Brite.STATE_COMPLETED) {
+                        console.log('✓ Payment completed');
+                        // Get session details after payment completion
+                        getBriteSessionDetails();
+                    }
+                }, function() {
+                    console.log('Brite Client closed');
+                    briteClient.stop();
+                    closeBriteAndReturnToPayment();
+                });
+
+                console.log('✓ Brite Client rendered');
+
+            } catch (error) {
+                console.error('Brite session error:', error);
+                showBriteError(error.message || 'Error creating payment session');
+            }
+        }
+
+        async function getBriteSessionDetails() {
+            try {
+                console.log('Fetching Brite session details for sessionId:', briteSessionId);
+                const detailsFormData = new FormData();
+                detailsFormData.append('bearerToken', briteBearerToken);
+                detailsFormData.append('sessionId', briteSessionId);
+
+                const detailsResponse = await fetch('/Brite/SessionDetails', {
+                    method: 'POST',
+                    body: detailsFormData
+                });
+
+                const detailsData = await detailsResponse.json();
+                console.log('Brite session details response:', detailsData);
+
+                if (detailsData.success) {
+                    console.log('✓ Payment successful, saving data and redirecting to success page');
+                    // Store data in sessionStorage for Success page to display
+                    sessionStorage.setItem('briteSessionData', JSON.stringify(detailsData));
+                    sessionStorage.setItem('briteBearerToken', briteBearerToken);
+                    
+                    // Redirect to success page with both sessionId and transactionId
+                    const successUrl = '/Payment/Success?provider=brite&sessionId=' + encodeURIComponent(briteSessionId) + '&transactionId=' + encodeURIComponent(detailsData.transactionId || '');
+                    window.location.href = successUrl;
+                } else {
+                    // Handle API error response
+                    const errorMessage = detailsData.error_message || detailsData.error || 'Failed to retrieve session details';
+                    showBriteError(errorMessage);
+                }
+            } catch (error) {
+                console.error('Error getting session details:', error);
+                showBriteError('Error retrieving payment details: ' + error.message);
+            }
+        }
+
+        function closeBriteAndReturnToPayment(errorMessage) {
+            // Hide all overlays and modals
+            const briteContainer = document.getElementById('BritePayment');
+            if (briteContainer) {
+                briteContainer.style.display = 'none';
+                briteContainer.innerHTML = '';
+            }
+            
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+            
+            // Show payment forms again so user can select another method or retry
+            const paymentForms = document.querySelector('.payment-forms');
+            if (paymentForms) {
+                paymentForms.style.display = 'block';
+            }
+            
+            // Show error message if provided
+            if (errorMessage) {
+                showBriteError(errorMessage);
+            }
+        }
+
+        function showBriteError(message) {
+            alert('Payment Error:\n\n' + message);
+            
+            // Hide Brite container
+            const briteContainer = document.getElementById('BritePayment');
+            if (briteContainer) {
+                briteContainer.style.display = 'none';
+                briteContainer.innerHTML = '';
+            }
+            
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+            
+            // Show payment forms again so user can select another method or retry
+            const paymentForms = document.querySelector('.payment-forms');
+            if (paymentForms) {
+                paymentForms.style.display = 'block';
             }
         }
     </script>
