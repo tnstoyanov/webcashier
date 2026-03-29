@@ -115,13 +115,26 @@ namespace WebCashier.Services
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.Add("GT-Authentication", signature);
 
-                _logger.LogInformation("Sending payment request to Praxis API");
-
+                Console.WriteLine("\n" + new string('─', 80));
+                Console.WriteLine("📡 PRAXIS API REQUEST");
+                Console.WriteLine(new string('─', 80));
                 var endpoint = _runtime.Get("Praxis:Endpoint") ?? _config.Endpoint;
+                Console.WriteLine($"🔗 Endpoint: {endpoint}");
+                Console.WriteLine($"🔐 Signature: {signature.Substring(0, Math.Min(50, signature.Length))}...");
+                Console.WriteLine($"📦 Request Payload (first 1000 chars):\n{json.Substring(0, Math.Min(1000, json.Length))}");
+                Console.WriteLine($"📊 Full payload size: {json.Length} bytes");
+                Console.WriteLine(new string('─', 80));
+
+                _logger.LogInformation("Sending payment request to Praxis API");
+                _logger.LogInformation("Praxis Endpoint: {Endpoint}", endpoint);
+                _logger.LogInformation("Praxis Request Payload: {Payload}", json);
+
                 var response = await _httpClient.PostAsync(endpoint, content);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 _logger.LogInformation("Received response from Praxis API: {StatusCode}", response.StatusCode);
+                _logger.LogInformation("Praxis Response Body (first 1000 chars): {ResponseBody}", 
+                    responseContent.Length > 1000 ? responseContent.Substring(0, 1000) : responseContent);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -131,10 +144,15 @@ namespace WebCashier.Services
                     {
                         _logger.LogInformation("Praxis API Response - Status: {Status}, Description: {Description}, Transaction Status: {TransactionStatus}", 
                             praxisResponse.status, praxisResponse.description, praxisResponse.transaction?.transaction_status);
+                        _logger.LogInformation("Praxis Redirect URL: {RedirectUrl}", praxisResponse.redirect_url ?? "[NULL/EMPTY]");
                         
                         if (!string.IsNullOrEmpty(praxisResponse.redirect_url))
                         {
-                            _logger.LogInformation("Redirect URL provided: {RedirectUrl}", praxisResponse.redirect_url);
+                            _logger.LogInformation("✅ Redirect URL provided: {RedirectUrl}", praxisResponse.redirect_url);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("⚠️ No redirect URL in response. Will show Processing page.");
                         }
                         
                         return praxisResponse;

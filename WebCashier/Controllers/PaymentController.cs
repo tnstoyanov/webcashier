@@ -185,9 +185,17 @@ namespace WebCashier.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessPayment(PaymentModel model)
         {
+            Console.WriteLine("\n\n" + new string('=', 80));
+            Console.WriteLine("🚀🚀🚀 === PAYMENT PROCESSING START === 🚀🚀🚀");
+            Console.WriteLine(new string('=', 80));
+            
             _logger.LogInformation("=== PAYMENT PROCESSING START ===");
             _logger.LogInformation("Received payment request: {@Model}", model);
             _logger.LogInformation("ModelState IsValid: {IsValid}", ModelState.IsValid);
+            
+            Console.WriteLine($"✓ Payment action invoked with Method: {model.PaymentMethod}");
+            Console.WriteLine($"✓ Amount: {model.Amount}, Currency: {model.Currency}");
+            Console.WriteLine($"✓ Card: {(string.IsNullOrEmpty(model.CardNumber) ? "EMPTY" : "****" + model.CardNumber.Substring(Math.Max(0, model.CardNumber.Length - 4)))}\n");
             
             if (!ModelState.IsValid)
             {
@@ -250,8 +258,13 @@ namespace WebCashier.Controllers
 
         private async Task<IActionResult> ProcessPraxisPayment(PaymentModel model, string orderId, string clientIp)
         {
+            _logger.LogInformation("=== ProcessPraxisPayment START ===");
+            
             // Call Praxis API
             var praxisResponse = await _praxisService.ProcessPaymentAsync(model, clientIp, orderId);
+            
+            _logger.LogInformation("Praxis Response received. Status: {Status}, Description: {Description}", 
+                praxisResponse.status, praxisResponse.description);
 
             // Update with transaction ID from Praxis response
             _paymentStateService.SetPaymentPending(orderId, praxisResponse.transaction_id ?? "");
@@ -259,11 +272,22 @@ namespace WebCashier.Controllers
             // Check if Praxis returned a redirect URL (for 3DS authentication)
             if (!string.IsNullOrEmpty(praxisResponse.redirect_url))
             {
-                _logger.LogInformation("Redirecting to 3DS authentication: {RedirectUrl}", praxisResponse.redirect_url);
+                _logger.LogInformation("✅ Praxis redirect_url is populated: {RedirectUrl}", praxisResponse.redirect_url);
+                
+                // If this is an AJAX/fetch request, return JSON with redirect URL
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    _logger.LogInformation("🔄 AJAX request detected - returning JSON redirect to: {RedirectUrl}", praxisResponse.redirect_url);
+                    return Json(new { redirect = true, redirectUrl = praxisResponse.redirect_url });
+                }
+                
+                _logger.LogInformation("🔄 Returning HTTP 302 Redirect to: {RedirectUrl}", praxisResponse.redirect_url);
                 return Redirect(praxisResponse.redirect_url);
             }
 
-            // Always redirect to processing page to wait for callback
+            // No redirect URL from Praxis, show processing page
+            _logger.LogWarning("⚠️ No redirect_url from Praxis. Returning Processing page. Response status: {Status}, Description: {Description}", 
+                praxisResponse.status, praxisResponse.description);
             ViewBag.OrderId = orderId;
             return View("Processing", model);
         }

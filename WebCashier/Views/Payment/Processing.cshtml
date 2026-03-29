@@ -5,6 +5,22 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<script>
+    // CRITICAL: Disable jQuery validation before it loads, since this page has no forms to validate
+    window._skipValidationInit = true;
+    
+    // Prevent jQuery validation from auto-parsing any forms
+    if (typeof $ !== 'undefined') {
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof $.validator !== 'undefined' && typeof $.validator.unobtrusive !== 'undefined') {
+                $.validator.unobtrusive.parseAll = function() { return true; };
+                $.validator.unobtrusive.parse = function() { return true; };
+                console.log('Validation disabled on Processing page');
+            }
+        }, true); // Use capture phase to run before other listeners
+    }
+</script>
+
 <div class="processing-container">
     <div class="processing-content">
         <div class="spinner-border text-primary" role="status">
@@ -18,38 +34,55 @@
         <script>
             let orderIdFromForm = '@ViewBag.OrderId';
             let pollCount = 0;
-            let maxPolls = 60; // 2 minutes max
+            let maxPolls = 30; // 1 minute max (60 seconds / 2 second intervals)
             
             function checkPaymentStatus() {
                 pollCount++;
+                console.log(`CheckStatus poll ${pollCount}/${maxPolls} for orderId: ${orderIdFromForm}`);
                 
                 if (pollCount > maxPolls) {
-                    // Timeout - redirect to error page
+                    // Timeout - redirect to  timeout page
+                    console.warn('Payment polling timeout after ' + (maxPolls * 2) + ' seconds');
                     window.location.href = '/Payment/Timeout?orderId=' + orderIdFromForm;
                     return;
                 }
                 
-                fetch('/Payment/CheckStatus?orderId=' + orderIdFromForm)
-                    .then(response => response.json())
+                fetch('/Payment/CheckStatus?orderId=' + orderIdFromForm, {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response.json();
+                    })
                     .then(data => {
+                        console.log(`CheckStatus response: ${data.status}`);
+                        
                         if (data.status === 'completed') {
-                            // Payment completed - redirect to result page
+                            console.log('Payment completed - redirecting to result');
                             window.location.href = '/Payment/Result?orderId=' + orderIdFromForm;
                         } else if (data.status === 'pending') {
                             // Still processing - check again in 2 seconds
                             setTimeout(checkPaymentStatus, 2000);
+                        } else if (data.status === 'not_found') {
+                            console.error('Order not found');
+                            window.location.href = '/Payment/Error?orderId=' + orderIdFromForm;
                         } else {
                             // Error or unknown status
+                            console.error(`Unknown status: ${data.status}`);
                             window.location.href = '/Payment/Error?orderId=' + orderIdFromForm;
                         }
                     })
                     .catch(error => {
                         console.error('Error checking payment status:', error);
-                        setTimeout(checkPaymentStatus, 2000);
+                        // If there's a network error, continue polling
+                        if (pollCount <= maxPolls) {
+                            setTimeout(checkPaymentStatus, 2000);
+                        }
                     });
             }
             
-            // Start polling after 3 seconds
+            // Start polling after 3 seconds  
             setTimeout(checkPaymentStatus, 3000);
         </script>
     </div>

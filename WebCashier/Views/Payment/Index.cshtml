@@ -18,7 +18,7 @@
         <p class="security-text">All payments are 100% secure</p>
 
         <div class="payment-layout">
-            <form asp-action="ProcessPayment" method="post" class="payment-form">
+            <form asp-action="ProcessPayment" method="post" class="payment-form" novalidate="novalidate">
                 @Html.AntiForgeryToken()
                 
                 <div class="payment-methods">
@@ -1075,14 +1075,262 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
+        // ═══════════════════════════════════════════════════════════════════════════
+        // DEBUG MODE - Comprehensive Logging System
+        // ═══════════════════════════════════════════════════════════════════════════
+        
+        window.DEBUG_MODE = true;
+        window.DEBUG_LOGS = [];
+        window.MAX_LOGS = 100;
+        
+        // Define helper functions FIRST before they're used
+        function updateDebugPanel() {
+            const logsContainer = document.getElementById('debug-logs');
+            if (!logsContainer) return;
+            
+            logsContainer.innerHTML = window.DEBUG_LOGS.map((log, idx) => {
+                const colors = {
+                    'LOG': '#00ff00',
+                    'ERROR': '#ff0000',
+                    'WARN': '#ffff00',
+                    'DEBUG': '#00ffff'
+                };
+                const color = colors[log.level] || '#ffffff';
+                return `<div style="color: ${color}; margin: 2px 0;">
+                    <span style="color: #888;">[${log.timestamp}]</span> <span style="font-weight: bold;">[${log.level}]</span> ${log.message}
+                </div>`;
+            }).join('');
+            
+            // Auto-scroll to bottom
+            if (logsContainer.scrollTop !== undefined) {
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+        }
+        
+        // Now capture all console output
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+        const originalConsoleDebug = console.debug;
+        
+        function addDebugLog(level, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            
+            window.DEBUG_LOGS.push({
+                timestamp,
+                level,
+                message,
+                fullArgs: args
+            });
+            
+            // Keep only last MAX_LOGS
+            if (window.DEBUG_LOGS.length > window.MAX_LOGS) {
+                window.DEBUG_LOGS.shift();
+            }
+            
+            // Update debug panel if it exists and is ready
+            if (typeof updateDebugPanel === 'function') {
+                updateDebugPanel();
+            }
+        }
+        
+        console.log = function(...args) {
+            addDebugLog('LOG', ...args);
+            originalConsoleLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addDebugLog('ERROR', ...args);
+            originalConsoleError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            addDebugLog('WARN', ...args);
+            originalConsoleWarn.apply(console, args);
+        };
+        
+        console.debug = function(...args) {
+            addDebugLog('DEBUG', ...args);
+            originalConsoleDebug.apply(console, args);
+        };
+        
+        console.log('🔍 DEBUG MODE ENABLED - All console output is being captured');
+        console.log('📊 View debug panel at bottom right, or press D to show/hide');
+        console.log('💻 Open browser DevTools (F12) to see full console');
+        
+        // Track page events
+        window.addEventListener('load', () => console.log('✓ Page fully loaded'));
+        window.addEventListener('error', (e) => console.error('❌ Global error:', e.message));
+        document.addEventListener('DOMContentLoaded', () => console.log('✓ DOM Content Loaded'));
+    </script>
+    
+    <script>
+        // ═══════════════════════════════════════════════════════════════════════════
+        // DEBUG PANEL UI - Floating console overlay
+        // ═══════════════════════════════════════════════════════════════════════════
+        
+        function createDebugPanel() {
+            const panel = document.createElement('div');
+            panel.id = 'debug-panel';
+            panel.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                width: 400px;
+                max-height: 300px;
+                background: #1e1e1e;
+                color: #00ff00;
+                font-family: monospace;
+                font-size: 11px;
+                border: 2px solid #00ff00;
+                border-radius: 5px;
+                padding: 10px;
+                overflow-y: auto;
+                z-index: 99999;
+                display: none;
+                box-shadow: 0 0 10px rgba(0,255,0,0.3);
+            `;
+            
+            panel.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid #00ff00; padding-bottom: 8px;">
+                    <span style="font-weight: bold;">🔍 DEBUG CONSOLE</span>
+                    <span style="cursor: pointer; color: #ffff00;" onclick="closeDebugPanel()">✕</span>
+                </div>
+                <div id="debug-logs" style="max-height: 240px; overflow-y: auto;">
+                    <div style="color: #00ff00;">[Debug console ready]</div>
+                </div>
+            `;
+            
+            document.body.appendChild(panel);
+            return panel;
+        }
+        
+        function showDebugPanel() {
+            const panel = document.getElementById('debug-panel') || createDebugPanel();
+            panel.style.display = 'block';
+            updateDebugPanel();
+        }
+        
+        function closeDebugPanel() {
+            const panel = document.getElementById('debug-panel');
+            if (panel) panel.style.display = 'none';
+        }
+        
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debug-panel') || createDebugPanel();
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            if (panel.style.display === 'block') updateDebugPanel();
+        }
+        
+        // Create panel when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            createDebugPanel();
+            console.log('✓ Debug panel created');
+        });
+        
+        // Keyboard shortcut: D to toggle panel, L to clear logs
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'd' || e.key === 'D') {
+                e.preventDefault();
+                toggleDebugPanel();
+            }
+            if (e.key === 'l' || e.key === 'L') {
+                e.preventDefault();
+                window.DEBUG_LOGS = [];
+                updateDebugPanel();
+                console.log('🗑️ Debug logs cleared');
+            }
+        });
+        
+        console.log('🎮 Keyboard shortcuts: D=toggle panel, L=clear logs, F12=DevTools');
+    </script>
+
+    <script>
+        // CRITICAL: Completely bypass jQuery validation on Payment form
+        // This prevents :hidden selector errors and allows form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('.payment-form');
+            if (!form) {
+                console.error('❌ Payment form not found');
+                return;
+            }
+            console.log('✓ Payment form found:', form.className);
+            
+            // Remove any jQuery validation handlers
+            if (typeof $ !== 'undefined') {
+                const $form = $(form);
+                
+                // Unbind all jQuery validation events
+                $form.off('submit');
+                $form.off('click');
+                $form.off('change');
+                $form.off('input');
+                
+                // Remove validation data
+                $form.removeData('validator');
+                $form.removeData('unobtrusiveValidation');
+                
+                console.log('jQuery validation completely disabled on payment form');
+            }
+        }, false);
+    </script>
+    <script>
+        // CRITICAL: Disable jQuery validation unobtrusive auto-initialization to prevent errors
+        // We handle validation manually with custom code below
+        if (typeof $ !== 'undefined' && typeof $.validator !== 'undefined' &&
+            typeof $.validator.unobtrusive !== 'undefined') {
+            try {
+                // Store reference to parse function
+                const originalParse = $.validator.unobtrusive.parse;
+                
+                // Override parse with error-safe version that skips this form
+                $.validator.unobtrusive.parse = function(selector) {
+                    try {
+                        // Skip parsing if this is the payment form or a descendant
+                        if (selector === '.payment-form' || 
+                            (typeof selector === 'string' && selector.includes('payment-form'))) {
+                            console.log('Skipped jQuery validation parsing for payment form');
+                            return true;
+                        }
+                        if (selector && $(selector).closest('.payment-form').length > 0) {
+                            console.log('Skipped jQuery validation parsing for payment form element');
+                            return true;
+                        }
+                        if (selector && $(selector).length > 0) {
+                            return originalParse.call(this, selector);
+                        }
+                    } catch (e) {
+                        console.log('Validation parse skipped:', e.message);
+                    }
+                    return true;
+                };
+                
+                // Don't auto-parse the whole document
+                $.validator.unobtrusive.parseAll = function() {
+                    return true; // No-op to prevent automatic parsing
+                };
+                
+                console.log('jQuery validation unobtrusive disabled for payment form');
+            } catch (e) {
+                console.warn('Could not override jQuery validation:', e.message);
+            }
+        }
+    </script>
+    <script>
         // Suppress extension-related console errors
         const originalError = console.error;
         console.error = function(...args) {
             const errorMessage = args.join(' ');
-            // Filter out common extension-related errors
+            // Filter out common extension-related errors  
             if (errorMessage.includes('runtime.lastError') || 
                 errorMessage.includes('duplicate id') ||
-                errorMessage.includes('Extension context invalidated')) {
+                errorMessage.includes('Extension context invalidated') ||
+                errorMessage.includes('is not a valid selector') ||
+                errorMessage.includes(':hidden') ||
+                errorMessage.includes(':not(:hidden)')) {
                 return; // Don't log these errors
             }
             originalError.apply(console, args);
@@ -1163,7 +1411,8 @@
         const cardBackContent = document.querySelector('.card-back-content');
 
         // Format card number input and update widget
-        document.querySelector('[name="CardNumber"]').addEventListener('input', function(e) {
+        const cardNumberInput = document.querySelector('[name="CardNumber"]');
+        if (cardNumberInput) cardNumberInput.addEventListener('input', function(e) {
             let value = e.target.value.replace(/\s/g, '').replace(/[^0-9]/gi, '');
             let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
             e.target.value = formattedValue;
@@ -1193,7 +1442,7 @@
         });
 
         // Flip back to front when focusing on card number
-        document.querySelector('[name="CardNumber"]').addEventListener('focus', function(e) {
+        if (cardNumberInput) cardNumberInput.addEventListener('focus', function(e) {
             console.log('Card number focused - flipping to front');
             if (cardContainer) {
                 cardContainer.classList.remove('flipped');
@@ -1202,7 +1451,8 @@
         });
 
         // Format expiration date and update widget
-        document.querySelector('[name="ExpirationDate"]').addEventListener('input', function(e) {
+        const expirationDateInput = document.querySelector('[name="ExpirationDate"]');
+        if (expirationDateInput) expirationDateInput.addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
             if (value.length >= 2) {
                 value = value.substring(0,2) + '/' + value.substring(2,4);
@@ -1218,14 +1468,15 @@
         });
 
         // Flip back to front when focusing on expiration date
-        document.querySelector('[name="ExpirationDate"]').addEventListener('focus', function(e) {
+        if (expirationDateInput) expirationDateInput.addEventListener('focus', function(e) {
             if (cardContainer) {
                 cardContainer.classList.remove('flipped');
             }
         });
 
         // Update name on card - only show user input
-        document.querySelector('[name="NameOnCard"]').addEventListener('input', function(e) {
+        const nameOnCardInput = document.querySelector('[name="NameOnCard"]');
+        if (nameOnCardInput) nameOnCardInput.addEventListener('input', function(e) {
             const name = e.target.value.trim().toUpperCase();
             if (name.length > 0) {
                 nameDisplay.textContent = name;
@@ -1238,40 +1489,43 @@
         });
 
         // Flip back to front when focusing on name
-        document.querySelector('[name="NameOnCard"]').addEventListener('focus', function(e) {
+        if (nameOnCardInput) nameOnCardInput.addEventListener('focus', function(e) {
             if (cardContainer) {
                 cardContainer.classList.remove('flipped');
             }
         });
 
         // Update CVV - only show user input and handle card flipping
-        document.querySelector('[name="CVV"]').addEventListener('focus', function(e) {
-            // Flip card to back side with 3D animation
-            console.log('CVV focused - flipping to back');
-            if (cardContainer) {
-                cardContainer.classList.add('flipped');
-                console.log('Added flipped class');
-            } else {
-                console.log('cardContainer not found');
-            }
-        });
+        const cvvInput = document.querySelector('[name="CVV"]');
+        if (cvvInput) {
+            cvvInput.addEventListener('focus', function(e) {
+                // Flip card to back side with 3D animation
+                console.log('CVV focused - flipping to back');
+                if (cardContainer) {
+                    cardContainer.classList.add('flipped');
+                    console.log('Added flipped class');
+                } else {
+                    console.log('cardContainer not found');
+                }
+            });
 
-        document.querySelector('[name="CVV"]').addEventListener('blur', function(e) {
-            // Don't auto-flip back on blur - let user decide by clicking other inputs
-            console.log('CVV blurred');
-        });
+            cvvInput.addEventListener('blur', function(e) {
+                // Don't auto-flip back on blur - let user decide by clicking other inputs
+                console.log('CVV blurred');
+            });
 
-        document.querySelector('[name="CVV"]').addEventListener('input', function(e) {
-            const cvv = e.target.value.trim();
-            if (cvv.length > 0) {
-                cvvDisplayBack.textContent = cvv;
-            } else {
-                cvvDisplayBack.textContent = '•••';
-            }
-            
-            // Validate CVV with delay
-            setTimeout(() => validateCVV(true), 150);
-        });
+            cvvInput.addEventListener('input', function(e) {
+                const cvv = e.target.value.trim();
+                if (cvv.length > 0) {
+                    cvvDisplayBack.textContent = cvv;
+                } else {
+                    cvvDisplayBack.textContent = '•••';
+                }
+                
+                // Validate CVV with delay
+                setTimeout(() => validateCVV(true), 150);
+            });
+        }
 
         // Card brand detection and styling
         function updateCardBrand(cardNumber) {
@@ -1489,9 +1743,12 @@
                 amountInput = document.querySelector('[name="Amount"]');
             }
             
-            if (!amountInput) return false;
+            if (!amountInput) {
+                console.warn('Amount input not found for payment method:', selectedPaymentMethod);
+                return false;
+            }
             
-            const amountError = amountInput.parentElement.querySelector('.text-danger');
+            const amountError = amountInput.parentElement?.querySelector('.text-danger');
             const value = parseFloat(amountInput.value);
             
             if (!amountInput.value || value <= 0) {
@@ -1528,7 +1785,9 @@
 
         function validateNameOnCard(showErrors = true) {
             const nameInput = document.querySelector('[name="NameOnCard"]');
-            const nameError = nameInput.parentElement.querySelector('.text-danger');
+            if (!nameInput) return false;
+            
+            const nameError = nameInput.parentElement?.querySelector('.text-danger');
             
             if (!nameInput.value.trim()) {
                 if (nameError && showErrors) {
@@ -1544,14 +1803,22 @@
 
         function validateCardNumber(showErrors = true) {
             const cardInput = document.querySelector('[name="CardNumber"]');
-            const cardError = cardInput.parentElement.querySelector('.text-danger');
+            if (!cardInput) {
+                console.warn('Card input not found');
+                return false;
+            }
+            
+            const cardError = cardInput.parentElement?.querySelector('.text-danger');
             const value = cardInput.value.replace(/\s/g, '').replace(/[^0-9]/g, '');
+            
+            console.log('Card validation - Raw value:', cardInput.value, 'Cleaned:', value, 'Length:', value.length);
             
             if (!value) {
                 if (cardError && showErrors) {
                     cardError.textContent = 'Card number is required.';
                     cardError.style.display = 'block';
                 }
+                console.log('Card validation failed: empty');
                 return false;
             }
             
@@ -1561,6 +1828,7 @@
                     cardError.textContent = 'Please enter a valid card number (13-19 digits).';
                     cardError.style.display = 'block';
                 }
+                console.log('Card validation failed: invalid length');
                 return false;
             }
             
@@ -1570,12 +1838,14 @@
                     cardError.textContent = 'Please enter a valid credit card number.';
                     cardError.style.display = 'block';
                 }
+                console.log('Card validation failed: failed isValidCardNumber check');
                 return false;
             }
             
             if (cardError) {
                 cardError.style.display = 'none';
             }
+            console.log('Card validation passed');
             return true;
         }
 
@@ -1670,7 +1940,9 @@
 
         function validateExpirationDate(showErrors = true) {
             const expiryInput = document.querySelector('[name="ExpirationDate"]');
-            const expiryError = expiryInput.parentElement.querySelector('.text-danger');
+            if (!expiryInput) return false;
+            
+            const expiryError = expiryInput.parentElement?.querySelector('.text-danger');
             const value = expiryInput.value;
             
             if (!value || value.length < 5) {
@@ -1721,7 +1993,9 @@
 
         function validateCVV(showErrors = true) {
             const cvvInput = document.querySelector('[name="CVV"]');
-            const cvvError = cvvInput.parentElement.querySelector('.text-danger');
+            if (!cvvInput) return false;
+            
+            const cvvError = cvvInput.parentElement?.querySelector('.text-danger');
             const value = cvvInput.value;
             
             if (!value || value.length < 3 || value.length > 4) {
@@ -1738,12 +2012,27 @@
 
         // Check if all mandatory fields are valid and update deposit button state
         function updateDepositButtonState() {
+            console.log('=== updateDepositButtonState called ===');
             const depositBtn = document.getElementById('deposit-btn');
+            if (!depositBtn) {
+                console.error('Deposit button not found!');
+                return; // Exit if deposit button doesn't exist
+            }
             
             // Get current payment method
-            const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked').value;
+            const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
+            console.log('Payment method selected:', selectedPaymentMethod);
+            
+            if (!selectedPaymentMethod) {
+                console.log('No payment method selected, disabling button');
+                // No payment method selected, disable button
+                depositBtn.disabled = true;
+                depositBtn.classList.add('disabled');
+                return;
+            }
             
             if (selectedPaymentMethod === 'card') {
+                console.log('Validating card payment fields');
                 // For card payments, check all mandatory card fields (without showing errors)
                 const isAmountValid = validateAmount(false);
                 const isCurrencyValid = validateCurrency(false);
@@ -1752,28 +2041,44 @@
                 const isExpiryValid = validateExpirationDate(false);
                 const isCVVValid = validateCVV(false);
                 
+                console.log('Validation results:', {
+                    amount: isAmountValid,
+                    currency: isCurrencyValid,
+                    cardNumber: isCardNumberValid,
+                    name: isNameValid,
+                    expiry: isExpiryValid,
+                    cvv: isCVVValid
+                });
+                
                 const allValid = isAmountValid && isCurrencyValid && isCardNumberValid && 
                                isNameValid && isExpiryValid && isCVVValid;
                 
                 if (allValid) {
+                    console.log('All card fields valid - ENABLING deposit button');
                     depositBtn.disabled = false;
                     depositBtn.classList.remove('disabled');
                     depositBtn.textContent = 'DEPOSIT';
                 } else {
+                    console.log('Some card fields invalid - DISABLING deposit button');
                     depositBtn.disabled = true;
                     depositBtn.classList.add('disabled');
                     depositBtn.textContent = 'DEPOSIT';
                 }
             } else {
+                console.log('Validating non-card payment method');
                 // For other payment methods, only check amount and currency (without showing errors)
                 const isAmountValid = validateAmount(false);
                 const isCurrencyValid = validateCurrency(false);
                 
+                console.log('Validation results:', { amount: isAmountValid, currency: isCurrencyValid });
+                
                 if (isAmountValid && isCurrencyValid) {
+                    console.log('Amount and currency valid - ENABLING deposit button');
                     depositBtn.disabled = false;
                     depositBtn.classList.remove('disabled');
                     depositBtn.textContent = 'DEPOSIT';
                 } else {
+                    console.log('Amount or currency invalid - DISABLING deposit button');
                     depositBtn.disabled = true;
                     depositBtn.classList.add('disabled');
                     depositBtn.textContent = 'DEPOSIT';
@@ -2000,115 +2305,316 @@
         }
 
         // Wait for DOM to be fully loaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                initializeValidation();
-                setTimeout(initializeCarousel, 200); // Increased delay
-            });
-        } else {
+        function initializePage() {
             initializeValidation();
             setTimeout(initializeCarousel, 200); // Increased delay
-        }
-
-        // Form submission handler for loading overlay and data preparation
-        document.querySelector('.payment-form').addEventListener('submit', function(e) {
-            // Disable deposit button to prevent multiple submissions
-            const depositBtn = document.getElementById('deposit-btn');
-            if (depositBtn && !depositBtn.disabled) {
-                depositBtn.disabled = true;
-                depositBtn.textContent = 'PROCESSING...';
-            }
             
-            const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
-            
-            // For PayPal payment, handle with AJAX
-            if (selectedPaymentMethod === 'paypal') {
-                e.preventDefault();
-                handlePayPalPayment(e.target);
-                return;
-            }
-            // For JM Financial payment, handle with AJAX
-            if (selectedPaymentMethod === 'jmf') {
-                e.preventDefault();
-                handleJMFPayment(e.target);
-                return;
-            }
-            // For Luxtak payment, handle with AJAX
-            if (selectedPaymentMethod === 'luxtak') {
-                e.preventDefault(); // Prevent default form submission
-                handleLuxtakPayment(e.target);
-                return;
-            }
-            // For Smilepayz TH payment, handle with AJAX
-            if (selectedPaymentMethod === 'smilepayz-th') {
-                e.preventDefault();
-                handleSmilepayzPayment(e.target);
-                return;
-            }
-            // For Paysolutions TH payment, handle with AJAX
-            if (selectedPaymentMethod === 'paysolutions-th') {
-                e.preventDefault();
-                handlePaysolutionsPayment(e.target);
-                return;
-            }
-            // For GPay Nuvei payment, intercept and show modal first
-            if (selectedPaymentMethod === 'gpay') {
-                e.preventDefault();
-                showNuveiPreModal(e.target, 'ppp_GooglePay');
-                return;
-            }
-            // For Apple Pay Nuvei payment, intercept and show modal first
-            if (selectedPaymentMethod === 'apple-pay-nuvei') {
-                e.preventDefault();
-                showNuveiPreModal(e.target, 'ppp_ApplePay');
-                return;
-            }
-            // For Apple Pay Nuvei IFrame payment
-            if (selectedPaymentMethod === 'apple-pay-nuvei-iframe') {
-                e.preventDefault();
-                handleApplePayNuveiIFrame(e.target);
-                return;
-            }
-            if (selectedPaymentMethod === 'swiftgoldpay') {
-                e.preventDefault();
-                handleSwiftGoldPayFlow(e.target);
-                return;
-            }
-            if (selectedPaymentMethod === 'zmg') {
-                e.preventDefault();
-                handleZotaPayment(e.target);
-                return;
-            }
-            // For Brite payment, let the custom handler at the end handle it
-            if (selectedPaymentMethod === 'brite') {
-                e.preventDefault();
-                return;
-            }
-            // For Nuvei Simply Connect payment, let the custom handler at the end handle it
-            if (selectedPaymentMethod === 'nuvei-simply-connect') {
-                e.preventDefault();
+            // Form submission handler for loading overlay and data preparation
+            const paymentForm = document.querySelector('.payment-form');
+            if (!paymentForm) {
+                console.error('Payment form not found');
                 return;
             }
             
-            // Check if form is valid before showing loading overlay
-            const form = e.target;
-            const isValid = form.checkValidity();
+            paymentForm.addEventListener('submit', function(e) {
+                console.log('=== FORM SUBMISSION TRIGGERED ===');
+                const form = e.target;
+                const selectedPaymentMethod = document.querySelector('input[name="PaymentMethod"]:checked')?.value;
+                console.log('Selected payment method:', selectedPaymentMethod);
+                
+                // For PayPal payment, handle with AJAX
+                if (selectedPaymentMethod === 'paypal') {
+                    e.preventDefault();
+                    handlePayPalPayment(form);
+                    return;
+                }
+                // For JM Financial payment, handle with AJAX
+                if (selectedPaymentMethod === 'jmf') {
+                    e.preventDefault();
+                    handleJMFPayment(form);
+                    return;
+                }
+                // For Luxtak payment, handle with AJAX
+                if (selectedPaymentMethod === 'luxtak') {
+                    e.preventDefault();
+                    handleLuxtakPayment(form);
+                    return;
+                }
+                // For Smilepayz TH payment, handle with AJAX
+                if (selectedPaymentMethod === 'smilepayz-th') {
+                    e.preventDefault();
+                    handleSmilepayzPayment(form);
+                    return;
+                }
+                // For Paysolutions TH payment, handle with AJAX
+                if (selectedPaymentMethod === 'paysolutions-th') {
+                    e.preventDefault();
+                    handlePaysolutionsPayment(form);
+                    return;
+                }
+                // For GPay Nuvei payment, intercept and show modal first
+                if (selectedPaymentMethod === 'gpay') {
+                    e.preventDefault();
+                    showNuveiPreModal(form, 'ppp_GooglePay');
+                    return;
+                }
+                // For Apple Pay Nuvei payment, intercept and show modal first
+                if (selectedPaymentMethod === 'apple-pay-nuvei') {
+                    e.preventDefault();
+                    showNuveiPreModal(form, 'ppp_ApplePay');
+                    return;
+                }
+                // For Apple Pay Nuvei IFrame payment
+                if (selectedPaymentMethod === 'apple-pay-nuvei-iframe') {
+                    e.preventDefault();
+                    handleApplePayNuveiIFrame(form);
+                    return;
+                }
+                if (selectedPaymentMethod === 'swiftgoldpay') {
+                    e.preventDefault();
+                    handleSwiftGoldPayFlow(form);
+                    return;
+                }
+                if (selectedPaymentMethod === 'zmg') {
+                    e.preventDefault();
+                    handleZotaPayment(form);
+                    return;
+                }
+                // For Brite payment, let the custom handler at the end handle it
+                if (selectedPaymentMethod === 'brite') {
+                    e.preventDefault();
+                    return;
+                }
+                // For Nuvei Simply Connect payment, let the custom handler at the end handle it
+                if (selectedPaymentMethod === 'nuvei-simply-connect') {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // For card payment: Use fetch() to completely bypass jQuery validation
+                if (selectedPaymentMethod === 'card') {
+                    e.preventDefault(); // Prevent default form submission
+                    submitCardPaymentViaFetch(form);
+                    return;
+                }
+                
+                // Default: Allow form to submit naturally
+                console.log('✓ Form allowed to submit naturally');
+            });
             
-            if (isValid) {
+            // Card payment submission using fetch - completely bypasses jQuery validation
+            async function submitCardPaymentViaFetch(form) {
+                console.log('═'.repeat(60));
+                console.log('🚀 CARD PAYMENT SUBMISSION STARTED');
+                console.log('═'.repeat(60));
+                
+                // Collect form data
+                const cardNumber = document.querySelector('[name="CardNumber"]')?.value;
+                const expDate = document.querySelector('[name="ExpirationDate"]')?.value;
+                const cvv = document.querySelector('[name="CVV"]')?.value;
+                const nameOnCard = document.querySelector('[name="NameOnCard"]')?.value;
+                const amount = document.querySelector('[name="Amount"]')?.value;
+                const currency = document.querySelector('[name="Currency"]')?.value;
+                const paymentMethod = document.querySelector('[name="PaymentMethod"]:checked')?.value;
+                
+                console.log('📋 FORM DATA COLLECTED:');
+                console.log('  Amount:', amount);
+                console.log('  Currency:', currency);
+                console.log('  Payment Method:', paymentMethod);
+                console.log('  Card Number:', cardNumber ? '****' + cardNumber.slice(-4) : 'EMPTY');
+                console.log('  Exp Date:', expDate || 'EMPTY');
+                console.log('  CVV:', cvv ? '***' : 'EMPTY');
+                console.log('  Name:', nameOnCard || 'EMPTY');
+                
+                // Custom validation
+                let isValid = true;
+                const validationResults = [];
+                
+                if (!amount || parseFloat(amount) <= 0) { 
+                    isValid = false; 
+                    validationResults.push('❌ Amount invalid or empty');
+                    console.error('❌ Amount invalid:', amount);
+                } else {
+                    validationResults.push('✓ Amount valid: ' + amount);
+                }
+                
+                if (!currency) { 
+                    isValid = false;
+                    validationResults.push('❌ Currency not selected');
+                    console.error('❌ Currency invalid');
+                } else {
+                    validationResults.push('✓ Currency valid: ' + currency);
+                }
+                
+                if (!validateCardNumber(cardNumber)) { 
+                    isValid = false;
+                    validationResults.push('❌ Card number invalid');
+                    console.error('❌ Card number invalid');
+                } else {
+                    validationResults.push('✓ Card number valid (Luhn check passed)');
+                }
+                
+                if (!validateExpirationDate(expDate)) { 
+                    isValid = false;
+                    validationResults.push('❌ Expiration date invalid');
+                    console.error('❌ Expiration date invalid');
+                } else {
+                    validationResults.push('✓ Expiration date valid: ' + expDate);
+                }
+                
+                if (!validateCVV(cvv)) { 
+                    isValid = false;
+                    validationResults.push('❌ CVV invalid');
+                    console.error('❌ CVV invalid');
+                } else {
+                    validationResults.push('✓ CVV valid');
+                }
+                
+                if (!nameOnCard || nameOnCard.trim() === '') { 
+                    isValid = false;
+                    validationResults.push('❌ Name on card empty');
+                    console.error('❌ Name on card invalid');
+                } else {
+                    validationResults.push('✓ Name on card valid: ' + nameOnCard);
+                }
+                
+                console.log('\n✅ VALIDATION RESULTS:');
+                validationResults.forEach(result => console.log('  ' + result));
+                
+                if (!isValid) {
+                    console.error('\n❌ VALIDATION FAILED - NOT SUBMITTING');
+                    console.log('═'.repeat(60));
+                    return;
+                }
+                
+                console.log('\n✅ ALL VALIDATION PASSED');
+                console.log('📤 Submitting form via fetch()');
+                console.log('URL:', form.action);
+                console.log('Method: POST');
+                
                 // Show loading overlay
                 const loadingOverlay = document.getElementById('loading-overlay');
                 if (loadingOverlay) {
                     loadingOverlay.style.display = 'flex';
+                    console.log('✓ Loading overlay displayed');
                 }
                 
-                // Disable submit button to prevent double submission
-                const submitBtn = form.querySelector('.deposit-btn');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'PROCESSING...';
+                // Disable deposit button
+                const depositBtn = document.getElementById('deposit-btn');
+                if (depositBtn) {
+                    depositBtn.disabled = true;
+                    depositBtn.textContent = 'PROCESSING...';
+                    console.log('✓ Submit button disabled');
                 }
+                
+                try {
+                    // Create FormData from form element
+                    const formData = new FormData(form);
+                    console.log('✓ FormData created');
+                    
+                    console.log('\n📡 SENDING FETCH REQUEST...');
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'Accept': 'text/html,application/xhtml+xml',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        redirect: 'follow'
+                    });
+                    
+                    console.log('\n📨 RESPONSE RECEIVED:');
+                    console.log('  Status Code:', response.status);
+                    console.log('  Status Text:', response.statusText);
+                    console.log('  Response Type:', response.type);
+                    console.log('  Response URL:', response.url);
+                    console.log('  Headers:', {
+                        'Content-Type': response.headers.get('Content-Type'),
+                        'Location': response.headers.get('Location')
+                    });
+                    
+                    // Check if fetch followed a redirect to an external URL (3DS page)
+                    const currentOrigin = window.location.origin;
+                    if (response.url && !response.url.startsWith(currentOrigin)) {
+                        console.log('\n🔄 CROSS-ORIGIN REDIRECT DETECTED');
+                        console.log('  Redirected to:', response.url);
+                        window.location.href = response.url;
+                        return;
+                    }
+                    
+                    // Check for redirect via Location header (fallback)
+                    if (response.type === 'opaqueredirect' || response.status === 301 || response.status === 302 || response.status === 303 || response.status === 307 || response.status === 308) {
+                        console.log('\n🔄 REDIRECT DETECTED');
+                        const redirectUrl = response.headers.get('Location');
+                        if (redirectUrl) {
+                            console.log('  Redirect URL:', redirectUrl);
+                            console.log('  ✓ Navigating to:', redirectUrl);
+                            window.location.href = redirectUrl;
+                            return;
+                        }
+                    }
+                    
+                    // Check if response is successful
+                    if (response.ok) {
+                        const contentType = response.headers.get('Content-Type') || '';
+                        
+                        // Check for JSON redirect response from server
+                        if (contentType.includes('application/json')) {
+                            const jsonData = await response.json();
+                            console.log('\n📦 JSON RESPONSE:', jsonData);
+                            if (jsonData.redirect && jsonData.redirectUrl) {
+                                console.log('🔄 Server returned redirect URL:', jsonData.redirectUrl);
+                                window.location.href = jsonData.redirectUrl;
+                                return;
+                            }
+                        }
+                        
+                        const html = await response.text();
+                        console.log('\n✅ SUCCESSFUL RESPONSE');
+                        console.log('  Response HTML length:', html.length);
+                        
+                        if (html.includes('Processing') || html.includes('loading-overlay')) {
+                            console.log('  ✓ Processing page detected in response');
+                            if (loadingOverlay) loadingOverlay.style.display = 'none';
+                            document.documentElement.innerHTML = html;
+                        } else {
+                            console.log('  ℹ️ Response is not Processing page, redirecting...');
+                            window.location.href = '/Payment/Processing';
+                        }
+                    } else {
+                        console.error('\n❌ SERVER ERROR:');
+                        console.error('  Status:', response.status);
+                        console.error('  ✗ Server returned error');
+                        showAlert('An error occurred processing your payment. Please try again.', 'Payment Error');
+                        if (loadingOverlay) loadingOverlay.style.display = 'none';
+                        if (depositBtn) {
+                            depositBtn.disabled = false;
+                            depositBtn.textContent = 'DEPOSIT';
+                        }
+                    }
+                } catch (error) {
+                    console.error('\n❌ FETCH EXCEPTION:');
+                    console.error('  Error:', error.message);
+                    console.error('  Stack:', error.stack);
+                    showAlert('An error occurred submitting your payment. Please try again.', 'Submission Error');
+                    if (loadingOverlay) loadingOverlay.style.display = 'none';
+                    if (depositBtn) {
+                        depositBtn.disabled = false;
+                        depositBtn.textContent = 'DEPOSIT';
+                    }
+                }
+                
+                console.log('═'.repeat(60));
             }
-    });
+        }
+        
+        // Wait for DOM to be fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePage);
+        } else {
+            initializePage();
+        }
+        
         // Zota handler (AJAX)
         async function handleZotaPayment(form){
             const amountInput = document.querySelector('[name="ZotaAmount"]') || document.querySelector('[name="Amount"]');

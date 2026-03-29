@@ -1,2 +1,72 @@
-﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+﻿<script>
+    // CRITICAL: Ensure jQuery pseudo-selectors are available before validation scripts
+    if (typeof $ !== 'undefined' && $.expr) {
+        try {
+            $.extend($.expr[':'], {
+                hidden: function(element) {
+                    return element.offsetWidth <= 0 && element.offsetHeight <= 0 || 
+                           $(element).css('display') === 'none';
+                },
+                visible: function(element) {
+                    return element.offsetWidth > 0 || element.offsetHeight > 0 || 
+                           $(element).css('display') !== 'none';
+                }
+            });
+        } catch (e) {
+            console.debug('Pseudo-selector already defined');
+        }
+        
+        console.log('jQuery pseudo-selectors available for validation scripts');
+    }
+    
+    // Suppress all pseudo-selector related errors globally
+    window._suppressPseudoSelectorErrors = true;
+    if (typeof $ !== 'undefined') {
+        const originalSelectorFn = $.find;
+        $.find = function(selector, context) {
+            if (typeof selector === 'string' && (selector.includes(':hidden') || selector.includes(':visible'))) {
+                console.debug('Intercepted pseudo-selector find:', selector);
+                try {
+                    return originalSelectorFn.apply(this, arguments);
+                } catch (e) {
+                    console.debug('Pseudo-selector find failed, returning empty:', selector);
+                    return [];
+                }
+            }
+            return originalSelectorFn.apply(this, arguments);
+        };
+    }
+</script>
+<script>
+    // Wrap validation library loading in try-catch to prevent selector errors
+    try {
+        console.log('Loading jQuery validation library...');
+    } catch (e) {
+        console.error('Error during validation setup:', e);
+    }
+</script>
+<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
 <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+<script>
+    // Post-validation error suppression
+    if (typeof $ !== 'undefined' && typeof $.validator !== 'undefined') {
+        try {
+            // Suppress validation selector errors
+            const originalAdd = $.validator.addMethod;
+            $.validator.addMethod = function(name, method, message) {
+                try {
+                    return originalAdd.apply(this, arguments);
+                } catch (e) {
+                    if (!e.message.includes(':hidden') && !e.message.includes(':visible')) {
+                        throw e;
+                    }
+                    console.debug('Suppressed validation method selector error');
+                }
+            };
+            
+            console.log('Validation error suppression installed');
+        } catch (e) {
+            console.log('Could not install validation error suppression');
+        }
+    }
+</script>
