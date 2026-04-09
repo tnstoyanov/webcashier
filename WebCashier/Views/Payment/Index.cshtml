@@ -4112,16 +4112,23 @@
                 if (window.Brite === undefined) {
                     console.log('Loading Brite SDK...');
                     const script = document.createElement('script');
-                    script.src = 'https://docs.britepayments.com/wp-content/cache/min/1/client.js?ver=1774533308';
-                    script.dataset.minify = '1';
+                    script.src = 'https://websdk.britepayments.io/v1/client.js';
+                    script.type = 'text/javascript';
+                    script.async = true;
                     document.head.appendChild(script);
                     
-                    // Wait for Brite to be available
-                    await new Promise((resolve) => {
+                    // Wait for Brite to be available with timeout
+                    await new Promise((resolve, reject) => {
+                        let attempts = 0;
+                        const maxAttempts = 50; // 5 seconds max
                         const checkBrite = setInterval(() => {
+                            attempts++;
                             if (window.Brite) {
                                 clearInterval(checkBrite);
                                 resolve();
+                            } else if (attempts >= maxAttempts) {
+                                clearInterval(checkBrite);
+                                reject(new Error('Brite SDK failed to load after 5 seconds'));
                             }
                         }, 100);
                     });
