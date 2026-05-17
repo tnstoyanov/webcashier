@@ -4,8 +4,8 @@ services:
     env: dotnet
     plan: free
     runtime: dotnet
-    buildCommand: cd WebCashier && dotnet publish --configuration Release --output ../publish
-    startCommand: dotnet ./publish/WebCashier.dll
+    buildCommand: cd WebCashier && dotnet publish --configuration Release --output ../publish --self-contained false --runtime linux-x64
+    startCommand: cd ./publish && dotnet WebCashier.dll
     disks:
       - name: data
         mountPath: /var/data
@@ -17,3 +17,7 @@ services:
         value: http://0.0.0.0:$PORT
       - key: DATA_PROTECTION_KEYS_DIRECTORY
         value: /var/data/dp-keys
+      - key: DOTNET_TieredCompilation
+        value: "true"
+      - key: DOTNET_TieredCompilationQuickJit
+        value: "true"
