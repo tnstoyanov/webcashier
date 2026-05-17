@@ -1,12 +1,12 @@
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
 # CACHE BUSTING - Force fresh build on Render.com
 ARG CACHE_BUST=20250726000200
-RUN echo "Cache invalidation: $CACHE_BUST - Comprehensive Luxtak API logging for production debugging" > /tmp/cache_bust.txt
+RUN echo "Cache invalidation: $CACHE_BUST - Fixed .NET 8.0 runtime for proper deployment" > /tmp/cache_bust.txt
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY ["WebCashier/WebCashier.csproj", "WebCashier/"]
 RUN dotnet restore "WebCashier/WebCashier.csproj"
@@ -24,4 +24,4 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:8080
 RUN adduser --disabled-password --home /app --gecos '' appuser && chown -R appuser /app
 USER appuser
-ENTRYPOINT ["dotnet", "WebCashier.dll"]
+ENTRYPOINT ["dotnet", "/app/WebCashier.dll"]
