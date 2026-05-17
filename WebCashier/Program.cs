@@ -344,6 +344,27 @@ builder.Services.AddHttpClient<WebCashier.Services.IPaysolutionsService, WebCash
     return handler;
 });
 
+// PagTree service (PIX QR - Brazil)
+builder.Services.Configure<WebCashier.Models.PagTree.PagTreeConfig>(builder.Configuration.GetSection("PagTree"));
+builder.Services.AddHttpClient<WebCashier.Services.IPagTreeService, WebCashier.Services.PagTreeService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "WebCashier/1.0");
+})
+.AddHttpMessageHandler<LoggingHandler>()
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    var handler = new HttpClientHandler();
+    handler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+    handler.CheckCertificateRevocationList = false;
+    handler.UseCookies = false;
+    if (builder.Environment.IsDevelopment())
+    {
+        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+    }
+    return handler;
+});
+
 // SwiftGoldPay service with mTLS and optional pinning
 builder.Services.AddHttpClient<ISwiftGoldPayService, SwiftGoldPayService>(client =>
 {
