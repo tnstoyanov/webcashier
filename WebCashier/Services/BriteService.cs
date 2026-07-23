@@ -126,10 +126,11 @@ namespace WebCashier.Services
                     return null;
                 }
 
-                // Determine endpoint based on payment method
-                var sessionEndpoint = paymentMethod == BritePaymentMethod.SwishPayment 
-                    ? "session.create_swish_payment" 
-                    : "session.create_deposit";
+                // The paymentMethod value already contains the Brite session endpoint name
+                // (e.g. "session.create_deposit", "session.create_swish_payment", "session.create_ideal_payment")
+                var sessionEndpoint = string.IsNullOrWhiteSpace(paymentMethod)
+                    ? BritePaymentMethod.Deposit
+                    : paymentMethod;
 
                 // Send amount as-is (not multiplied by 100) - Brite expects the unit amount
                 var amountValue = (long)amount;

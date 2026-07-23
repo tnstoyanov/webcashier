@@ -192,5 +192,6 @@ namespace WebCashier.Models.Brite
         public const string Card = "card";
         public const string Deposit = "session.create_deposit";
         public const string SwishPayment = "session.create_swish_payment";
+        public const string IdealPayment = "session.create_ideal_payment";
     }
 }

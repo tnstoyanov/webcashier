@@ -748,6 +748,25 @@
                                         </label>
                                     </div>
                                 </div>
+
+                                <!-- Submethods - Only visible for the Netherlands -->
+                                <div id="brite-submethod-container-nl" style="display: none; margin-top: 20px;">
+                                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 10px; cursor: pointer; background: #f9fafb;">
+                                        <input type="radio" id="brite-nl-instant-bank-transfer" name="BriteSubmethodNL" value="session.create_deposit" checked style="width: 18px; height: 18px; cursor: pointer;" />
+                                        <label for="brite-nl-instant-bank-transfer" style="cursor: pointer; flex: 1; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                            <img src="https://ext-assets.britepayments.com/assets/logo_cluster/brand_badge_primary--logo_cluster_medium--SE--light.svg" alt="Instant Bank Transfer" style="height: 32px; object-fit: contain;" />
+                                            <span>Instant Bank Transfer</span>
+                                        </label>
+                                    </div>
+
+                                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #f9fafb;">
+                                        <input type="radio" id="brite-ideal" name="BriteSubmethodNL" value="session.create_ideal_payment" style="width: 18px; height: 18px; cursor: pointer;" />
+                                        <label for="brite-ideal" style="cursor: pointer; flex: 1; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                            <img src="https://d1twnm33rljaon.cloudfront.net/_AUTOxAUTO_crop_center-center_none/122193/iDEAL_Wero_Lockup_Yellow_Horizontal_RGB.webp" alt="iDEAL" style="height: 32px; object-fit: contain;" />
+                                            <span>iDEAL</span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="form-right">
@@ -3788,13 +3807,15 @@
         // Add event listener to Country select to show/hide payment methods
         const briteCountrySelect = document.getElementById('BriteCountryId');
         const briteSubmethodContainer = document.getElementById('brite-submethod-container');
-        if (briteCountrySelect && briteSubmethodContainer) {
+        const briteSubmethodContainerNL = document.getElementById('brite-submethod-container-nl');
+        if (briteCountrySelect) {
             briteCountrySelect.addEventListener('change', function() {
                 const selectedCountry = this.value;
-                if (selectedCountry === 'se') {
-                    briteSubmethodContainer.style.display = 'block';
-                } else {
-                    briteSubmethodContainer.style.display = 'none';
+                if (briteSubmethodContainer) {
+                    briteSubmethodContainer.style.display = selectedCountry === 'se' ? 'block' : 'none';
+                }
+                if (briteSubmethodContainerNL) {
+                    briteSubmethodContainerNL.style.display = selectedCountry === 'nl' ? 'block' : 'none';
                 }
             });
         }
@@ -3826,7 +3847,9 @@
                     const amount = document.querySelector('[name="BriteAmount"]')?.value;
                     const currency = document.querySelector('[name="BriteCurrency"]')?.value;
                     const countryId = document.querySelector('[name="BriteCountryId"]')?.value;
-                    const submethod = document.querySelector('[name="BriteSubmethod"]:checked')?.value || 'session.create_deposit';
+                    const submethod = countryId === 'nl'
+                        ? (document.querySelector('[name="BriteSubmethodNL"]:checked')?.value || 'session.create_deposit')
+                        : (document.querySelector('[name="BriteSubmethod"]:checked')?.value || 'session.create_deposit');
 
                     if (!amount || amount <= 0) {
                         const depositBtn = document.getElementById('deposit-btn');
