@@ -1007,6 +1007,8 @@ body {
   align-items: center;
   z-index: 9999;
   padding: 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 #BritePayment iframe {
@@ -1030,8 +1032,24 @@ body {
   }
 }
 
-/* Tablet and desktop: Centered modal */
+/* Tablet and desktop: Centered modal.
+   The Brite client shrinks #BritePayment to hug the iframe's actual size once it
+   loads, so we anchor/center it via top/left 50% + transform instead of relying on
+   flex centering alone (flex centering breaks once the fixed-position box's own
+   width/height shrink, causing it to appear pinned to the top-left corner). */
 @media (min-width: 481px) {
+  #BritePayment {
+    top: 50%;
+    left: 50%;
+    width: auto;
+    height: auto;
+    min-width: 400px;
+    min-height: 600px;
+    transform: translate(-50%, -50%);
+    padding: 0;
+    background-color: transparent;
+  }
+
   #BritePayment iframe {
     width: 420px !important;
     height: 620px !important;
