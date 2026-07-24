@@ -79,4 +79,43 @@ namespace WebCashier.Models.Brite
         [JsonPropertyName("timestamp")]
         public string? Timestamp { get; set; }
     }
+
+    public class BriteTransactionDetails
+    {
+        [JsonPropertyName("id")]
+        public string? Id { get; set; }
+
+        [JsonPropertyName("amount")]
+        public decimal? Amount { get; set; }
+
+        [JsonPropertyName("currency_id")]
+        public string? CurrencyId { get; set; }
+
+        [JsonPropertyName("merchant_reference")]
+        public string? MerchantReference { get; set; }
+
+        [JsonPropertyName("message")]
+        public string? Message { get; set; }
+
+        [JsonPropertyName("from_bank_account")]
+        public BriteIbanAccount? FromBankAccount { get; set; }
+
+        [JsonPropertyName("error_message")]
+        public string? ErrorMessage { get; set; }
+
+        [JsonPropertyName("error_name")]
+        public string? ErrorName { get; set; }
+    }
+
+    public class BriteIbanAccount
+    {
+        [JsonPropertyName("bank_name")]
+        public string? BankName { get; set; }
+
+        [JsonPropertyName("country_id")]
+        public string? CountryId { get; set; }
+
+        [JsonPropertyName("iban")]
+        public string? Iban { get; set; }
+    }
 }

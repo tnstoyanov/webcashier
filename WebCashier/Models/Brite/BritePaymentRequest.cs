@@ -40,8 +40,8 @@ namespace WebCashier.Models.Brite
         [JsonPropertyName("customer_email")]
         public string? CustomerEmail { get; set; }
 
-        [JsonPropertyName("deeplink_redirect")]
-        public string? DeeplinkRedirect { get; set; }
+        [JsonPropertyName("redirect_uri")]
+        public string? RedirectUri { get; set; }
 
         [JsonPropertyName("country_id")]
         public string? CountryId { get; set; }

@@ -28,6 +28,11 @@ namespace WebCashier.Services
         /// </summary>
         Task<BriteSessionDetails?> GetSessionDetailsAsync(string bearerToken, string sessionId);
 
+        /// <summary>
+        /// Step 6: Get transaction details using transaction ID from session details
+        /// </summary>
+        Task<BriteTransactionDetails?> GetTransactionDetailsAsync(string bearerToken, string transactionId);
+
         // Kept for interface compatibility
         Task<BriteTransactionResponse?> CreatePaymentAsync(
             decimal amount,

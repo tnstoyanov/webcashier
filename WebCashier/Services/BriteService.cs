@@ -58,17 +58,37 @@ namespace WebCashier.Services
 
                 var client = _httpClientFactory.CreateClient();
                 var endpoint = $"{_apiUrl}/api/merchant.authorize";
+                var requestId = Guid.NewGuid().ToString("N");
 
                 var jsonContent = JsonSerializer.Serialize(authRequest);
                 var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                await _commLog.LogAsync("brite-outbound-request", new
+                {
+                    requestId,
+                    operation = "merchant.authorize",
+                    endpoint,
+                    method = "POST",
+                    requestBody = Truncate(jsonContent)
+                }, "brite");
 
                 _logger.LogInformation("[Brite] Authorizing merchant");
 
                 var response = await client.PostAsync(endpoint, httpContent);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
+                await _commLog.LogAsync("brite-inbound-response", new
+                {
+                    requestId,
+                    operation = "merchant.authorize",
+                    endpoint,
+                    statusCode = (int)response.StatusCode,
+                    responseBody = Truncate(responseContent)
+                }, "brite");
+
                 await _commLog.LogAsync("brite-authorize", new
                 {
+                    requestId,
                     endpoint,
                     statusCode = (int)response.StatusCode
                 }, "brite");
@@ -78,6 +98,7 @@ namespace WebCashier.Services
                     _logger.LogError("[Brite] Authorization failed: {StatusCode} - {Error}", response.StatusCode, responseContent);
                     await _commLog.LogAsync("brite-auth-error", new
                     {
+                        requestId,
                         statusCode = (int)response.StatusCode,
                         error = responseContent
                     }, "brite");
@@ -138,7 +159,7 @@ namespace WebCashier.Services
                 var sessionRequest = new BriteDepositSessionRequest
                 {
                     CustomerEmail = customerEmail,
-                    DeeplinkRedirect = _config["Brite:DeeplinkRedirect"] ?? _config["Brite:ReturnUrl"],
+                    RedirectUri = _config["Brite:DeeplinkRedirect"] ?? _config["Brite:ReturnUrl"],
                     CountryId = countryId.ToLower(),
                     CustomerFirstname = customerFirstname ?? "Customer",
                     CustomerLastname = customerLastname ?? "User",
@@ -154,15 +175,25 @@ namespace WebCashier.Services
                         PostalCode = "00000",
                         CountryId = countryId.ToLower()
                     },
-                    TransactionCallbackUrl = _config["Brite:WebhookUrl"],
-                    SessionCallbackUrl = _config["Brite:WebhookUrl"]
+                    TransactionCallbackUrl = "https://9619a21036402ff00f16c3922bc9f1e4.m.pipedream.net",
+                    SessionCallbackUrl = "https://9619a21036402ff00f16c3922bc9f1e4.m.pipedream.net"
                 };
 
                 var client = _httpClientFactory.CreateClient();
                 var endpoint = $"{_apiUrl}/api/{sessionEndpoint}";
+                var requestId = Guid.NewGuid().ToString("N");
 
                 var jsonContent = JsonSerializer.Serialize(sessionRequest);
                 var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                await _commLog.LogAsync("brite-outbound-request", new
+                {
+                    requestId,
+                    operation = sessionEndpoint,
+                    endpoint,
+                    method = "POST",
+                    requestBody = Truncate(jsonContent)
+                }, "brite");
 
                 _logger.LogInformation("[Brite] Creating {SessionType} session for {CountryId}", sessionEndpoint, countryId);
 
@@ -175,8 +206,18 @@ namespace WebCashier.Services
                 var response = await client.SendAsync(request);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
+                await _commLog.LogAsync("brite-inbound-response", new
+                {
+                    requestId,
+                    operation = sessionEndpoint,
+                    endpoint,
+                    statusCode = (int)response.StatusCode,
+                    responseBody = Truncate(responseContent)
+                }, "brite");
+
                 await _commLog.LogAsync("brite-create-session", new
                 {
+                    requestId,
                     endpoint,
                     paymentMethod,
                     countryId,
@@ -189,6 +230,7 @@ namespace WebCashier.Services
                     _logger.LogError("[Brite] Session creation failed: {StatusCode} - {Error}", response.StatusCode, responseContent);
                     await _commLog.LogAsync("brite-session-error", new
                     {
+                        requestId,
                         statusCode = (int)response.StatusCode,
                         error = responseContent
                     }, "brite");
@@ -249,10 +291,20 @@ namespace WebCashier.Services
 
                 var client = _httpClientFactory.CreateClient();
                 var endpoint = $"{_apiUrl}/api/session.get";
+                var requestId = Guid.NewGuid().ToString("N");
 
                 var requestBody = new { id = sessionId };
                 var jsonContent = JsonSerializer.Serialize(requestBody);
                 var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                await _commLog.LogAsync("brite-outbound-request", new
+                {
+                    requestId,
+                    operation = "session.get",
+                    endpoint,
+                    method = "POST",
+                    requestBody = Truncate(jsonContent)
+                }, "brite");
 
                 _logger.LogInformation("[Brite] Getting session details for {SessionId}", sessionId);
 
@@ -265,11 +317,21 @@ namespace WebCashier.Services
                 var response = await client.SendAsync(request);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
+                await _commLog.LogAsync("brite-inbound-response", new
+                {
+                    requestId,
+                    operation = "session.get",
+                    endpoint,
+                    statusCode = (int)response.StatusCode,
+                    responseBody = Truncate(responseContent)
+                }, "brite");
+
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogError("[Brite] Get session failed: {StatusCode}", response.StatusCode);
                     await _commLog.LogAsync("brite-get-session-error", new
                     {
+                        requestId,
                         sessionId,
                         statusCode = (int)response.StatusCode
                     }, "brite");
@@ -292,6 +354,101 @@ namespace WebCashier.Services
                 _logger.LogError(ex, "[Brite] Error in GetSessionDetailsAsync");
                 await _commLog.LogAsync("brite-get-session-exception", new { error = ex.Message }, "brite");
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Step 6: Get transaction details by transaction ID
+        /// </summary>
+        public async Task<BriteTransactionDetails?> GetTransactionDetailsAsync(string bearerToken, string transactionId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(bearerToken) || string.IsNullOrWhiteSpace(transactionId))
+                {
+                    _logger.LogError("[Brite] Missing bearer token or transaction ID");
+                    return null;
+                }
+
+                var client = _httpClientFactory.CreateClient();
+                var endpoint = $"{_apiUrl}/api/transaction.get";
+                var requestId = Guid.NewGuid().ToString("N");
+
+                var requestBody = new { id = transactionId };
+                var jsonContent = JsonSerializer.Serialize(requestBody);
+                var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                await _commLog.LogAsync("brite-outbound-request", new
+                {
+                    requestId,
+                    operation = "transaction.get",
+                    endpoint,
+                    method = "POST",
+                    requestBody = Truncate(jsonContent)
+                }, "brite");
+
+                _logger.LogInformation("[Brite] Getting transaction details for {TransactionId}", transactionId);
+
+                var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+                {
+                    Content = httpContent
+                };
+                request.Headers.Add("Authorization", $"Bearer {bearerToken}");
+
+                var response = await client.SendAsync(request);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                await _commLog.LogAsync("brite-inbound-response", new
+                {
+                    requestId,
+                    operation = "transaction.get",
+                    endpoint,
+                    statusCode = (int)response.StatusCode,
+                    responseBody = Truncate(responseContent)
+                }, "brite");
+
+                var transactionDetails = JsonSerializer.Deserialize<BriteTransactionDetails>(responseContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError("[Brite] Get transaction failed: {StatusCode}", response.StatusCode);
+                    await _commLog.LogAsync("brite-get-transaction-error", new
+                    {
+                        requestId,
+                        transactionId,
+                        statusCode = (int)response.StatusCode,
+                        error = Truncate(responseContent)
+                    }, "brite");
+
+                    return transactionDetails ?? new BriteTransactionDetails
+                    {
+                        ErrorMessage = $"HTTP {response.StatusCode}: {Truncate(responseContent)}",
+                        ErrorName = "HttpError"
+                    };
+                }
+
+                if (transactionDetails?.Id == null && string.IsNullOrWhiteSpace(transactionDetails?.ErrorMessage))
+                {
+                    _logger.LogError("[Brite] Transaction details response invalid");
+                    return new BriteTransactionDetails
+                    {
+                        ErrorMessage = "Invalid transaction response from Brite",
+                        ErrorName = "InvalidResponse"
+                    };
+                }
+
+                _logger.LogInformation("[Brite] Transaction details retrieved for {TransactionId}", transactionId);
+                return transactionDetails;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Brite] Error in GetTransactionDetailsAsync");
+                await _commLog.LogAsync("brite-get-transaction-exception", new { error = ex.Message }, "brite");
+                return new BriteTransactionDetails
+                {
+                    ErrorMessage = $"Exception: {ex.Message}",
+                    ErrorName = "Exception"
+                };
             }
         }
 
@@ -331,6 +488,16 @@ namespace WebCashier.Services
             // Brite uses HMAC-SHA256, but specific implementation depends on their webhook format
             // For now, return true - implement based on actual webhook requirements
             return true;
+        }
+
+        private static string Truncate(string? value, int maxLength = 2000)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            return value.Length <= maxLength ? value : value.Substring(0, maxLength);
         }
     }
 }

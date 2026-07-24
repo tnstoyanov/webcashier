@@ -242,6 +242,67 @@ namespace WebCashier.Controllers
         }
 
         /// <summary>
+        /// Step 6: Get transaction details (bank name + iban)
+        /// POST /Brite/TransactionDetails
+        /// </summary>
+        [HttpPost("TransactionDetails")]
+        public async Task<IActionResult> TransactionDetails(
+            [FromForm] string bearerToken,
+            [FromForm] string transactionId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(bearerToken) || string.IsNullOrWhiteSpace(transactionId))
+                {
+                    return Json(new { success = false, error = "Missing parameters" });
+                }
+
+                await _commLog.LogAsync("brite-inbound", new
+                {
+                    provider = "Brite",
+                    action = "TransactionDetails",
+                    transactionId
+                }, "brite");
+
+                var details = await _briteService.GetTransactionDetailsAsync(bearerToken, transactionId);
+
+                if (details == null)
+                {
+                    return Json(new { success = false, error = "Failed to get transaction details" });
+                }
+
+                if (!string.IsNullOrWhiteSpace(details.ErrorMessage))
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        error = details.ErrorMessage,
+                        errorName = details.ErrorName
+                    });
+                }
+
+                return Json(new
+                {
+                    success = true,
+                    transactionId = details.Id,
+                    amount = details.Amount,
+                    currency = details.CurrencyId,
+                    merchantReference = details.MerchantReference,
+                    message = details.Message,
+                    fromBankName = details.FromBankAccount?.BankName,
+                    fromBankIban = details.FromBankAccount?.Iban,
+                    fromBankCountryId = details.FromBankAccount?.CountryId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Brite] Error in TransactionDetails action");
+                await _commLog.LogAsync("brite-transaction-details-exception", new { error = ex.Message }, "brite");
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Webhook endpoint for transaction notifications
         /// POST /Brite/Webhook
         /// </summary>
@@ -253,11 +314,19 @@ namespace WebCashier.Controllers
                 using (var reader = new StreamReader(Request.Body))
                 {
                     var payload = await reader.ReadToEndAsync();
+                    var headers = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString());
 
-                    await _commLog.LogAsync("brite-webhook-received", new
+                    await _commLog.LogAsync("brite-inbound-request", new
                     {
-                        payload = payload.Length > 500 ? payload.Substring(0, 500) : payload,
-                        contentType = Request.ContentType
+                        source = "brite",
+                        eventType = "webhook",
+                        method = Request.Method,
+                        path = Request.Path.ToString(),
+                        queryString = Request.QueryString.ToString(),
+                        contentType = Request.ContentType,
+                        remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        headers,
+                        payload = payload.Length > 2000 ? payload.Substring(0, 2000) : payload
                     }, "brite");
 
                     _logger.LogInformation("[Brite] Webhook received: {PayloadSize} bytes", payload.Length);
