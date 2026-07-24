@@ -155,6 +155,8 @@ namespace WebCashier.Services
 
                 // Send amount as-is (not multiplied by 100) - Brite expects the unit amount
                 var amountValue = (long)amount;
+                var callbackUrl = _config["Brite:WebhookUrl"]
+                    ?? "https://9619a21036402ff00f16c3922bc9f1e4.m.pipedream.net";
 
                 var sessionRequest = new BriteDepositSessionRequest
                 {
@@ -171,12 +173,19 @@ namespace WebCashier.Services
                     CustomerAddress = new BriteCustomerAddress
                     {
                         City = "Anyplace",
-                        Address = "123 Main St",
+                        Street = "123 Main St",
                         PostalCode = "00000",
                         CountryId = countryId.ToLower()
                     },
-                    TransactionCallbackUrl = "https://9619a21036402ff00f16c3922bc9f1e4.m.pipedream.net",
-                    SessionCallbackUrl = "https://9619a21036402ff00f16c3922bc9f1e4.m.pipedream.net"
+                    Callbacks = new List<BriteCallback>
+                    {
+                        new() { Url = callbackUrl, TransactionState = 2 },
+                        new() { Url = callbackUrl, TransactionState = 3 },
+                        new() { Url = callbackUrl, TransactionState = 4 },
+                        new() { Url = callbackUrl, TransactionState = 5 },
+                        new() { Url = callbackUrl, TransactionState = 6 },
+                        new() { Url = callbackUrl, TransactionState = 7 }
+                    }
                 };
 
                 var client = _httpClientFactory.CreateClient();

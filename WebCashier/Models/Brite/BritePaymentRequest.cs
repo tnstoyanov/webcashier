@@ -70,11 +70,8 @@ namespace WebCashier.Models.Brite
         [JsonPropertyName("customer_address")]
         public BriteCustomerAddress? CustomerAddress { get; set; }
 
-        [JsonPropertyName("transaction_callback_url")]
-        public string? TransactionCallbackUrl { get; set; }
-
-        [JsonPropertyName("session_callback_url")]
-        public string? SessionCallbackUrl { get; set; }
+        [JsonPropertyName("callbacks")]
+        public List<BriteCallback>? Callbacks { get; set; }
     }
 
     public class BriteCustomerAddress
@@ -82,8 +79,8 @@ namespace WebCashier.Models.Brite
         [JsonPropertyName("city")]
         public string? City { get; set; }
 
-        [JsonPropertyName("address")]
-        public string? Address { get; set; }
+        [JsonPropertyName("street")]
+        public string? Street { get; set; }
 
         [JsonPropertyName("postal_code")]
         public string? PostalCode { get; set; }
@@ -97,8 +94,8 @@ namespace WebCashier.Models.Brite
         [JsonPropertyName("url")]
         public string? Url { get; set; }
 
-        [JsonPropertyName("event")]
-        public string? Event { get; set; }
+        [JsonPropertyName("transaction_state")]
+        public int TransactionState { get; set; }
     }
 
     // Step 3: Deposit session response
