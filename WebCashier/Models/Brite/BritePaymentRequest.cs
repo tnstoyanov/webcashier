@@ -183,12 +183,12 @@ namespace WebCashier.Models.Brite
 
     public class BritePaymentMethod
     {
-        public const string Swish = "swish";
-        public const string Ideal = "ideal";
-        public const string OpenBanking = "open_banking";
+        public const string Swish = "swish"; // Sweden only
+        public const string Ideal = "ideal"; // Netherlands only
+        public const string OpenBanking = "open_banking"; // Belgium, 
         public const string Card = "card";
-        public const string Deposit = "session.create_deposit";
-        public const string SwishPayment = "session.create_swish_payment";
-        public const string IdealPayment = "session.create_ideal_payment";
+        public const string Deposit = "session.create_deposit"; // default payment method for deposit
+        public const string SwishPayment = "session.create_swish_payment"; // Sweden only
+        public const string IdealPayment = "session.create_ideal_payment"; // Netherlands only
     }
 }

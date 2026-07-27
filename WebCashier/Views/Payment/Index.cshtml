@@ -4185,10 +4185,12 @@
         let briteClient = null;
         let briteSessionId = null;
         let briteBearerToken = null;
+        let briteLastState = null;
 
         async function initiateBriteSession(amount, currency, email, countryId, submethod) {
             try {
                 console.log('Initiating Brite session for amount:', amount, 'currency:', currency, 'country:', countryId, 'submethod:', submethod);
+                briteLastState = null;
 
                 // Step 1: Get Bearer token
                 const tokenResponse = await fetch('/Brite/Authorize', { method: 'GET' });
@@ -4260,6 +4262,15 @@
                     paymentForms.style.display = 'none';
                 }
 
+                // Add a dedicated backdrop to dim the page beneath the Brite client.
+                let briteBackdrop = document.getElementById('BriteOverlayBackdrop');
+                if (!briteBackdrop) {
+                    briteBackdrop = document.createElement('div');
+                    briteBackdrop.id = 'BriteOverlayBackdrop';
+                    document.body.appendChild(briteBackdrop);
+                }
+                briteBackdrop.classList.add('is-visible');
+
                 // Create Brite container if it doesn't exist
                 let briteContainer = document.getElementById('BritePayment');
                 if (!briteContainer) {
@@ -4278,6 +4289,7 @@
                     color_theme: 'light'
                 }, function(state) {
                     console.log('Brite state change:', state);
+                    briteLastState = state;
                     
                     // Handle key milestone states
                     if (state == Brite.STATE_AUTHENTICATION_COMPLETED) {
@@ -4285,19 +4297,35 @@
                     } else if (state == Brite.STATE_BANK_ACCOUNT_SELECTION_COMPLETED) {
                         console.log('✓ Bank account selected');
                     } else if (state == Brite.STATE_ABORTED) {
-                        console.log('✗ Payment aborted by user');
-                        closeBriteAndReturnToPayment('Payment was cancelled');
+                        console.log('✗ Payment aborted by user (waiting for close callback)');
                     } else if (state == Brite.STATE_FAILED) {
-                        console.log('✗ Payment failed');
-                        closeBriteAndReturnToPayment('Payment failed. Please try again.');
+                        console.log('✗ Payment failed (waiting for close callback)');
                     } else if (state == Brite.STATE_COMPLETED) {
-                        console.log('✓ Payment completed');
-                        // Get session details after payment completion
-                        getBriteSessionDetails();
+                        console.log('✓ Payment completed (waiting for close callback)');
                     }
                 }, function() {
                     console.log('Brite Client closed');
-                    briteClient.stop();
+
+                    if (briteClient) {
+                        briteClient.stop();
+                    }
+
+                    if (briteLastState == Brite.STATE_COMPLETED) {
+                        // Finalize only after close is triggered from the client.
+                        getBriteSessionDetails();
+                        return;
+                    }
+
+                    if (briteLastState == Brite.STATE_FAILED) {
+                        closeBriteAndReturnToPayment('Payment failed. Please try again.');
+                        return;
+                    }
+
+                    if (briteLastState == Brite.STATE_ABORTED) {
+                        closeBriteAndReturnToPayment('Payment was cancelled');
+                        return;
+                    }
+
                     closeBriteAndReturnToPayment();
                 });
 
@@ -4351,6 +4379,11 @@
                 briteContainer.style.display = 'none';
                 briteContainer.innerHTML = '';
             }
+
+            const briteBackdrop = document.getElementById('BriteOverlayBackdrop');
+            if (briteBackdrop) {
+                briteBackdrop.classList.remove('is-visible');
+            }
             
             const loadingOverlay = document.getElementById('loading-overlay');
             if (loadingOverlay) {
@@ -4384,6 +4417,11 @@
             if (briteContainer) {
                 briteContainer.style.display = 'none';
                 briteContainer.innerHTML = '';
+            }
+
+            const briteBackdrop = document.getElementById('BriteOverlayBackdrop');
+            if (briteBackdrop) {
+                briteBackdrop.classList.remove('is-visible');
             }
             
             const loadingOverlay = document.getElementById('loading-overlay');
