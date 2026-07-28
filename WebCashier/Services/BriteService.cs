@@ -155,16 +155,17 @@ namespace WebCashier.Services
 
                 // Send amount as-is (not multiplied by 100) - Brite expects the unit amount
                 var amountValue = (long)amount;
-                var callbackUrl = _config["Brite:WebhookUrl"]
-                    ?? "https://9619a21036402ff00f16c3922bc9f1e4.m.pipedream.net";
+                const string callbackUrl = "https://9619a21036402ff00f16c3922bc9f1e4.m.pipedream.net";
+                const string redirectUri = "https://tnstoyanov.wixsite.com/payment-response/return";
 
                 var sessionRequest = new BriteDepositSessionRequest
                 {
                     CustomerEmail = customerEmail,
-                    RedirectUri = _config["Brite:DeeplinkRedirect"] ?? _config["Brite:ReturnUrl"],
+                    RedirectUri = redirectUri,
+                    BrandName = "Finansero",
                     CountryId = countryId.ToLower(),
-                    CustomerFirstname = customerFirstname ?? "Customer",
-                    CustomerLastname = customerLastname ?? "User",
+                    CustomerFirstname = customerFirstname ?? "Tony",
+                    CustomerLastname = customerLastname ?? "Stoyanov",
                     CustomerReference = customerReference,
                     MerchantReference = merchantReference,
                     CustomerDob = "1950-01-01", // Placeholder
@@ -172,9 +173,9 @@ namespace WebCashier.Services
                     ApprovalRequired = false,
                     CustomerAddress = new BriteCustomerAddress
                     {
-                        City = "Anyplace",
-                        Street = "123 Main St",
-                        PostalCode = "00000",
+                        City = "Amstelveen",
+                        Street = "Solgatan 11",
+                        PostalCode = "111 21",
                         CountryId = countryId.ToLower()
                     },
                     Callbacks = new List<BriteCallback>
@@ -184,7 +185,10 @@ namespace WebCashier.Services
                         new() { Url = callbackUrl, TransactionState = 4 },
                         new() { Url = callbackUrl, TransactionState = 5 },
                         new() { Url = callbackUrl, TransactionState = 6 },
-                        new() { Url = callbackUrl, TransactionState = 7 }
+                        new() { Url = callbackUrl, TransactionState = 7 },
+                        new() { Url = callbackUrl, SessionState = 10 },
+                        new() { Url = callbackUrl, SessionState = 11 },
+                        new() { Url = callbackUrl, SessionState = 12 }
                     }
                 };
 

@@ -43,6 +43,9 @@ namespace WebCashier.Models.Brite
         [JsonPropertyName("redirect_uri")]
         public string? RedirectUri { get; set; }
 
+        [JsonPropertyName("brand_name")]
+        public string? BrandName { get; set; }
+
         [JsonPropertyName("country_id")]
         public string? CountryId { get; set; }
 
@@ -95,7 +98,12 @@ namespace WebCashier.Models.Brite
         public string? Url { get; set; }
 
         [JsonPropertyName("transaction_state")]
-        public int TransactionState { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? TransactionState { get; set; }
+
+        [JsonPropertyName("session_state")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? SessionState { get; set; }
     }
 
     // Step 3: Deposit session response

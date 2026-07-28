@@ -106,7 +106,7 @@ namespace WebCashier.Controllers
                 }
 
                 var customerReference = DateTime.UtcNow.ToString("yyyyMMddHHmmss") + Random.Shared.Next(1000000, 9999999);
-                var merchantReference = customerReference;
+                var merchantReference = Random.Shared.Next(4000000, 5000000).ToString();
 
                 await _commLog.LogAsync("brite-inbound", new
                 {
