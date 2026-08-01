@@ -50,6 +50,10 @@ namespace WebCashier.Services
                 _ => ForceHttps(Combine(baseUrl, "/Payment?paymentMethod=gpay"))
             };
 
+            // Apple Pay HPP opens in a top-level tab/window, not in an iframe modal.
+            // Sending inIframeMode=true for Apple Pay can suppress the wallet on some desktop browsers.
+            var useIframeMode = !string.Equals(req.PaymentMethod, "ppp_ApplePay", StringComparison.OrdinalIgnoreCase);
+
             var fields = new List<NuveiFormField>
             {
                 F("merchant_id", merchantId!),
@@ -78,13 +82,17 @@ namespace WebCashier.Services
                 F("encoding", "UTF-8"),
                 F("payment_method", req.PaymentMethod),
                 F("payment_method_mode", "filter"),
-                F("inIframeMode", "true"),
                 F("notify_url", notifyUrl),
                 F("success_url", successUrl),
                 F("error_url", errorUrl),
                 F("pending_url", pendingUrl),
                 F("back_url", backUrl)
             };
+
+            if (useIframeMode)
+            {
+                fields.Add(F("inIframeMode", "true"));
+            }
 
             // Checksum: concatenate values (no spaces) in exact order, prepend secret key, sha256 hex lowercase
             var concatValues = new StringBuilder();

@@ -16,8 +16,9 @@ namespace WebCashier.Controllers
         private readonly ISmilepayzService _smilepayzService;
         private readonly IPayPalService _paypalService;
         private readonly ICommLogService _commLog;
+        private readonly IGeoIpCountryResolver _geoIpCountryResolver;
 
-        public PaymentController(ILogger<PaymentController> logger, IPraxisService praxisService, LuxtakService luxtakService, IPaymentStateService paymentStateService, ISmilepayzService smilepayzService, IPayPalService paypalService, ICommLogService commLog)
+        public PaymentController(ILogger<PaymentController> logger, IPraxisService praxisService, LuxtakService luxtakService, IPaymentStateService paymentStateService, ISmilepayzService smilepayzService, IPayPalService paypalService, ICommLogService commLog, IGeoIpCountryResolver geoIpCountryResolver)
         {
             _logger = logger;
             _praxisService = praxisService;
@@ -26,12 +27,18 @@ namespace WebCashier.Controllers
             _smilepayzService = smilepayzService;
             _paypalService = paypalService;
             _commLog = commLog;
+            _geoIpCountryResolver = geoIpCountryResolver;
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var model = new PaymentModel();
+            var countryCode = await _geoIpCountryResolver.ResolveCountryCodeAsync(HttpContext, HttpContext.RequestAborted);
+            var model = new PaymentModel
+            {
+                CountryCode = countryCode
+            };
+            _logger.LogInformation("Payment page country resolved by IP/header: {CountryCode}", countryCode);
             return View(model);
         }
 

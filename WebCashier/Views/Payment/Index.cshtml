@@ -617,6 +617,7 @@
                                 <input type="hidden" id="nuvei-merchant-id" />
                                 <input type="hidden" id="nuvei-merchant-site-id" />
                                 <input type="hidden" id="nuvei-order-id" />
+                                <input type="hidden" id="nuvei-country-code" value="@Model.CountryCode" />
                             </div>
                         </div>
                         
@@ -4010,6 +4011,33 @@
             }
         }
 
+        function detectBrowserContext() {
+            const ua = navigator.userAgent || '';
+            const isMac = /Macintosh|Mac OS X/i.test(ua);
+            const isChrome = /Chrome\//i.test(ua) && !/Edg\//i.test(ua) && !/OPR\//i.test(ua) && !/CriOS/i.test(ua);
+            const isSafari = /Safari\//i.test(ua) && !/Chrome\//i.test(ua) && !/CriOS/i.test(ua) && !/Edg\//i.test(ua);
+            const hasApplePaySession = typeof window.ApplePaySession !== 'undefined';
+            return { ua, isMac, isChrome, isSafari, hasApplePaySession };
+        }
+
+        function showSimplyConnectApplePayHintIfNeeded(checkoutContainer) {
+            const ctx = detectBrowserContext();
+            console.log('Nuvei Simply Connect browser context:', ctx);
+
+            const existing = document.getElementById('nuvei-applepay-browser-hint');
+            if (existing) existing.remove();
+
+            // In embedded Simply Connect, Apple Pay tile visibility is browser/capability gated by Nuvei.
+            // On macOS Chrome, ApplePaySession is typically unavailable, so the tile is often hidden.
+            if (ctx.isMac && ctx.isChrome && !ctx.hasApplePaySession) {
+                const hint = document.createElement('div');
+                hint.id = 'nuvei-applepay-browser-hint';
+                hint.style.cssText = 'margin: 0 0 12px 0; padding: 10px 12px; border-radius: 8px; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; font-size: 13px; line-height: 1.45;';
+                hint.textContent = 'Apple Pay may not appear in Nuvei Simply Connect on this browser. If needed, use the Apple Pay HPP method, which is currently working in your environment.';
+                checkoutContainer.parentElement?.insertBefore(hint, checkoutContainer);
+            }
+        }
+
         function initializeNuveiCheckout(sessionToken, merchantId, merchantSiteId, amount, currency, clientUniqueId) {
             // Wait for checkout.js to be loaded
             if (typeof window.checkout === 'undefined') {
@@ -4021,8 +4049,10 @@
             const checkoutContainer = document.getElementById('nuvei-checkout');
             checkoutContainer.innerHTML = '<p style="color: #999;">Loading payment methods...</p>';
             checkoutContainer.style.display = 'flex';
+            showSimplyConnectApplePayHintIfNeeded(checkoutContainer);
 
             const amount_str = amount.toString();
+            const countryCode = (document.getElementById('nuvei-country-code')?.value || 'US').toUpperCase();
 
             // Call the checkout() method with configuration
             try {
@@ -4032,7 +4062,7 @@
                     sessionToken: sessionToken,
                     merchantSiteId: merchantSiteId,
                     merchantId: merchantId,
-                    country: "US",
+                    country: countryCode,
                     currency: currency,
                     amount: amount_str,
                     renderTo: "#nuvei-checkout",
@@ -4040,6 +4070,10 @@
 
                     onReady: function(result) {
                         console.log('Nuvei checkout ready:', result);
+                        if (result && typeof result === 'object') {
+                            console.log('Nuvei checkout methods snapshot:', result.paymentMethods || result.availablePaymentMethods || result.methods || 'n/a');
+                        }
+                        console.log('Nuvei Simply Connect country code used:', countryCode);
                     },
 
                     onSelectPaymentMethod: function(paymentDetails) {

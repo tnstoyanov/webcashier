@@ -38,6 +38,9 @@ namespace WebCashier.Models
 
         [Display(Name = "Promotion Code")]
         public string? PromotionCode { get; set; }
+
+        [Display(Name = "Country Code")]
+        public string CountryCode { get; set; } = "US";
     }
 
     public class PaymentResult
