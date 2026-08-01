@@ -4290,10 +4290,11 @@
 
                 console.log('✓ Brite SDK loaded');
 
-                // Step 4: Hide payment forms and show Brite container
-                const paymentForms = document.querySelector('.payment-forms');
-                if (paymentForms) {
-                    paymentForms.style.display = 'none';
+                // Step 4: Keep the payment UI visible beneath the overlay so backdrop blur
+                // has real content to act on and the user keeps visual context.
+                const paymentContent = document.querySelector('.payment-content');
+                if (paymentContent) {
+                    paymentContent.classList.add('brite-background-muted');
                 }
 
                 // Add a dedicated backdrop to dim the page beneath the Brite client.
@@ -4312,14 +4313,57 @@
                     briteContainer.id = 'BritePayment';
                     document.body.appendChild(briteContainer);
                 }
+                briteContainer.style.display = 'flex';
+
+                let briteMount = document.getElementById('BritePaymentMount');
+                if (!briteMount) {
+                    briteMount = document.createElement('div');
+                    briteMount.id = 'BritePaymentMount';
+                    briteContainer.appendChild(briteMount);
+                }
+                briteContainer.innerHTML = '';
+                briteContainer.appendChild(briteMount);
 
                 // Step 5: Initialize and render Brite Client
                 briteClient = new Brite(sessionToken);
+
+                // Compute viewport-aware dimensions so the SDK iframe fits iOS screens
+                // (including landscape and dynamic browser UI bars).
+                const vv = window.visualViewport;
+                const viewportWidth = Math.floor(vv?.width || window.innerWidth || document.documentElement.clientWidth || 390);
+                const viewportHeight = Math.floor(vv?.height || window.innerHeight || document.documentElement.clientHeight || 844);
+                const compactViewport = viewportWidth <= 820 || viewportHeight <= 740;
+                const horizontalPadding = compactViewport ? 20 : 24;
+                const verticalPadding = compactViewport ? 20 : 24;
+
+                const briteWidthPx = compactViewport
+                    ? Math.min(420, Math.max(320, viewportWidth - horizontalPadding))
+                    : Math.max(360, Math.min(420, viewportWidth - horizontalPadding));
+
+                const briteHeightPx = compactViewport
+                    ? Math.min(620, Math.max(360, viewportHeight - verticalPadding))
+                    : Math.max(520, Math.min(620, viewportHeight - verticalPadding));
+
+                if (briteContainer) {
+                    briteContainer.classList.toggle('brite-compact', compactViewport);
+                }
+                if (briteMount) {
+                    briteMount.style.setProperty('--brite-frame-width', `${briteWidthPx}px`);
+                    briteMount.style.setProperty('--brite-frame-height', `${briteHeightPx}px`);
+                }
+
+                console.log('Brite viewport sizing:', {
+                    viewportWidth,
+                    viewportHeight,
+                    compactViewport,
+                    briteWidthPx,
+                    briteHeightPx
+                });
                 
                 briteClient.start({
-                    selector: '#BritePayment',
-                    width: '400px',
-                    height: '600px',
+                    selector: '#BritePaymentMount',
+                    width: `${briteWidthPx}px`,
+                    height: `${briteHeightPx}px`,
                     color_theme: 'light'
                 }, function(state) {
                     console.log('Brite state change:', state);
@@ -4424,10 +4468,9 @@
                 loadingOverlay.style.display = 'none';
             }
             
-            // Show payment forms again so user can select another method or retry
-            const paymentForms = document.querySelector('.payment-forms');
-            if (paymentForms) {
-                paymentForms.style.display = 'block';
+            const paymentContent = document.querySelector('.payment-content');
+            if (paymentContent) {
+                paymentContent.classList.remove('brite-background-muted');
             }
             
             // Show error message if provided
@@ -4463,10 +4506,9 @@
                 loadingOverlay.style.display = 'none';
             }
             
-            // Show payment forms again so user can select another method or retry
-            const paymentForms = document.querySelector('.payment-forms');
-            if (paymentForms) {
-                paymentForms.style.display = 'block';
+            const paymentContent = document.querySelector('.payment-content');
+            if (paymentContent) {
+                paymentContent.classList.remove('brite-background-muted');
             }
         }
 

@@ -155,8 +155,10 @@ namespace WebCashier.Services
 
                 // Send amount as-is (not multiplied by 100) - Brite expects the unit amount
                 var amountValue = (long)amount;
-                const string callbackUrl = "https://9619a21036402ff00f16c3922bc9f1e4.m.pipedream.net";
-                const string redirectUri = "https://tnstoyanov.wixsite.com/payment-response/return";
+                var callbackUrl = _config["Brite:WebhookUrl"] ?? "https://webcashier.onrender.com/Brite/Webhook";
+                var redirectUri = _config["Brite:DeeplinkRedirect"]
+                    ?? _config["Brite:ReturnUrl"]
+                    ?? "https://webcashier.onrender.com/Payment/Return";
 
                 var sessionRequest = new BriteDepositSessionRequest
                 {
